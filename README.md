@@ -22,8 +22,13 @@ Link used to extract data for central region [14.06.2022, 14:12]:
 - [SPEI Global Drought Monitor](https://spei.csic.es/map/maps.html#months=1#month=4#year=2022)
 
 - [Selection Malawi](https://spei.csic.es/map/maps.html#months=0#month=4#year=2022)
-  - ![img.png](img.png)
+  - ![img.png](images/img.png)
 - [Global SPEI Database](https://spei.csic.es/database.html#p7)
+
+
+#### Map data (Open street map)
+[Geofabric data](https://download.geofabrik.de/)
+
 
 ### src
 
