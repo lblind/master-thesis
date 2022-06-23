@@ -1,7 +1,7 @@
 """
 PREPROCESSING
 
-Everything belong to the preprocessing part
+Everything belonging to the preprocessing part
 """
 
 import os
@@ -9,6 +9,7 @@ import pandas as pd
 import xarray as xr
 import netCDF4
 import numpy as np
+import datetime
 
 
 def read_and_clean_csvs_food_prices(path_to_dir_csvs="../input/food-price-dta/csv"):
@@ -56,6 +57,44 @@ def read_and_clean_csvs_food_prices(path_to_dir_csvs="../input/food-price-dta/cs
         pass
 
     return dfs
+
+
+def extract_time_long_lat_slice(df_wfp_coords):
+    """
+
+    :param df_wfp_coords:
+    :return:
+    """
+    # EXTRACT SLICES/ RANGES OF VARIABLES
+
+    # TIME
+    max_year = df_wfp_coords.loc[df_wfp_coords["Year"].idxmax(), "Year"]
+    max_month = df_wfp_coords.loc[df_wfp_coords["Month"].idxmax(), "Month"]
+    max_day = 31  # set manually, as unit of WFP data = MONTH
+
+    max_date = datetime.datetime(max_year, max_month, max_day)
+    print("\nMax date\n", max_date)
+
+    min_year = df_wfp_coords.loc[df_wfp_coords["Year"].idxmin(), "Year"]
+    min_month = df_wfp_coords.loc[df_wfp_coords["Month"].idxmin(), "Month"]
+    min_day = 1  # set manually, as unit of WFP data = MONTH
+
+    min_date = datetime.datetime(min_year, min_month, min_day)
+    print("\nMin date\n", min_date)
+
+    range_time = slice(min_date, max_date)
+
+    max_long_market = df_wfp_coords.loc[df_wfp_coords["MarketLongitude"].idxmax(), "MarketLongitude"]
+    min_long_market = df_wfp_coords.loc[df_wfp_coords["MarketLongitude"].idxmin(), "MarketLongitude"]
+
+    range_long_market = slice(min_long_market, max_long_market)
+
+    max_lat_market = df_wfp_coords.loc[df_wfp_coords["MarketLatitude"].idxmax(), "MarketLatitude"]
+    min_lat_market = df_wfp_coords.loc[df_wfp_coords["MarketLatitude"].idxmin(), "MarketLatitude"]
+
+    range_lat_market = slice(min_lat_market, max_lat_market)
+
+    return range_time, range_long_market, range_lat_market
 
 
 def read_climate_data(path_to_netcdf, time_slice, long_slice, lat_slice):
@@ -121,85 +160,17 @@ def read_climate_data(path_to_netcdf, time_slice, long_slice, lat_slice):
 
     return df_excel
 
-    # TODO: NEXT STEPS
-    # 1. Iterate over time
-    # ...if middle of month (15)/ only consider that (as only one match value):
-    # extract long, lat, spei, year, month
-    # add row to dataframe
-    # return dataframe
 
-    df_climate = pd.DataFrame()
+def merge_climate_and_extended_food_price_dfs(climate_df, food_prices_coords_df):
+    """
+    Merge dataframe of climate data with extended food price data
 
-    # next: loop over remaining time
-    # extract spei, long and lat
+    :param climate_df:
+    :param food_prices_coords_df:
+    :return:
+    """
 
-    # print("\nKeys\n")
-    # print(ds.keys())
-    #
-    # data = netCDF4.Dataset(path_to_netcdf)
-    #
-    # # Extract variables
-    # print("Variables")
-    # columns = ["long", "lat", "spei", "time",]
-    # # print(data.variables["lon"])
-    #
-    # print("Dimensions", ds.dims)
-    # print("Variables", ds.variables)
-    #
-
-    #
-    # print(f"LONG\n{long}, {len(long)}")
-    # print(f"LAT\n{lat}, {len(lat)}")
-    # print(f"Time\n{time}")
-    #
-    # # make df
-    # # df_new = pd.DataFrame(data=[long, lat, spei], index=time, columns=columns[:-1])
-    # # print("\nDFNEW\n", df_new.columns, "\n", df_new)
-    #
-    # path_logs_dir = "../input/climate-dta/logs"
-    #
-    # if os.path.exists(path_logs_dir) is False:
-    #     os.makedirs(path_logs_dir)
-    #
-    # # store head of cdf as excel
-    # # ds.head().to_dataframe().to_excel(f"{path_logs_dir}/header_cdf.xlsx")
-    #
-    # df = ds.to_dataframe()
-    #
-    # # drop values with no spei available
-    # df=df.dropna()
-    #
-    # # drop everything that doesn't match the WFP climate base (-2020)
-    #
-    #
-    # print(df)
-    # print(df.shape)
-    # # print(df.lon)
-    #
-    # # df.iloc[:50, :].to_excel("../input/climate-dta/subsection_spei.xlsx")
-    #
-    #
-    #
-    # #
-    # # print(df.columns)
-    # # print(df)
-    # #
-    # # print(f"------------------------------\n"
-    # #       f"After reindexing\n"
-    # #       f"------------------------------\n")
-    # #
-    # # # REINDEX dataframe
-    # # df.reindex(columns=columns)
-    # # print(df.columns)
-    # # print(df)
-    #
-    # # print first column
-    # # print(df.iloc[:, 0])
-    #
-    # # print first row
-    # # print(df.iloc[0])
-    #
-    # return df
+    pass
 
 
 

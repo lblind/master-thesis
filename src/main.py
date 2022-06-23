@@ -24,35 +24,7 @@ if __name__ == "__main__":
     # print(df_all)
 
     # EXTRACT SLICES/ RANGES OF VARIABLES
-
-    # TIME
-    max_year = df_all.loc[df_all["Year"].idxmax(), "Year"]
-    max_month = df_all.loc[df_all["Month"].idxmax(), "Month"]
-    max_day = 31 # set manually, as unit of WFP data = MONTH
-
-    max_date = datetime.datetime(max_year, max_month, max_day)
-    print("\nMax date\n", max_date)
-
-    min_year = df_all.loc[df_all["Year"].idxmin(), "Year"]
-    min_month = df_all.loc[df_all["Month"].idxmin(), "Month"]
-    min_day = 1  # set manually, as unit of WFP data = MONTH
-
-    min_date = datetime.datetime(min_year, min_month, min_day)
-    print("\nMin date\n", min_date)
-
-    range_time = slice(min_date, max_date)
-
-    max_long_market = df_all.loc[df_all["MarketLongitude"].idxmax(), "MarketLongitude"]
-    min_long_market = df_all.loc[df_all["MarketLongitude"].idxmin(), "MarketLongitude"]
-
-    range_long_market = slice(min_long_market, max_long_market)
-
-    max_lat_market = df_all.loc[df_all["MarketLatitude"].idxmax(), "MarketLatitude"]
-    min_lat_market = df_all.loc[df_all["MarketLatitude"].idxmin(), "MarketLatitude"]
-
-    range_lat_market = slice(min_lat_market, max_lat_market)
-
-
+    range_time, range_long_market, range_lat_market = preproc.extract_time_long_lat_slice(df_all)
 
     #
     # # df_all.to_excel("../output/food_prices_long_lat.xlsx")
