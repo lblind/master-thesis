@@ -12,26 +12,19 @@ import preprocessing as preproc
 
 if __name__ == "__main__":
 
-    # 1. Read food prices, convert to excel and return as dfs
-    df_central, df_north, df_south = preproc.read_and_clean_csvs_food_prices()
+    # PART A) Get food price part of data
 
-    path_to_longs = "../input/food-price-dta/longs and lats/MWI_markets.csv"
+    # 1. Read food prices, convert to excel and return as merged df (for all regions)
+    df_wfp = preproc.get_df_wfp_preprocessed()
+    # 2. Read CSV containing market coordinates and merge to price data
+    df_wfp_with_coords = preproc.read_and_merge_wfp_market_coords(df_wfp)
+    # 3. Preparation for merge with Part B): Extract range of 3 main variables: time, longitude, latitude
+    slice_time, slice_lon, slice_lat = preproc.extract_time_long_lat_slice(df_wfp_with_coords)
 
-    df_markets_coord = pd.read_csv(path_to_longs)
-    df_markets_coord.rename(columns={'MarketName': 'Market'}, inplace=True)
+    # PART B) Get climate part of data (SPEI)
 
-    df_all = pd.merge(df_north, df_markets_coord, on="Market", how="inner")
-    # print(df_all)
+    df_spei = preproc.read_climate_data(time_slice=slice_time, long_slice=slice_lon, lat_slice=slice_lat)
 
-    # EXTRACT SLICES/ RANGES OF VARIABLES
-    range_time, range_long_market, range_lat_market = preproc.extract_time_long_lat_slice(df_all)
-
-    #
-    # # df_all.to_excel("../output/food_prices_long_lat.xlsx")
-
-    path_climate = "../input/climate-dta/spei01.nc"
-    df_spei = preproc.read_climate_data(path_climate, time_slice=range_time,
-                                        long_slice=range_long_market, lat_slice=range_lat_market)
     # # match df all to df climate
     # df_all_climate = pd.merge(df_all, df_spei, on=["long", "lat"], how="inner")
 

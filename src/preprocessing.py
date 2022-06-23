@@ -12,19 +12,22 @@ import numpy as np
 import datetime
 
 
-def read_and_clean_csvs_food_prices(path_to_dir_csvs="../input/food-price-dta/csv"):
+def get_df_wfp_preprocessed(path_to_dir_wfp_csvs_per_region="../input/food-price-dta/csv"):
     """
 
-    :param path_to_dir_csvs:
+    :param path_to_dir_wfp_csvs_per_region:
     :return:
     """
-    if os.path.exists(path_to_dir_csvs) is False:
-        raise ValueError(f"Directory containing csvs <{path_to_dir_csvs}> not found.\n"
+    if os.path.exists(path_to_dir_wfp_csvs_per_region) is False:
+        raise ValueError(f"Directory containing csvs <{path_to_dir_wfp_csvs_per_region}> not found.\n"
                          f"Please review your path definition and make sure the directory exists.")
 
-    central_path_to_csv_all = f"{path_to_dir_csvs}/Central_All_Commodities_WFP_2022Jun14_Malawi_FoodPricesData.csv"
-    northern_path_to_csv_all = f"{path_to_dir_csvs}/Northern_All_Commodities_WFP_2022Jun14_Malawi_FoodPricesData.csv"
-    southern_path_to_csv_all = f"{path_to_dir_csvs}/Southern_All_Commodities_WFP_2022Jun14_Malawi_FoodPricesData.csv"
+    central_path_to_csv_all = f"{path_to_dir_wfp_csvs_per_region}" \
+                              f"/Central_All_Commodities_WFP_2022Jun14_Malawi_FoodPricesData.csv"
+    northern_path_to_csv_all = f"{path_to_dir_wfp_csvs_per_region}" \
+                               f"/Northern_All_Commodities_WFP_2022Jun14_Malawi_FoodPricesData.csv"
+    southern_path_to_csv_all = f"{path_to_dir_wfp_csvs_per_region}" \
+                               f"/Southern_All_Commodities_WFP_2022Jun14_Malawi_FoodPricesData.csv"
 
     df_central = pd.read_csv(central_path_to_csv_all)
     df_northern = pd.read_csv(northern_path_to_csv_all)
@@ -38,25 +41,56 @@ def read_and_clean_csvs_food_prices(path_to_dir_csvs="../input/food-price-dta/cs
     # df_southern = df_southern[df_southern.Commodity.isin(dropped_commodities) is False]
     print(df_southern.Commodity.unique())
 
-    print(46 + 20 + 57)
+    # mark dfs corresponding to their region and combine them as one df
+    df_central["Region"] = "Central"
+    df_northern["Region"] = "North"
+    df_southern["Region"] = "South"
 
-    dfs = [df_central, df_northern, df_southern]
+    df_merged_all_regions = pd.concat([df_central, df_northern, df_southern], ignore_index=True)
+    print(df_merged_all_regions)
 
-    for i, df in enumerate(dfs):
-        # print(f"#------------------------------------------------------------------------\n"
-        #       f"# [{i}]\n"
-        #       f"{df.Market.unique().size}"
-        #       f"#------------------------------------------------------------------------\n")
-        #     print(df)
-        #     print(df.columns)
-        #     for column in df.columns:
-        #         print(df[column].unique())
+    # Some summary statistics
+    df_regions_list = [df_central, df_northern, df_southern]
+
+    for i, df in enumerate(df_regions_list):
+        print(f"#------------------------------------------------------------------------\n"
+              f"\nSummary statistic"
+              f"# [{i}]\n"
+              f"Size of Market: {df.Market.unique().size}\n"
+              f"\n#------------------------------------------------------------------------\n")
+        # print(df)
+        # print(df.columns)
+        # for column in df.columns:
+        #     print(df[column].unique())
         #     # print(df["Commodity"].unique())
         #     # print(df["Year"].unique())
         #     # print(df["Market"].unique())
-        pass
 
-    return dfs
+    print("Overall size of markets", len(df_merged_all_regions["Market"].unique()))
+    return df_merged_all_regions
+
+
+def read_and_merge_wfp_market_coords(df_wfp, path_to_csv_wfp_coords_markets="../input/food-price-dta/"
+                                                                            "longs and lats/MWI_markets.csv"):
+    """
+
+    :param df_wfp:
+    :param path_to_csv_wfp_coords_markets:
+
+    :return:
+    """
+    # Read csv
+    df_wfp_coords_markets = pd.read_csv(path_to_csv_wfp_coords_markets)
+    # Rename column for merge
+    df_wfp_coords_markets.rename(columns={'MarketName': 'Market'}, inplace=True)
+
+    # Merge Food Price data with provided coordinates of markets
+    df_wfp_coords = pd.merge(df_wfp, df_wfp_coords_markets, on="Market", how="inner")
+
+    # df_wfp_coords_north = pd.merge(df_wfp_north, df_wfp_coords_markets, on="Market", how="inner")
+    # df_wfp_coords_south = pd.merge(df_wfp_central, df_wfp_coords_markets, on="Market", how="inner")
+
+    return df_wfp_coords
 
 
 def extract_time_long_lat_slice(df_wfp_coords):
@@ -97,7 +131,7 @@ def extract_time_long_lat_slice(df_wfp_coords):
     return range_time, range_long_market, range_lat_market
 
 
-def read_climate_data(path_to_netcdf, time_slice, long_slice, lat_slice):
+def read_climate_data(time_slice, long_slice, lat_slice, path_to_netcdf="../input/climate-dta/spei01.nc"):
     """
     Reads the netcdf and converts it into a pandas df
 
@@ -146,7 +180,7 @@ def read_climate_data(path_to_netcdf, time_slice, long_slice, lat_slice):
     time_column = df_excel["time"]
 
     df_excel["Year"] = df_excel["time"]
-    df_excel["Year"] = df_excel["Year"].apply(lambda x : x.year)
+    df_excel["Year"] = df_excel["Year"].apply(lambda x: x.year)
 
     df_excel["Month"] = df_excel["time"]
     df_excel["Month"] = df_excel["Month"].apply(lambda x: x.month)
@@ -171,6 +205,3 @@ def merge_climate_and_extended_food_price_dfs(climate_df, food_prices_coords_df)
     """
 
     pass
-
-
-
