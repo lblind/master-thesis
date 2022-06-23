@@ -64,6 +64,12 @@ def read_climate_data(path_to_netcdf, start_time = "2003-01-01", end_time="2022-
 
     :param path_to_netcdf:
     :return:
+
+
+    References
+    ----------
+    SPEI Database:
+
     """
     ds = xr.open_dataset(path_to_netcdf)
     # print(ds)
@@ -72,8 +78,25 @@ def read_climate_data(path_to_netcdf, start_time = "2003-01-01", end_time="2022-
     ds = ds.sel(time=slice(start_time, end_time))
 
     print(ds)
+    print("\nCOORDINATES:\n", ds.coords)
+    print("\nDIMENSIONS:\n", ds.dims)
+    # Access METADATA
+    for i, var in enumerate(ds.variables.values()):
+        print(f"\nVARIABLE {i}:\n", var)
+
+    # rint("First row:", ds[0, :, :])
+
+    # TODO: NEXT STEPS
+    # 1. Iterate over time
+    # ...if middle of month (15)/ only consider that (as only one match value):
+    # extract long, lat, spei, year, month
+    # add row to dataframe
+    # return dataframe
 
     df_climate = pd.DataFrame()
+
+    # next: loop over remaining time
+    # extract spei, long and lat
 
     # print("\nKeys\n")
     # print(ds.keys())
