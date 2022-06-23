@@ -195,13 +195,28 @@ def read_climate_data(time_slice, long_slice, lat_slice, path_to_netcdf="../inpu
     return df_excel
 
 
-def merge_climate_and_extended_food_price_dfs(climate_df, food_prices_coords_df):
+def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
     """
     Merge dataframe of climate data with extended food price data
 
-    :param climate_df:
-    :param food_prices_coords_df:
+    :param df_wfp_with_coords:
+    :param df_spei:
+
     :return:
     """
+    print("Columns WFP:\n",df_wfp_with_coords.columns)
+    print("Columns SPEI:\n", df_spei.columns)
 
-    pass
+    # Rename columns for merge
+    df_spei.rename(columns={'lat': 'MarketLatitude'}, inplace=True)
+    df_spei.rename(columns={'lon': 'MarketLongitude'}, inplace=True)
+
+    print("Columns SPEI:\n", df_spei.columns)
+
+    # Merge Food Price data with provided coordinates of markets
+    df_final = pd.merge(df_wfp_with_coords, df_spei, on=["Year", "Month", "MarketLatitude", "MarketLongitude"],
+                             how="inner")
+
+    df_final.to_excel("../output/final-dta.xlsx")
+
+    return df_final

@@ -4,15 +4,14 @@ MAIN
 
 Starting point of program execution
 """
-import datetime
 
-import pandas as pd
 import preprocessing as preproc
 
 
 if __name__ == "__main__":
 
     # PART A) Get food price part of data
+    # -----------------------------------
 
     # 1. Read food prices, convert to excel and return as merged df (for all regions)
     df_wfp = preproc.get_df_wfp_preprocessed()
@@ -22,17 +21,15 @@ if __name__ == "__main__":
     slice_time, slice_lon, slice_lat = preproc.extract_time_long_lat_slice(df_wfp_with_coords)
 
     # PART B) Get climate part of data (SPEI)
+    # ---------------------------------------
 
     df_spei = preproc.read_climate_data(time_slice=slice_time, long_slice=slice_lon, lat_slice=slice_lat)
 
-    # # match df all to df climate
-    # df_all_climate = pd.merge(df_all, df_spei, on=["long", "lat"], how="inner")
+    # PART C) Merge Outcomes of Part A) and Part C)
+    # ---------------------------------------------
+    df_all = preproc.merge_food_price_and_climate_dfs(df_wfp_with_coords=df_wfp_with_coords, df_spei=df_spei)
 
-    # print(df_all_climate.columns)
 
-    # print(df_all.columns)
-
-    # print(df_markets_coord)
 
 
 
