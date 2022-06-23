@@ -58,7 +58,7 @@ def read_and_clean_csvs_food_prices(path_to_dir_csvs="../input/food-price-dta/cs
     return dfs
 
 
-def read_climate_data(path_to_netcdf, start_time = "2003-01-01", end_time="2022-01-07"):
+def read_climate_data(path_to_netcdf, time_slice, long_slice, lat_slice):
     """
     Reads the netcdf and converts it into a pandas df
 
@@ -74,8 +74,11 @@ def read_climate_data(path_to_netcdf, start_time = "2003-01-01", end_time="2022-
     ds = xr.open_dataset(path_to_netcdf)
     # print(ds)
 
-    # Just keep data that is in correct time range
-    ds = ds.sel(time=slice(start_time, end_time))
+    # Just keep data that is relevant (time range, market lats, market lons)
+    # ds = ds.sel(time=slice(start_time, end_time))
+    ds = ds.sel(time=time_slice)
+    ds = ds.sel(lon=long_slice)
+    ds = ds.sel(lat=lat_slice)
 
     print(ds)
     print("\nCOORDINATES:\n", ds.coords)
@@ -85,6 +88,38 @@ def read_climate_data(path_to_netcdf, start_time = "2003-01-01", end_time="2022-
         print(f"\nVARIABLE {i}:\n", var)
 
     # rint("First row:", ds[0, :, :])
+
+    # extract the data per column
+    lon_arr = ds.variables["lon"][:]
+    lat_arr = ds.variables["lat"][:]
+    time_arr = ds.variables["time"][:]
+    spei_arr = ds.variables["spei"][:]
+
+    df = ds.to_dataframe()
+    df.to_excel("../output/climate_data.xlsx")
+
+    df_excel = pd.read_excel("../output/climate_data.xlsx")
+
+    print(df["spei"])
+    # print(df.columns)
+    print(df_excel.columns)
+
+    time_column = df_excel["time"]
+
+    df_excel["Year"] = df_excel["time"]
+    df_excel["Year"] = df_excel["Year"].apply(lambda x : x.year)
+
+    df_excel["Month"] = df_excel["time"]
+    df_excel["Month"] = df_excel["Month"].apply(lambda x: x.month)
+
+    df_excel["Day"] = df_excel["time"]
+    df_excel["Day"] = df_excel["Day"].apply(lambda x: x.day)
+
+    df_excel.to_excel("../output/climate_data_preprocessed.xlsx")
+
+    print(df_excel["time"])
+
+    return df_excel
 
     # TODO: NEXT STEPS
     # 1. Iterate over time
@@ -111,11 +146,7 @@ def read_climate_data(path_to_netcdf, start_time = "2003-01-01", end_time="2022-
     # print("Dimensions", ds.dims)
     # print("Variables", ds.variables)
     #
-    # # extract the data per column
-    # long = data.variables["lon"][:]
-    # lat = data.variables["lat"][:]
-    # time = data.variables["time"][:]
-    # spei = data.variables["spei"][:]
+
     #
     # print(f"LONG\n{long}, {len(long)}")
     # print(f"LAT\n{lat}, {len(lat)}")
