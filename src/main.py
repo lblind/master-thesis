@@ -31,14 +31,24 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------
     df_final = preproc.merge_food_price_and_climate_dfs(df_wfp_with_coords=df_wfp_with_coords, df_spei=df_spei)
 
-    print("Final Shape:", df_final.shape, "\nWFP after closest point:", df_wfp_with_coords.shape)
+    # print("Final Shape:", df_final.shape, "\nWFP after closest point:", df_wfp_with_coords.shape)
 
     # Store intermediate results and final output as excel
-    df_wfp.to_excel("../output/df_wfp.xlsx")
-    df_wfp_with_coords.to_excel("../output/df_wfp_with_coords.xlsx")
-    df_spei.to_excel("../output/df_spei.xlsx")
-    df_final.to_excel("../output/final-dta.xlsx")
+    df_wfp.to_excel("../output/df_wfp.xlsx", na_rep="-")
+    df_wfp_with_coords.to_excel("../output/df_wfp_with_coords.xlsx", na_rep="-")
+    df_spei.to_excel("../output/df_spei.xlsx", na_rep="-")
+    df_final.to_excel("../output/final-dta.xlsx", na_rep="-")
 
+    print(f"\n----------------------------------------------------------------------------------------------------\n"
+          f"PREPROCESSING: DONE.\nSuccessfully merged different datasets (wfp, wfp coords, spei)\nand stored them"
+          f" as excel workbooks in the output folder.\n"
+          f"Summary statistics:\n"
+          f"Number of entries: {df_final.shape[0]}\n"
+          f"Number of nan/missing values Prices: {df_final.Price.isna().sum()} (Share: "
+          f"{df_final.Price.isna().sum()/ df_final.shape[0]})\n"
+          f"Number of nan/missing values SPEI: {df_final.Spei.isna().sum()} (Share: "
+          f"{df_final.Spei.isna().sum()/ df_final.shape[0]})\n"
+          f"----------------------------------------------------------------------------------------------------\n")
 
 
 

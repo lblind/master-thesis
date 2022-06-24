@@ -197,19 +197,7 @@ def read_climate_data(time_slice, long_slice, lat_slice, path_to_netcdf="../inpu
 
     df_excel.to_excel("../output/climate_data_preprocessed.xlsx")
 
-    # print(df_excel["time"])
-
     return df_excel
-
-
-def closest_point_great_circles(point, neighbors):
-    """
-
-    :param point:
-    :param neighbours:
-    :return:
-    """
-    pass
 
 
 def determine_closest_points_for_markets(df_spei, df_wfp_with_coords, algorithm="great circles"):
@@ -223,24 +211,22 @@ def determine_closest_points_for_markets(df_spei, df_wfp_with_coords, algorithm=
     """
 
     # First: Create list of coordinates
-    df_spei["tuple_lon_lat_spei"] = list(zip(df_spei["lat_spei"], df_spei["lon_spei"]))
-    df_wfp_with_coords["tuple_lon_lat_markets"] = list(zip(df_wfp_with_coords["MarketLatitude"],
+    df_spei["tuple_lat_lon_spei"] = list(zip(df_spei["lat_spei"], df_spei["lon_spei"]))
+    df_wfp_with_coords["tuple_lat_lon_markets"] = list(zip(df_wfp_with_coords["MarketLatitude"],
                                                            df_wfp_with_coords["MarketLongitude"]))
-    unique_spei_coords = df_spei["tuple_lon_lat_spei"].unique() # 90
-    unique_market_coords = df_wfp_with_coords["tuple_lon_lat_markets"].unique() # 121
+    unique_spei_coords = df_spei["tuple_lat_lon_spei"].unique()  # 90
+    unique_market_coords = df_wfp_with_coords["tuple_lat_lon_markets"].unique()  # 121
     # print(unique_market_coords, "\n", len(unique_market_coords))
     # print(unique_spei_coords, "\n", len(unique_spei_coords))
 
     # create two new columns
-    df_wfp_with_coords["lon_spei_nn"] = np.nan
     df_wfp_with_coords["lat_spei_nn"] = np.nan
+    df_wfp_with_coords["lon_spei_nn"] = np.nan
     df_wfp_with_coords["distance_nn"] = np.nan
 
     for market_point in unique_market_coords:
         market_lat = market_point[0]
         market_lon = market_point[1]
-
-        # print("Lat:", market_lat, "Lon:", market_lon)
 
         # iterate over all available spei points
         for i, spei_point in enumerate(unique_spei_coords):
@@ -257,16 +243,15 @@ def determine_closest_points_for_markets(df_spei, df_wfp_with_coords, algorithm=
                     min_distance = curr_distance
                     min_spei_coords = spei_point
 
-        # print(f"Min Distance: {min_distance}\nMin Spei: {min_spei_coords}")
         # assign information to min distance for market
         df_wfp_with_coords.loc[(df_wfp_with_coords["MarketLatitude"] ==
-                               market_lat) & (df_wfp_with_coords["MarketLongitude"] == market_lon), ["distance_nn"]] \
+                                market_lat) & (df_wfp_with_coords["MarketLongitude"] == market_lon), ["distance_nn"]] \
             = min_distance
         df_wfp_with_coords.loc[(df_wfp_with_coords["MarketLatitude"] ==
-                               market_lat) & (df_wfp_with_coords["MarketLongitude"] == market_lon), ["lat_spei_nn"]] \
+                                market_lat) & (df_wfp_with_coords["MarketLongitude"] == market_lon), ["lat_spei_nn"]] \
             = min_spei_coords[0]
         df_wfp_with_coords.loc[(df_wfp_with_coords["MarketLatitude"] ==
-                               market_lat) & (df_wfp_with_coords["MarketLongitude"] == market_lon), ["lon_spei_nn"]] \
+                                market_lat) & (df_wfp_with_coords["MarketLongitude"] == market_lon), ["lon_spei_nn"]] \
             = min_spei_coords[1]
 
     # return df with information on min distance
@@ -282,15 +267,12 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
 
     :return:
     """
-    print("Columns WFP:\n",df_wfp_with_coords.columns)
-    print("Columns SPEI:\n", df_spei.columns)
+    # print("Columns WFP:\n",df_wfp_with_coords.columns)
+    # print("Columns SPEI:\n", df_spei.columns)
 
     # Rename columns for merge
     df_spei.rename(columns={'lat': 'lat_spei'}, inplace=True)
     df_spei.rename(columns={'lon': 'lon_spei'}, inplace=True)
-
-
-    print("WFP before closest point:", df_wfp_with_coords.shape)
 
     # add information on closest spei measure points for markets
     df_wfp_with_coords = determine_closest_points_for_markets(df_spei=df_spei, df_wfp_with_coords=df_wfp_with_coords)
@@ -301,10 +283,64 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
     # Merge Food Price data with provided coordinates of markets (nearest neighbor market to
     # JOIN SPEI: (lat_spei, lon_spei) ON WFP nearest neighbour (lat_spei, lon_spei)
     df_final = pd.merge(df_wfp_with_coords, df_spei, on=["Year", "Month", "lat_spei_nn", "lon_spei_nn"],
-                             how="left")
+                        how="left")
 
-    print("SPEI shape:", df_spei.shape)
+    # BEAUTIFY DF
+
+    # Some renaming
+    # Mark new columns with * prefix, camel case
+    df_final.rename(columns={"Data Source": "DataSourceWFP",
+                             "lon_spei_nn": "*LonSpeiNN",
+                             "lat_spei_nn": "*LatSpeiNN",
+                             "distance_nn": "*DistanceNN",
+                             "time": "TimeSpei",
+                             "spei": "Spei",
+                             "Day": "*DaySpei",
+                             "Region": "*Region",
+                             "tuple_lat_lon_markets": "*TupleLatLonMarkets",
+                             "tuple_lat_lon_spei": "*TupleLatLonSpei",
+                             "Price Type" : "PriceType"
+                             }, inplace=True
+                    )
+
+    set_cols_before_reordering = set(df_final.columns.tolist())
+
+    # Some reordering
+    df_final = df_final.reindex(columns=["Country",
+                                         "*Region",
+                                         "Market",
+                                         "MarketID",
+
+                                         "Year",
+                                         "Month",
+                                         "Commodity",
+                                         "Unit",
+                                         "Currency",
+                                         "Price",
+                                         "Spei",
+
+                                         "*DistanceNN",
+                                         "MarketCreateDate",
+                                         "PriceType",
+                                         "DataSourceWFP",
+                                         "Adm0Code",
+                                         "Adm1Code",
+                                         "Adm2Code",
+                                         "MarketLatitude",
+                                         "MarketLongitude",
+                                         "*TupleLatLonMarkets",
+                                         "*LatSpeiNN",
+                                         "*LonSpeiNN",
+                                         "*TupleLatLonSpei",
+                                         "TimeSpei",
+                                         "*DaySpei"
+                                         ])
+
+    set_cols_after_reordering = set(df_final.columns.tolist())
+
+    diff_cols = set_cols_before_reordering.difference(set_cols_after_reordering)
+
+    if len(diff_cols) != 0:
+        raise ValueError(f"Error in reordering the columns of the final df.\nPossibly omitted columns: {diff_cols}")
 
     return df_final
-
-
