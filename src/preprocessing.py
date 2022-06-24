@@ -11,6 +11,10 @@ import netCDF4
 import numpy as np
 import datetime
 
+from geopy.distance import great_circle
+
+import math
+
 
 def get_df_wfp_preprocessed(path_to_dir_wfp_csvs_per_region="../input/food-price-dta/csv"):
     """
@@ -93,7 +97,7 @@ def read_and_merge_wfp_market_coords(df_wfp, path_to_csv_wfp_coords_markets="../
     return df_wfp_coords
 
 
-def extract_time_long_lat_slice(df_wfp_coords):
+def extract_time_lon_lat_slice(df_wfp_coords):
     """
 
     :param df_wfp_coords:
@@ -121,14 +125,14 @@ def extract_time_long_lat_slice(df_wfp_coords):
     max_long_market = df_wfp_coords.loc[df_wfp_coords["MarketLongitude"].idxmax(), "MarketLongitude"]
     min_long_market = df_wfp_coords.loc[df_wfp_coords["MarketLongitude"].idxmin(), "MarketLongitude"]
 
-    range_long_market = slice(min_long_market, max_long_market)
+    range_lon_market = slice(min_long_market, max_long_market)
 
     max_lat_market = df_wfp_coords.loc[df_wfp_coords["MarketLatitude"].idxmax(), "MarketLatitude"]
     min_lat_market = df_wfp_coords.loc[df_wfp_coords["MarketLatitude"].idxmin(), "MarketLatitude"]
 
     range_lat_market = slice(min_lat_market, max_lat_market)
 
-    return range_time, range_long_market, range_lat_market
+    return range_time, range_lon_market, range_lat_market
 
 
 def read_climate_data(time_slice, long_slice, lat_slice, path_to_netcdf="../input/climate-dta/spei01.nc"):
@@ -177,6 +181,9 @@ def read_climate_data(time_slice, long_slice, lat_slice, path_to_netcdf="../inpu
     # print(df.columns)
     print(df_excel.columns)
 
+    # Propagate nan values (for lon, lat)
+    df_excel[["lon", "lat"]] = df_excel[["lon", "lat"]].fillna(method="ffill",)
+
     time_column = df_excel["time"]
 
     df_excel["Year"] = df_excel["time"]
@@ -195,6 +202,37 @@ def read_climate_data(time_slice, long_slice, lat_slice, path_to_netcdf="../inpu
     return df_excel
 
 
+def closest_point_great_circles(point, neighbors):
+    """
+
+    :param point:
+    :param neighbours:
+    :return:
+    """
+    pass
+
+
+def determine_closest_points_for_markets(df_spei, df_wfp_with_coords, algorithm="great circles"):
+    """
+
+    References
+    ----------
+    https://www.timvink.nl/closest-coordinates/
+
+    :return:
+    """
+
+    # First: Create list of coordinates
+    df_spei["tuple_lon_lat_spei"] = list(zip(df_spei["lat_spei"], df_spei["lon_spei"]))
+    df_wfp_with_coords["tuple_lon_lat_markets"] = list(zip(df_wfp_with_coords["MarketLatitude"],
+                                                           df_wfp_with_coords["MarketLongitude"]))
+    unique_spei_coords = df_spei["tuple_lon_lat_spei"].unique()
+    unique_market_coords = df_wfp_with_coords["tuple_lon_lat_markets"].unique()
+    print(unique_market_coords)
+    print(unique_spei_coords)
+
+
+
 def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
     """
     Merge dataframe of climate data with extended food price data
@@ -208,15 +246,19 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
     print("Columns SPEI:\n", df_spei.columns)
 
     # Rename columns for merge
-    df_spei.rename(columns={'lat': 'MarketLatitude'}, inplace=True)
-    df_spei.rename(columns={'lon': 'MarketLongitude'}, inplace=True)
+    df_spei.rename(columns={'lat': 'lat_spei'}, inplace=True)
+    df_spei.rename(columns={'lon': 'lon_spei'}, inplace=True)
 
     print("Columns SPEI:\n", df_spei.columns)
 
-    # Merge Food Price data with provided coordinates of markets
-    df_final = pd.merge(df_wfp_with_coords, df_spei, on=["Year", "Month", "MarketLatitude", "MarketLongitude"],
-                             how="inner")
+    determine_closest_points_for_markets(df_spei=df_spei, df_wfp_with_coords=df_wfp_with_coords)
 
-    df_final.to_excel("../output/final-dta.xlsx")
+    # # Merge Food Price data with provided coordinates of markets
+    # df_final = pd.merge(df_wfp_with_coords, df_spei, on=["Year", "Month", "MarketLatitude", "MarketLongitude"],
+    #                          how="inner")
+    #
+    # df_final.to_excel("../output/final-dta.xlsx")
+    #
+    # return df_final
 
-    return df_final
+
