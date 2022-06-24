@@ -182,9 +182,7 @@ def read_climate_data(time_slice, long_slice, lat_slice, path_to_netcdf="../inpu
     print(df_excel.columns)
 
     # Propagate nan values (for lon, lat)
-    df_excel[["lon", "lat"]] = df_excel[["lon", "lat"]].fillna(method="ffill",)
-
-    time_column = df_excel["time"]
+    df_excel[["lon", "lat"]] = df_excel[["lon", "lat"]].fillna(method="ffill")
 
     df_excel["Year"] = df_excel["time"]
     df_excel["Year"] = df_excel["Year"].apply(lambda x: x.year)
@@ -226,10 +224,53 @@ def determine_closest_points_for_markets(df_spei, df_wfp_with_coords, algorithm=
     df_spei["tuple_lon_lat_spei"] = list(zip(df_spei["lat_spei"], df_spei["lon_spei"]))
     df_wfp_with_coords["tuple_lon_lat_markets"] = list(zip(df_wfp_with_coords["MarketLatitude"],
                                                            df_wfp_with_coords["MarketLongitude"]))
-    unique_spei_coords = df_spei["tuple_lon_lat_spei"].unique()
-    unique_market_coords = df_wfp_with_coords["tuple_lon_lat_markets"].unique()
-    print(unique_market_coords)
-    print(unique_spei_coords)
+    unique_spei_coords = df_spei["tuple_lon_lat_spei"].unique() # 90
+    unique_market_coords = df_wfp_with_coords["tuple_lon_lat_markets"].unique() # 121
+    print(unique_market_coords, "\n", len(unique_market_coords))
+    print(unique_spei_coords, "\n", len(unique_spei_coords))
+
+    # create two new columns
+    df_wfp_with_coords["lon_spei_nn"] = np.nan
+    df_wfp_with_coords["lat_spei_nn"] = np.nan
+    df_wfp_with_coords["distance_nn"] = np.nan
+
+    for market_point in unique_market_coords:
+        market_lat = market_point[0]
+        market_lon = market_point[1]
+
+        # print("Lat:", market_lat, "Lon:", market_lon)
+
+        # iterate over all available spei points
+        for i, spei_point in enumerate(unique_spei_coords):
+            if i == 0:
+                # assume min distance = with first spei coordinate
+                min_distance = great_circle(market_point, spei_point)
+
+                # remember coordinates of spei market
+                min_spei_coords = spei_point
+
+            else:
+                curr_distance = great_circle(market_point, spei_point)
+                if curr_distance < min_distance:
+                    min_distance = curr_distance
+                    min_spei_coords = spei_point
+
+        # print(f"Min Distance: {min_distance}\nMin Spei: {min_spei_coords}")
+        # assign information to min distance for market
+        df_wfp_with_coords.loc[(df_wfp_with_coords["MarketLatitude"] ==
+                               market_lat) & (df_wfp_with_coords["MarketLongitude"] == market_lon), ["distance_nn"]] \
+            = min_distance
+        df_wfp_with_coords.loc[(df_wfp_with_coords["MarketLatitude"] ==
+                               market_lat) & (df_wfp_with_coords["MarketLongitude"] == market_lon), ["lat_spei_nn"]] \
+            = min_spei_coords[0]
+        df_wfp_with_coords.loc[(df_wfp_with_coords["MarketLatitude"] ==
+                               market_lat) & (df_wfp_with_coords["MarketLongitude"] == market_lon), ["lon_spei_nn"]] \
+            = min_spei_coords[1]
+
+    # return df with information on min distance
+    return df_wfp_with_coords
+
+
 
 
 
@@ -251,14 +292,22 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
 
     print("Columns SPEI:\n", df_spei.columns)
 
-    determine_closest_points_for_markets(df_spei=df_spei, df_wfp_with_coords=df_wfp_with_coords)
+    # add information on closest spei measure points for markets
+    df_wfp_with_coords = determine_closest_points_for_markets(df_spei=df_spei, df_wfp_with_coords=df_wfp_with_coords)
 
-    # # Merge Food Price data with provided coordinates of markets
-    # df_final = pd.merge(df_wfp_with_coords, df_spei, on=["Year", "Month", "MarketLatitude", "MarketLongitude"],
-    #                          how="inner")
+
+    # df_spei.rename(columns={'lat': 'MarketLatitude'}, inplace=True)
+    # df_spei.rename(columns={'lon': 'MarketLongitude'}, inplace=True)
+
+    df_spei.rename(columns={'lat_spei': 'lat_spei_nn'}, inplace=True)
+    df_spei.rename(columns={'lon_spei': 'lon_spei_nn'}, inplace=True)
+
+    # Merge Food Price data with provided coordinates of markets (nearest neighbor market to
+    df_final = pd.merge(df_wfp_with_coords, df_spei, on=["Year", "Month", "lat_spei_nn", "lon_spei_nn"],
+                             how="inner")
     #
-    # df_final.to_excel("../output/final-dta.xlsx")
+    df_final.to_excel("../output/final-dta.xlsx")
     #
-    # return df_final
+    return df_final
 
 
