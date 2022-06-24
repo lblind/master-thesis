@@ -27,12 +27,17 @@ if __name__ == "__main__":
 
     df_spei = preproc.read_climate_data(time_slice=slice_time, long_slice=slice_lon, lat_slice=slice_lat)
 
-    # df_wfp_with_coords.to_excel("../output/df_wfp_with_coords.xlsx")
-    # df_spei.to_excel("../output/df_spei.xlsx")
+    # PART C) Merge Outcomes of Part A) and Part C) and store them as excel
+    # ---------------------------------------------------------------------
+    df_final = preproc.merge_food_price_and_climate_dfs(df_wfp_with_coords=df_wfp_with_coords, df_spei=df_spei)
 
-    # PART C) Merge Outcomes of Part A) and Part C)
-    # ---------------------------------------------
-    df_all = preproc.merge_food_price_and_climate_dfs(df_wfp_with_coords=df_wfp_with_coords, df_spei=df_spei)
+    print("Final Shape:", df_final.shape, "\nWFP after closest point:", df_wfp_with_coords.shape)
+
+    # Store intermediate results and final output as excel
+    df_wfp.to_excel("../output/df_wfp.xlsx")
+    df_wfp_with_coords.to_excel("../output/df_wfp_with_coords.xlsx")
+    df_spei.to_excel("../output/df_spei.xlsx")
+    df_final.to_excel("../output/final-dta.xlsx")
 
 
 

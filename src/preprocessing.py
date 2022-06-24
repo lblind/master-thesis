@@ -40,10 +40,12 @@ def get_df_wfp_preprocessed(path_to_dir_wfp_csvs_per_region="../input/food-price
     # southern: omit prices for: Maize (white) - retail, Rice (imported) - retail, Sorghum (red) - retail
     # as no data available for other regions
 
-    print(df_southern.Commodity.unique())
+    print("Southern unique Commodities before omission ", df_southern.Commodity.unique())
     dropped_commodities = ["Maize (white) - retail", "Rice (imported) - retail", "Sorghum (red) - retail"]
-    # df_southern = df_southern[df_southern.Commodity.isin(dropped_commodities) is False]
-    print(df_southern.Commodity.unique())
+
+    # drop commodities (southern)
+    df_southern = df_southern[~df_southern.Commodity.isin(dropped_commodities)]
+    print("Southern unique Commodities after omission", df_southern.Commodity.unique())
 
     # mark dfs corresponding to their region and combine them as one df
     df_central["Region"] = "Central"
@@ -89,7 +91,7 @@ def read_and_merge_wfp_market_coords(df_wfp, path_to_csv_wfp_coords_markets="../
     df_wfp_coords_markets.rename(columns={'MarketName': 'Market'}, inplace=True)
 
     # Merge Food Price data with provided coordinates of markets
-    df_wfp_coords = pd.merge(df_wfp, df_wfp_coords_markets, on="Market", how="inner")
+    df_wfp_coords = pd.merge(df_wfp, df_wfp_coords_markets, on="Market", how="left")
 
     # df_wfp_coords_north = pd.merge(df_wfp_north, df_wfp_coords_markets, on="Market", how="inner")
     # df_wfp_coords_south = pd.merge(df_wfp_central, df_wfp_coords_markets, on="Market", how="inner")
@@ -177,9 +179,9 @@ def read_climate_data(time_slice, long_slice, lat_slice, path_to_netcdf="../inpu
 
     df_excel = pd.read_excel("../output/climate_data.xlsx")
 
-    print(df["spei"])
-    # print(df.columns)
-    print(df_excel.columns)
+    # print(df["spei"])
+    # # print(df.columns)
+    # print(df_excel.columns)
 
     # Propagate nan values (for lon, lat)
     df_excel[["lon", "lat"]] = df_excel[["lon", "lat"]].fillna(method="ffill")
@@ -195,7 +197,7 @@ def read_climate_data(time_slice, long_slice, lat_slice, path_to_netcdf="../inpu
 
     df_excel.to_excel("../output/climate_data_preprocessed.xlsx")
 
-    print(df_excel["time"])
+    # print(df_excel["time"])
 
     return df_excel
 
@@ -226,8 +228,8 @@ def determine_closest_points_for_markets(df_spei, df_wfp_with_coords, algorithm=
                                                            df_wfp_with_coords["MarketLongitude"]))
     unique_spei_coords = df_spei["tuple_lon_lat_spei"].unique() # 90
     unique_market_coords = df_wfp_with_coords["tuple_lon_lat_markets"].unique() # 121
-    print(unique_market_coords, "\n", len(unique_market_coords))
-    print(unique_spei_coords, "\n", len(unique_spei_coords))
+    # print(unique_market_coords, "\n", len(unique_market_coords))
+    # print(unique_spei_coords, "\n", len(unique_spei_coords))
 
     # create two new columns
     df_wfp_with_coords["lon_spei_nn"] = np.nan
@@ -271,9 +273,6 @@ def determine_closest_points_for_markets(df_spei, df_wfp_with_coords, algorithm=
     return df_wfp_with_coords
 
 
-
-
-
 def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
     """
     Merge dataframe of climate data with extended food price data
@@ -290,24 +289,22 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
     df_spei.rename(columns={'lat': 'lat_spei'}, inplace=True)
     df_spei.rename(columns={'lon': 'lon_spei'}, inplace=True)
 
-    print("Columns SPEI:\n", df_spei.columns)
+
+    print("WFP before closest point:", df_wfp_with_coords.shape)
 
     # add information on closest spei measure points for markets
     df_wfp_with_coords = determine_closest_points_for_markets(df_spei=df_spei, df_wfp_with_coords=df_wfp_with_coords)
-
-
-    # df_spei.rename(columns={'lat': 'MarketLatitude'}, inplace=True)
-    # df_spei.rename(columns={'lon': 'MarketLongitude'}, inplace=True)
 
     df_spei.rename(columns={'lat_spei': 'lat_spei_nn'}, inplace=True)
     df_spei.rename(columns={'lon_spei': 'lon_spei_nn'}, inplace=True)
 
     # Merge Food Price data with provided coordinates of markets (nearest neighbor market to
+    # JOIN SPEI: (lat_spei, lon_spei) ON WFP nearest neighbour (lat_spei, lon_spei)
     df_final = pd.merge(df_wfp_with_coords, df_spei, on=["Year", "Month", "lat_spei_nn", "lon_spei_nn"],
-                             how="inner")
-    #
-    df_final.to_excel("../output/final-dta.xlsx")
-    #
+                             how="left")
+
+    print("SPEI shape:", df_spei.shape)
+
     return df_final
 
 
