@@ -7,7 +7,12 @@ This is the GitHub repository corresponding to the Master Thesis of Lena B..
 ![SDG-2.png](images/sdg-2.png) ![SDG-13.png](images/sdg-13.png) 
 
 --------------------------------------------------------------------------
-## Structure
+## Data
+The data merges data on food prices for different commodities and markets provided by WFP, as well as climate data on droughts, based on the SPEI as a drought indicator.  
+
+**The final dataset can be found [here](output/final-dta.xlsx)**.
+
+## Structure 
 ### [input](input)
 ### Food price data
 ![Screenshot vam.png](images/screenshot-wfp-vam.png)
@@ -29,7 +34,9 @@ _Screenshot: [SPEI Global Drought Monitor](https://spei.csic.es/spei_database/#m
 - [SPEI Global Drought Monitor](https://spei.csic.es/map/maps.html#months=1#month=4#year=2022)
 
 - [Selection Malawi](https://spei.csic.es/map/maps.html#months=0#month=4#year=2022)
-- [Global SPEI Database](https://spei.csic.es/database.html#p7)
+- [Global SPEI Database](https://spei.csic.es/database.html#p7)  
+
+
 
 
 --------------------------------------------------------------
