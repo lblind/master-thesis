@@ -4,13 +4,13 @@
 
 This is the GitHub repository corresponding to the Master Thesis of Lena B..
 
-![img.png](images/sdg-2.png) ![img_1.png](images/sdg-13.png) 
+![SDG-2.png](images/sdg-2.png) ![SDG-13.png](images/sdg-13.png) 
 
 --------------------------------------------------------------------------
 ## Structure
 ### [input](input)
 ### Food price data
-![img.png](images/screenshot-wfp-vam.png)
+![Screenshot vam.png](images/screenshot-wfp-vam.png)
 [Food prices](input/food-price-dta/csv) have been obtained via the open source database of WFP.  
 Temporal Unit of analysis: Month  
 
@@ -24,7 +24,7 @@ Link used to extract data for central region [14.06.2022, 14:12]:
 Further data upon [market coordinates](input/food-price-dta/longs%20and%20lats) has been kindly provided upon request via the team of WFP.
 
 ### Climate data (drought)
-![img.png](images/screenshot-spei-database.png)  
+![Screenshot Spei database.png](images/screenshot-spei-database.png)  
 _Screenshot: [SPEI Global Drought Monitor](https://spei.csic.es/spei_database/#map_name=spei01#map_position=1439)_
 - [SPEI Global Drought Monitor](https://spei.csic.es/map/maps.html#months=1#month=4#year=2022)
 
