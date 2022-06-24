@@ -4,11 +4,13 @@
 
 This is the GitHub repository corresponding to the Master Thesis of Lena B..
 
+![img.png](images/sdg-2.png) ![img_1.png](images/sdg-13.png) 
 
 --------------------------------------------------------------------------
 ## Structure
 ### [input](input)
 ### Food price data
+![img.png](images/screenshot-wfp-vam.png)
 [Food prices](input/food-price-dta/csv) have been obtained via the open source database of WFP.  
 Temporal Unit of analysis: Month  
 
