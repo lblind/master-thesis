@@ -4,11 +4,12 @@
 
 This is the GitHub repository corresponding to the Master Thesis of Lena B..
 
+
 --------------------------------------------------------------------------
 ## Structure
-### input
-#### Food price data
-Food prices have been obtained via the open source database of WFP.  
+### [input](input)
+### Food price data
+[Food prices](input/food-price-dta/csv) have been obtained via the open source database of WFP.  
 Temporal Unit of analysis: Month  
 
 _Source_:
@@ -17,23 +18,20 @@ _Source_:
 
 Link used to extract data for central region [14.06.2022, 14:12]:  
 - [Link](https://dataviz.vam.wfp.org/economic_explorer/prices)
+### Coordinates of Markets
+Further data upon [market coordinates](input/food-price-dta/longs%20and%20lats) has been kindly provided upon request via the team of WFP.
 
-#### Climate data (drought)
+### Climate data (drought)
+![img.png](images/screenshot-spei-database.png)  
+_Screenshot: [SPEI Global Drought Monitor](https://spei.csic.es/spei_database/#map_name=spei01#map_position=1439)_
 - [SPEI Global Drought Monitor](https://spei.csic.es/map/maps.html#months=1#month=4#year=2022)
 
 - [Selection Malawi](https://spei.csic.es/map/maps.html#months=0#month=4#year=2022)
-  - ![img.png](images/img.png)
 - [Global SPEI Database](https://spei.csic.es/database.html#p7)
 
 
-#### Map data (Open street map)
-[Geofabric data](https://download.geofabrik.de/)
-
-
-### src
-
 --------------------------------------------------------------
-## Useful Links
+## Additional Useful Links
 
 ### WFP
 - [VAM Resource Center](https://resources.vam.wfp.org/)
