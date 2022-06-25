@@ -31,7 +31,15 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------
     df_final = preproc.merge_food_price_and_climate_dfs(df_wfp_with_coords=df_wfp_with_coords, df_spei=df_spei)
 
-    # print("Final Shape:", df_final.shape, "\nWFP after closest point:", df_wfp_with_coords.shape)
+    df_final = preproc.classify_droughts(df_final)
+
+    # Summary statistics categorical
+    counts = df_final["SpeiCat"].value_counts()
+    print(f"Counts:\n{counts}")
+
+    counts_drought = df_final["Drought"].value_counts()
+    print(f"Counts Drought:\n{counts_drought}")
+    print(f"Share of droughts: {28671/ (28671 + 115943)}")
 
     # Store intermediate results and final output as excel
     df_wfp.to_excel("../output/df_wfp.xlsx", na_rep="-")

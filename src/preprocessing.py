@@ -262,10 +262,15 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
     """
     Merge dataframe of climate data with extended food price data
 
+    For that, a nearest neighbor matching technique for each market to the next spei measure point is used
+    (metric: great circle distance/ haversine distance)
+
+
     :param df_wfp_with_coords:
     :param df_spei:
 
-    :return:
+    :return: df_final: pd.DataFrame
+        Final Dataset containing both wfp prices, market coordinates and spei indicators
     """
     # print("Columns WFP:\n",df_wfp_with_coords.columns)
     # print("Columns SPEI:\n", df_spei.columns)
@@ -299,7 +304,7 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
                              "Region": "*Region",
                              "tuple_lat_lon_markets": "*TupleLatLonMarkets",
                              "tuple_lat_lon_spei": "*TupleLatLonSpei",
-                             "Price Type" : "PriceType"
+                             "Price Type": "PriceType"
                              }, inplace=True
                     )
 
@@ -342,5 +347,33 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
 
     if len(diff_cols) != 0:
         raise ValueError(f"Error in reordering the columns of the final df.\nPossibly omitted columns: {diff_cols}")
+
+    return df_final
+
+
+def classify_droughts(df_final):
+    """
+    For each point given, classify whether a drought has occured or not
+
+    :param df_final:
+    :return:
+
+    References
+    ----------
+    https://www.researchgate.net/figure/SPEI-drought-index-categories_tbl1_283244485
+    """
+    # bins = [-np.inf, -2, -1.5, -1, -0.99, 0.99, 1.49, 1.99]
+    bins = [-np.inf, -2, -1.5, -1, 0.99, 1.49, 1.99, np.inf]
+    category_names = ["Extremely dry (ED)", "Severely dry (SD)", "Moderately dry (MD)",
+                      "Near normal (NN)",
+                      "Moderately wet (MW)", "Very wet (VW)", "Extremely wet (EW)"]
+
+    # Spei categories
+    df_final["SpeiCat"] = pd.cut(x=df_final["Spei"], bins=bins, labels=category_names, right=True)
+
+    # Simple boolean flag
+    df_final["Drought"] = df_final["Spei"] <= -1
+
+
 
     return df_final
