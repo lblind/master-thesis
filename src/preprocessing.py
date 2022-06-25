@@ -374,6 +374,18 @@ def classify_droughts(df_final):
     # Simple boolean flag
     df_final["Drought"] = df_final["Spei"] <= -1
 
-
-
     return df_final
+
+
+def separate_df_drought_non_drought(df_final_classified):
+    """
+    Separate the already classified dataframe (drought/ non-drought)
+    into two datasets (drought/ non-drought)
+
+    :param df_final_classified: pd.DataFrame
+    :return: df_drought, df_no_drought: pd.DataFrame(s)
+    """
+    df_drought = df_final_classified[df_final_classified["Drought"]]
+    df_no_drought = df_final_classified[~df_final_classified["Drought"]]
+
+    return df_drought, df_no_drought

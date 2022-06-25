@@ -39,13 +39,20 @@ if __name__ == "__main__":
 
     counts_drought = df_final["Drought"].value_counts()
     print(f"Counts Drought:\n{counts_drought}")
-    print(f"Share of droughts: {28671/ (28671 + 115943)}")
+    print(f"Share of droughts: {counts_drought[True]}/ {(counts_drought[True] + counts_drought[False])}")
 
-    # Store intermediate results and final output as excel
-    df_wfp.to_excel("../output/df_wfp.xlsx", na_rep="-")
-    df_wfp_with_coords.to_excel("../output/df_wfp_with_coords.xlsx", na_rep="-")
-    df_spei.to_excel("../output/df_spei.xlsx", na_rep="-")
-    df_final.to_excel("../output/final-dta.xlsx", na_rep="-")
+    # Get the distinguished datasets
+    df_drought, df_no_drought = preproc.separate_df_drought_non_drought(df_final)
+
+    # # Store intermediate results and final output as excel
+    # df_wfp.to_excel("../output/df_wfp.xlsx", na_rep="-")
+    # df_wfp_with_coords.to_excel("../output/df_wfp_with_coords.xlsx", na_rep="-")
+    # df_spei.to_excel("../output/df_spei.xlsx", na_rep="-")
+    # df_final.to_excel("../output/final-dta.xlsx", na_rep="-")
+    # df_drought.to_excel("../output/df_drought.xlsx", na_rep="-")
+    # df_no_drought.to_excel("../output/df_no_drought.xlsx", na_rep="-")
+
+    print(f"Df drought shape: {df_drought.shape}\ndf_no_drought: {df_no_drought.shape}")
 
     print(f"\n----------------------------------------------------------------------------------------------------\n"
           f"PREPROCESSING: DONE.\nSuccessfully merged different datasets (wfp, wfp coords, spei)\nand stored them"
@@ -57,6 +64,12 @@ if __name__ == "__main__":
           f"Number of nan/missing values SPEI: {df_final.Spei.isna().sum()} (Share: "
           f"{df_final.Spei.isna().sum()/ df_final.shape[0]})\n"
           f"----------------------------------------------------------------------------------------------------\n")
+
+
+
+
+
+
 
 
 
