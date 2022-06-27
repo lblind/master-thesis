@@ -1,11 +1,13 @@
 """
 MAIN
+---------
 (Control)
 
 Starting point of program execution
 """
 
 import preprocessing as preproc
+import pandas as pd
 
 
 if __name__ == "__main__":
@@ -52,6 +54,9 @@ if __name__ == "__main__":
     # df_drought.to_excel("../output/df_drought.xlsx", na_rep="-")
     # df_no_drought.to_excel("../output/df_no_drought.xlsx", na_rep="-")
 
+    # TODO: create an overall summary statics excel workbook with different excel sheets
+    # (general overview, sum stats missings per market/ commodity)
+
     print(f"Df drought shape: {df_drought.shape}\ndf_no_drought: {df_no_drought.shape}")
 
     print(f"\n----------------------------------------------------------------------------------------------------\n"
@@ -65,7 +70,8 @@ if __name__ == "__main__":
           f"{df_final.Spei.isna().sum()/ df_final.shape[0]})\n"
           f"----------------------------------------------------------------------------------------------------\n")
 
-
+    # Check missings
+    preproc.check_missings_per_market_and_commodity(df_final=df_final)
 
 
 

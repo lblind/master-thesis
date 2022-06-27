@@ -1,5 +1,6 @@
 """
 PREPROCESSING
+-------------
 
 Everything belonging to the preprocessing part
 """
@@ -389,3 +390,54 @@ def separate_df_drought_non_drought(df_final_classified):
     df_no_drought = df_final_classified[~df_final_classified["Drought"]]
 
     return df_drought, df_no_drought
+
+
+def check_missings_per_market_and_commodity(df_final):
+    """
+    Summary statistics for missing values per market and
+    commodity
+
+    :param df_final:
+    :return:
+    """
+
+    print(f"\n----------------------------------------------------------------------------------------------------\n"
+          f"Missings per MARKET"
+          f"\n----------------------------------------------------------------------------------------------------\n"
+          )
+
+    # Missings per Market
+    df_sum_stats_market = pd.DataFrame()
+    for market in df_final["Market"].unique():
+        # print(market)
+        na_values = df_final[df_final.Market == market].Price.isna().sum()
+        share_of_na = na_values / df_final[df_final.Market == market].shape[0]
+        print(f"\nMarket: {market}\n# missings: {na_values}\nShare: {share_of_na}")
+        # df_sum_stats_market = pd.concat([df_sum_stats_market, ])
+
+    print(f"\n----------------------------------------------------------------------------------------------------\n"
+          f"Missings per COMMODITY"
+          f"\n----------------------------------------------------------------------------------------------------\n"
+          )
+
+    # Missings per Commodity
+    for commodity in df_final["Commodity"].unique():
+        na_values = df_final[df_final.Commodity == commodity].Price.isna().sum()
+        share_of_na = na_values / df_final[df_final.Commodity == commodity].shape[0]
+        print(f"\nCommodity: {commodity}\n# missings: {na_values}\nShare: {share_of_na}")
+        # df_sum_stats_market = pd.concat([df_sum_stats_market, ])
+
+    print(f"\n----------------------------------------------------------------------------------------------------\n"
+          f"Missings per REGION"
+          f"\n----------------------------------------------------------------------------------------------------\n"
+          )
+    # Missings per Region
+    for region in df_final["*Region"].unique():
+        na_values = df_final[df_final["*Region"] == region].Price.isna().sum()
+        share_of_na = na_values / df_final[df_final["*Region"] == region].shape[0]
+        print(f"\nRegion: {region}\n# missings: {na_values}\nShare: {share_of_na}")
+        # df_sum_stats_market = pd.concat([df_sum_stats_market, ])
+
+
+
+
