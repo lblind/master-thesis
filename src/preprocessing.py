@@ -406,8 +406,15 @@ def check_missings_per_market_and_commodity(df_final):
           f"\n----------------------------------------------------------------------------------------------------\n"
           )
 
+    output_path_stats = "../output/summary-statistics"
+    if os.path.exists(output_path_stats) is False:
+        os.makedirs(output_path_stats)
+
+    na_values_list = []
+    share_of_na_list = []
+    market_size_list = []
     # Missings per Market
-    df_sum_stats_market = pd.DataFrame()
+
     for market in df_final["Market"].unique():
         # print(market)
         na_values = df_final[df_final.Market == market].Price.isna().sum()
@@ -415,11 +422,24 @@ def check_missings_per_market_and_commodity(df_final):
         print(f"\nMarket: {market}\n# missings: {na_values}\nShare: {share_of_na}")
         # df_sum_stats_market = pd.concat([df_sum_stats_market, ])
 
+        na_values_list.append(na_values)
+        share_of_na_list.append(share_of_na)
+        market_size_list.append(df_final[df_final.Market == market].shape[0])
+
+    df_sum_stats_market = pd.DataFrame({"Market" : df_final["Market"].unique(),
+                                        "No. missings" : na_values_list,
+                                        "No. overall entries" : market_size_list,
+                                        "Share missings" : share_of_na_list},
+                                       )
+
     print(f"\n----------------------------------------------------------------------------------------------------\n"
           f"Missings per COMMODITY"
           f"\n----------------------------------------------------------------------------------------------------\n"
           )
 
+    na_values_list = []
+    share_of_na_list = []
+    commodities_size_list = []
     # Missings per Commodity
     for commodity in df_final["Commodity"].unique():
         na_values = df_final[df_final.Commodity == commodity].Price.isna().sum()
@@ -427,18 +447,54 @@ def check_missings_per_market_and_commodity(df_final):
         print(f"\nCommodity: {commodity}\n# missings: {na_values}\nShare: {share_of_na}")
         # df_sum_stats_market = pd.concat([df_sum_stats_market, ])
 
+        commodities_size_list.append(df_final[df_final.Commodity == commodity].shape[0])
+
+        na_values_list.append(na_values)
+        share_of_na_list.append(share_of_na)
+
+    df_sum_stats_commodity = pd.DataFrame({"Commodity" : df_final["Commodity"].unique(),
+                                        "No. missings" : na_values_list,
+                                        "No. overall entries" : commodities_size_list,
+                                        "Share missings" : share_of_na_list},
+                                       )
+
     print(f"\n----------------------------------------------------------------------------------------------------\n"
           f"Missings per REGION"
           f"\n----------------------------------------------------------------------------------------------------\n"
           )
     # Missings per Region
+    na_values_list = []
+    share_of_na_list = []
+    region_size_list = []
     for region in df_final["*Region"].unique():
         na_values = df_final[df_final["*Region"] == region].Price.isna().sum()
         share_of_na = na_values / df_final[df_final["*Region"] == region].shape[0]
         print(f"\nRegion: {region}\n# missings: {na_values}\nShare: {share_of_na}")
         # df_sum_stats_market = pd.concat([df_sum_stats_market, ])
 
+        na_values_list.append(na_values)
+        share_of_na_list.append(share_of_na)
+        region_size_list.append(df_final[df_final["*Region"] == region].shape[0])
 
+    df_sum_stats_region = pd.DataFrame({"*Region" : df_final["*Region"].unique(),
+                                        "No. missings" : na_values_list,
+                                        "No. overall entries" : region_size_list,
+                                        "Share missings" : share_of_na_list},
+                                       )
+
+    # General data:
+    df_sum_stats_general = pd.DataFrame({
+        "No. missings" : [df_final.Price.isna().sum()],
+        "No. overall entries": [df_final.shape[0]],
+        "Share missings" : df_final.Price.isna().sum()/ df_final.shape[0]
+    })
+
+    # Write all dfs into one excel
+    with pd.ExcelWriter(f"{output_path_stats}/missing-values.xlsx") as writer:
+        df_sum_stats_general.to_excel(writer, sheet_name="General")
+        df_sum_stats_market.to_excel(writer, sheet_name="Markets")
+        df_sum_stats_commodity.to_excel(writer, sheet_name="Commodity")
+        df_sum_stats_region.to_excel(writer, sheet_name="Region")
 
 
 

@@ -73,6 +73,12 @@ if __name__ == "__main__":
     # Check missings
     preproc.check_missings_per_market_and_commodity(df_final=df_final)
 
+    # Check that everything went okay in preprocessing part
+    if df_final.shape[0] != df_wfp.shape[0]:
+        raise ValueError(f"Something went wrong in the preprocessing part.\n"
+                         f"# rows of final/ merged df {df_final.shape[0]} should"
+                         f" be the same as for the one of wfp {df_wfp.shape[0]}")
+
 
 
 
