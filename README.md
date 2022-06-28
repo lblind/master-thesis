@@ -16,7 +16,7 @@ The data merges data on food prices for different commodities and markets provid
 ### [input](input)
 ### Food price data
 ![Screenshot vam.png](images/screenshot-wfp-vam.png)
-[Food prices](input/food-price-dta/csv) have been obtained via the open source database of WFP.  
+[Food prices](input/Malawi/food-price-dta/csv-prices) have been obtained via the open source database of WFP.  
 Temporal Unit of analysis: Month  
 
 _Source_:
@@ -26,7 +26,7 @@ _Source_:
 Link used to extract data for central region [14.06.2022, 14:12]:  
 - [Link](https://dataviz.vam.wfp.org/economic_explorer/prices)
 ### Coordinates of Markets
-Further data upon [market coordinates](input/food-price-dta/longs%20and%20lats) has been kindly provided upon request via the team of WFP.
+Further data upon [market coordinates](input/Malawi/food-price-dta/longs%20and%20lats) has been kindly provided upon request via the team of WFP.
 
 ### Climate data (drought)
 ![Screenshot Spei database.png](images/screenshot-spei-database.png)  

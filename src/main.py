@@ -5,6 +5,7 @@ MAIN
 
 Starting point of program execution
 """
+import os
 
 import preprocessing as preproc
 import pandas as pd
@@ -17,8 +18,6 @@ if __name__ == "__main__":
 
     # 1. Read food prices, convert to excel and return as merged df (for all regions)
     df_wfp = preproc.get_df_wfp_preprocessed()
-
-    print(f"UNIQUE COMMODITIES: {df_wfp.Commodity.unique()}")
 
     # 2. Read CSV containing market coordinates and merge to price data
     df_wfp_with_coords = preproc.read_and_merge_wfp_market_coords(df_wfp)
@@ -36,6 +35,12 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------
     df_final = preproc.merge_food_price_and_climate_dfs(df_wfp_with_coords=df_wfp_with_coords, df_spei=df_spei)
 
+    # Check that everything went okay in preprocessing/ merge part
+    if df_final.shape[0] != df_wfp.shape[0]:
+        raise ValueError(f"Something went wrong in the preprocessing part.\n"
+                         f"# rows of final/ merged df {df_final.shape[0]} should"
+                         f" be the same as for the one of wfp {df_wfp.shape[0]}")
+
     df_final = preproc.classify_droughts(df_final)
 
     # Summary statistics categorical
@@ -49,38 +54,15 @@ if __name__ == "__main__":
     # Get the distinguished datasets
     df_drought, df_no_drought = preproc.separate_df_drought_non_drought(df_final)
 
-    # # Store intermediate results and final output as excel
-    # df_wfp.to_excel("../output/df_wfp.xlsx", na_rep="-")
-    # df_wfp_with_coords.to_excel("../output/df_wfp_with_coords.xlsx", na_rep="-")
-    # df_spei.to_excel("../output/df_spei.xlsx", na_rep="-")
-    # df_final.to_excel("../output/final-dta.xlsx", na_rep="-")
-    # df_drought.to_excel("../output/df_drought.xlsx", na_rep="-")
-    # df_no_drought.to_excel("../output/df_no_drought.xlsx", na_rep="-")
-
-    # TODO: create an overall summary statics excel workbook with different excel sheets
-    # (general overview, sum stats missings per market/ commodity)
-
-    print(f"Df drought shape: {df_drought.shape}\ndf_no_drought: {df_no_drought.shape}")
-
-    print(f"\n----------------------------------------------------------------------------------------------------\n"
-          f"PREPROCESSING: DONE.\nSuccessfully merged different datasets (wfp, wfp coords, spei)\nand stored them"
-          f" as excel workbooks in the output folder.\n"
-          f"Summary statistics:\n"
-          f"Number of entries: {df_final.shape[0]}\n"
-          f"Number of nan/missing values Prices: {df_final.Price.isna().sum()} (Share: "
-          f"{df_final.Price.isna().sum()/ df_final.shape[0]})\n"
-          f"Number of nan/missing values SPEI: {df_final.Spei.isna().sum()} (Share: "
-          f"{df_final.Spei.isna().sum()/ df_final.shape[0]})\n"
-          f"----------------------------------------------------------------------------------------------------\n")
-
     # Check missings
-    preproc.check_missings_per_market_and_commodity(df_final=df_final)
+    preproc.summary_stats_missings(df_final=df_final)
 
-    # Check that everything went okay in preprocessing part
-    if df_final.shape[0] != df_wfp.shape[0]:
-        raise ValueError(f"Something went wrong in the preprocessing part.\n"
-                         f"# rows of final/ merged df {df_final.shape[0]} should"
-                         f" be the same as for the one of wfp {df_wfp.shape[0]}")
+    preproc.write_preprocessing_results_to_excel(df_wfp=df_wfp, df_wfp_with_coords=df_wfp_with_coords,
+                                                 df_spei=df_spei, df_final=df_final, df_drought=df_drought,
+                                                 df_no_drought=df_no_drought)
+
+
+
 
 
 

@@ -17,7 +17,7 @@ from geopy.distance import great_circle
 import math
 
 
-def get_df_wfp_preprocessed(path_to_dir_wfp_csvs_per_region="../input/food-price-dta/csv"):
+def get_df_wfp_preprocessed(path_to_dir_wfp_csvs_per_region="../input/food-price-dta/csv-prices"):
     """
 
     :param path_to_dir_wfp_csvs_per_region:
@@ -28,11 +28,11 @@ def get_df_wfp_preprocessed(path_to_dir_wfp_csvs_per_region="../input/food-price
                          f"Please review your path definition and make sure the directory exists.")
 
     central_path_to_csv_all = f"{path_to_dir_wfp_csvs_per_region}" \
-                              f"/Central_All_Commodities_WFP_2022Jun14_Malawi_FoodPricesData.csv"
+                              f"/Central_All_Commodities_WFP_2022Jun14_Malawi_FoodPricesData.csv-prices"
     northern_path_to_csv_all = f"{path_to_dir_wfp_csvs_per_region}" \
-                               f"/Northern_All_Commodities_WFP_2022Jun14_Malawi_FoodPricesData.csv"
+                               f"/Northern_All_Commodities_WFP_2022Jun14_Malawi_FoodPricesData.csv-prices"
     southern_path_to_csv_all = f"{path_to_dir_wfp_csvs_per_region}" \
-                               f"/Southern_All_Commodities_WFP_2022Jun14_Malawi_FoodPricesData.csv"
+                               f"/Southern_All_Commodities_WFP_2022Jun14_Malawi_FoodPricesData.csv-prices"
 
     df_central = pd.read_csv(central_path_to_csv_all)
     df_northern = pd.read_csv(northern_path_to_csv_all)
@@ -79,7 +79,7 @@ def get_df_wfp_preprocessed(path_to_dir_wfp_csvs_per_region="../input/food-price
 
 
 def read_and_merge_wfp_market_coords(df_wfp, path_to_csv_wfp_coords_markets="../input/food-price-dta/"
-                                                                            "longs and lats/MWI_markets.csv"):
+                                                                            "csv-lons-and-lats/MWI_markets.csv-prices"):
     """
 
     :param df_wfp:
@@ -87,7 +87,7 @@ def read_and_merge_wfp_market_coords(df_wfp, path_to_csv_wfp_coords_markets="../
 
     :return:
     """
-    # Read csv
+    # Read csv-prices
     df_wfp_coords_markets = pd.read_csv(path_to_csv_wfp_coords_markets)
     # Rename column for merge
     df_wfp_coords_markets.rename(columns={'MarketName': 'Market'}, inplace=True)
@@ -393,7 +393,7 @@ def separate_df_drought_non_drought(df_final_classified):
     return df_drought, df_no_drought
 
 
-def check_missings_per_market_and_commodity(df_final):
+def summary_stats_missings(df_final):
     """
     Summary statistics for missing values per market and
     commodity
@@ -407,7 +407,7 @@ def check_missings_per_market_and_commodity(df_final):
           f"\n----------------------------------------------------------------------------------------------------\n"
           )
 
-    output_path_stats = "../output/summary-statistics"
+    output_path_stats = f"../output/{df_final.Country.unique()[0]}/summary-statistics"
     if os.path.exists(output_path_stats) is False:
         os.makedirs(output_path_stats)
 
@@ -491,11 +491,48 @@ def check_missings_per_market_and_commodity(df_final):
     })
 
     # Write all dfs into one excel
-    with pd.ExcelWriter(f"{output_path_stats}/missing-values.xlsx") as writer:
+    with pd.ExcelWriter(f"{output_path_stats}/{df_final.Country.unique()[0]}-missing-values.xlsx") as writer:
         df_sum_stats_general.to_excel(writer, sheet_name="General")
         df_sum_stats_market.to_excel(writer, sheet_name="Markets")
         df_sum_stats_commodity.to_excel(writer, sheet_name="Commodity")
         df_sum_stats_region.to_excel(writer, sheet_name="Region")
+
+
+def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, df_final, df_drought, df_no_drought):
+    """
+
+    :param df_wfp:
+    :param df_wfp_with_coords:
+    :param df_spei:
+    :param df_final:
+    :param df_drought:
+    :param df_no_drought:
+    :return:
+    """
+    # # Store intermediate results and final output as excel
+    output_path = f"../output/{df_wfp.Country.unique()[0]}"
+    if os.path.exists(output_path) is False:
+        os.makedirs(output_path)
+
+    df_wfp.to_excel(f"{output_path}/df_wfp.xlsx", na_rep="-")
+    df_wfp_with_coords.to_excel(f"{output_path}/df_wfp_with_coords.xlsx", na_rep="-")
+    df_spei.to_excel(f"{output_path}/df_spei.xlsx", na_rep="-")
+    df_drought.to_excel(f"{output_path}/df_drought.xlsx", na_rep="-")
+    df_no_drought.to_excel(f"{output_path}/df_no_drought.xlsx", na_rep="-")
+    df_final.to_excel(f"{output_path}/final-dta.xlsx", na_rep="-")
+
+    print(f"Df drought shape: {df_drought.shape}\ndf_no_drought: {df_no_drought.shape}")
+
+    print(f"\n----------------------------------------------------------------------------------------------------\n"
+          f"PREPROCESSING: DONE.\nSuccessfully merged different datasets (wfp, wfp coords, spei)\nand stored them"
+          f" as excel workbooks in the output folder.\n"
+          f"Summary statistics:\n"
+          f"Number of entries: {df_final.shape[0]}\n"
+          f"Number of nan/missing values Prices: {df_final.Price.isna().sum()} (Share: "
+          f"{df_final.Price.isna().sum()/ df_final.shape[0]})\n"
+          f"Number of nan/missing values SPEI: {df_final.Spei.isna().sum()} (Share: "
+          f"{df_final.Spei.isna().sum()/ df_final.shape[0]})\n"
+          f"----------------------------------------------------------------------------------------------------\n")
 
 
 
