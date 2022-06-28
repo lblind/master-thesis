@@ -17,22 +17,25 @@ from geopy.distance import great_circle
 import math
 
 
-def get_df_wfp_preprocessed(path_to_dir_wfp_csvs_per_region="../input/food-price-dta/csv-prices"):
+def get_df_wfp_preprocessed(country):
     """
 
+    :param country:
     :param path_to_dir_wfp_csvs_per_region:
     :return:
     """
+
+    path_to_dir_wfp_csvs_per_region = f"../input/{country}/food-price-dta/csv-prices"
     if os.path.exists(path_to_dir_wfp_csvs_per_region) is False:
         raise ValueError(f"Directory containing csvs <{path_to_dir_wfp_csvs_per_region}> not found.\n"
                          f"Please review your path definition and make sure the directory exists.")
 
     central_path_to_csv_all = f"{path_to_dir_wfp_csvs_per_region}" \
-                              f"/Central_All_Commodities_WFP_2022Jun14_Malawi_FoodPricesData.csv-prices"
+                              f"/Central_All_Commodities_WFP_2022Jun14_Malawi_FoodPricesData.csv"
     northern_path_to_csv_all = f"{path_to_dir_wfp_csvs_per_region}" \
-                               f"/Northern_All_Commodities_WFP_2022Jun14_Malawi_FoodPricesData.csv-prices"
+                               f"/Northern_All_Commodities_WFP_2022Jun14_Malawi_FoodPricesData.csv"
     southern_path_to_csv_all = f"{path_to_dir_wfp_csvs_per_region}" \
-                               f"/Southern_All_Commodities_WFP_2022Jun14_Malawi_FoodPricesData.csv-prices"
+                               f"/Southern_All_Commodities_WFP_2022Jun14_Malawi_FoodPricesData.csv"
 
     df_central = pd.read_csv(central_path_to_csv_all)
     df_northern = pd.read_csv(northern_path_to_csv_all)
@@ -78,15 +81,18 @@ def get_df_wfp_preprocessed(path_to_dir_wfp_csvs_per_region="../input/food-price
     return df_merged_all_regions
 
 
-def read_and_merge_wfp_market_coords(df_wfp, path_to_csv_wfp_coords_markets="../input/food-price-dta/"
-                                                                            "csv-lons-and-lats/MWI_markets.csv-prices"):
+def read_and_merge_wfp_market_coords(df_wfp, country):
     """
 
+    :param country:
     :param df_wfp:
     :param path_to_csv_wfp_coords_markets:
 
     :return:
     """
+
+    path_to_csv_wfp_coords_markets = f"../input/{country}/food-price-dta/csv-lons-and-lats/MWI_markets.csv"
+
     # Read csv-prices
     df_wfp_coords_markets = pd.read_csv(path_to_csv_wfp_coords_markets)
     # Rename column for merge
@@ -139,7 +145,7 @@ def extract_time_lon_lat_slice(df_wfp_coords):
     return range_time, range_lon_market, range_lat_market
 
 
-def read_climate_data(time_slice, long_slice, lat_slice, path_to_netcdf="../input/climate-dta/spei01.nc"):
+def read_climate_data(time_slice, long_slice, lat_slice, country, path_to_netcdf="../input/Global/climate-dta/spei01.nc"):
     """
     Reads the netcdf and converts it into a pandas df
 
@@ -168,18 +174,27 @@ def read_climate_data(time_slice, long_slice, lat_slice, path_to_netcdf="../inpu
     for i, var in enumerate(ds.variables.values()):
         print(f"\nVARIABLE {i}:\n", var)
 
-    # rint("First row:", ds[0, :, :])
-
     # extract the data per column
     lon_arr = ds.variables["lon"][:]
     lat_arr = ds.variables["lat"][:]
     time_arr = ds.variables["time"][:]
     spei_arr = ds.variables["spei"][:]
 
-    df = ds.to_dataframe()
-    df.to_excel("../output/climate_data.xlsx")
+    # Create dir if non existent
+    output_path = f"../output/{country}/intermediate-results"
 
-    df_excel = pd.read_excel("../output/climate_data.xlsx")
+    if os.path.exists(output_path) is False:
+        os.makedirs(output_path)
+
+    # store relevant slice in dataframe
+    df = ds.to_dataframe()
+    df.to_excel(f"{output_path}/{country}-tmp-spei-sliced.xlsx")
+
+    # read slice again (proper format)
+    df_excel = pd.read_excel(f"{output_path}/{country}-tmp-spei-sliced.xlsx")
+
+    # delete temporary excel file again
+    os.remove(f"{output_path}/{country}-tmp-spei-sliced.xlsx")
 
     # print(df["spei"])
     # # print(df.columns)
@@ -197,7 +212,8 @@ def read_climate_data(time_slice, long_slice, lat_slice, path_to_netcdf="../inpu
     df_excel["Day"] = df_excel["time"]
     df_excel["Day"] = df_excel["Day"].apply(lambda x: x.day)
 
-    df_excel.to_excel("../output/climate_data_preprocessed.xlsx")
+    # store results as excel
+    # df_excel.to_excel(f"{output_path}/{country}-spei-sliced-preprocessed.xlsx")
 
     return df_excel
 
@@ -509,17 +525,22 @@ def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, df
     :param df_no_drought:
     :return:
     """
-    # # Store intermediate results and final output as excel
-    output_path = f"../output/{df_wfp.Country.unique()[0]}"
-    if os.path.exists(output_path) is False:
-        os.makedirs(output_path)
+    # read country out of dataset
+    country = df_wfp.Country.unique()[0]
 
-    df_wfp.to_excel(f"{output_path}/df_wfp.xlsx", na_rep="-")
-    df_wfp_with_coords.to_excel(f"{output_path}/df_wfp_with_coords.xlsx", na_rep="-")
-    df_spei.to_excel(f"{output_path}/df_spei.xlsx", na_rep="-")
-    df_drought.to_excel(f"{output_path}/df_drought.xlsx", na_rep="-")
-    df_no_drought.to_excel(f"{output_path}/df_no_drought.xlsx", na_rep="-")
-    df_final.to_excel(f"{output_path}/final-dta.xlsx", na_rep="-")
+    # Store intermediate results and final output as excel
+    output_path_final = f"../output/{country}"
+    output_path_intermediate = f"{output_path_final}/intermediate-results"
+    if os.path.exists(output_path_intermediate) is False:
+        os.makedirs(output_path_intermediate)
+
+    df_wfp.to_excel(f"{output_path_intermediate}/df_wfp.xlsx", na_rep="-")
+    df_wfp_with_coords.to_excel(f"{output_path_intermediate}/df_wfp_with_coords.xlsx", na_rep="-")
+    df_spei.to_excel(f"{output_path_intermediate}/df_spei.xlsx", na_rep="-")
+
+    df_drought.to_excel(f"{output_path_final}/{country}-drought.xlsx", na_rep="-")
+    df_no_drought.to_excel(f"{output_path_final}/{country}-no-drought.xlsx", na_rep="-")
+    df_final.to_excel(f"{output_path_final}/{country}-final-dta.xlsx", na_rep="-")
 
     print(f"Df drought shape: {df_drought.shape}\ndf_no_drought: {df_no_drought.shape}")
 
