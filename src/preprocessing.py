@@ -17,7 +17,7 @@ from geopy.distance import great_circle
 import math
 
 
-def get_df_wfp_preprocessed_one_excel(country, dropped_commodities=None):
+def get_df_wfp_preprocessed_excel_per_country(country, dropped_commodities=None):
     """
     Reads the provided csv for the country
 
@@ -26,9 +26,9 @@ def get_df_wfp_preprocessed_one_excel(country, dropped_commodities=None):
 
     :return:
     """
-    # if no commodities is given -> default value:
-    if dropped_commodities is None:
-        dropped_commodities = ["Maize (white)", "Rice (imported)", "Sorghum (red)"]
+    # # if no commodities is given -> default value:
+    # if dropped_commodities is None:
+    #     dropped_commodities = ["Maize (white)", "Rice (imported)", "Sorghum (red)"]
 
     path_to_dir_wfp_csvs_per_region = f"../input/{country}/food-price-dta/csv-prices"
     if os.path.exists(path_to_dir_wfp_csvs_per_region) is False:
@@ -48,11 +48,12 @@ def get_df_wfp_preprocessed_one_excel(country, dropped_commodities=None):
         print(f"\nRegion: {region_name}\nNo. of Markets: {df_country.Market.unique().size}\n"
               f"Commodities before omission:\n{df_country.Commodity.unique()}")
 
-    # drop commodities (southern)
-    df_country = df_country[~df_country.Commodity.isin(dropped_commodities)]
-    print("Unique Commodities after omission:\n", df_country.Commodity.unique())
+    if dropped_commodities is not None:
+        # drop commodities
+        df_country = df_country[~df_country.Commodity.isin(dropped_commodities)]
+        print(f"Unique Commodities after omission of:\n{dropped_commodities}\n", df_country.Commodity.unique())
 
-    print(f"Overall number of markets entire country ({country})", len(df_country["Market"].unique()))
+        print(f"Overall number of markets entire country ({country})", len(df_country["Market"].unique()))
     return df_country
 
 
@@ -65,11 +66,11 @@ def get_df_wfp_preprocessed_excel_per_region(country, dropped_commodities=None):
 
     :return:
     """
-    # if no commodities is given -> default value:
-    if dropped_commodities is None:
-        dropped_commodities = ["Maize (white)", "Rice (imported)", "Sorghum (red)"]
+    # # if no commodities is given -> default value:
+    # if dropped_commodities is None:
+    #     dropped_commodities = ["Maize (white)", "Rice (imported)", "Sorghum (red)"]
 
-    path_to_dir_wfp_csvs_per_region = f"../input/{country}/food-price-dta/csv-prices"
+    path_to_dir_wfp_csvs_per_region = f"../input/{country}/food-price-dta/csv-prices/Regions"
     if os.path.exists(path_to_dir_wfp_csvs_per_region) is False:
         raise ValueError(f"Directory containing csvs <{path_to_dir_wfp_csvs_per_region}> not found.\n"
                          f"Please review your path definition and make sure the directory exists.")
@@ -89,11 +90,12 @@ def get_df_wfp_preprocessed_excel_per_region(country, dropped_commodities=None):
 
         # print unique commodities
         print(f"\nRegion: {region_name}\nNo. of Markets: {df_region.Market.unique().size}\n"
-              f"Commodities before ommission:\n{df_region.Commodity.unique()}")
+              f"Commodities before omission:\n{df_region.Commodity.unique()}")
 
-        # drop commodities (southern)
-        df_region = df_region[~df_region.Commodity.isin(dropped_commodities)]
-        print("Unique Commodities after omission:\n", df_region.Commodity.unique())
+        if dropped_commodities is not None:
+            # drop commodities
+            df_region = df_region[~df_region.Commodity.isin(dropped_commodities)]
+            print("Unique Commodities after omission:\n", df_region.Commodity.unique())
 
     df_merged_all_regions = pd.concat(df_regions_list, ignore_index=True)
     print(df_merged_all_regions)
@@ -442,6 +444,8 @@ def summary_stats_missings(df_final):
     :return:
     """
 
+    no_overall_entries = df_final.shape[0]
+
     print(f"\n----------------------------------------------------------------------------------------------------\n"
           f"Missings per MARKET"
           f"\n----------------------------------------------------------------------------------------------------\n"
@@ -454,8 +458,9 @@ def summary_stats_missings(df_final):
     na_values_list = []
     share_of_na_list = []
     market_size_list = []
-    # Missings per Market
+    share_market_country_list = []
 
+    # Missings per Market
     for market in df_final["Market"].unique():
         # print(market)
         na_values = df_final[df_final.Market == market].Price.isna().sum()
@@ -466,10 +471,12 @@ def summary_stats_missings(df_final):
         na_values_list.append(na_values)
         share_of_na_list.append(share_of_na)
         market_size_list.append(df_final[df_final.Market == market].shape[0])
+        share_market_country_list.append(market_size_list[-1]/no_overall_entries)
 
     df_sum_stats_market = pd.DataFrame({"Market" : df_final["Market"].unique(),
                                         "No. missings" : na_values_list,
                                         "No. overall entries" : market_size_list,
+                                        "Share Market / Country" : share_market_country_list,
                                         "Share missings" : share_of_na_list},
                                        )
 
@@ -481,21 +488,22 @@ def summary_stats_missings(df_final):
     na_values_list = []
     share_of_na_list = []
     commodities_size_list = []
+    share_commodity_country_list = []
     # Missings per Commodity
     for commodity in df_final["Commodity"].unique():
         na_values = df_final[df_final.Commodity == commodity].Price.isna().sum()
         share_of_na = na_values / df_final[df_final.Commodity == commodity].shape[0]
         print(f"\nCommodity: {commodity}\n# missings: {na_values}\nShare: {share_of_na}")
-        # df_sum_stats_market = pd.concat([df_sum_stats_market, ])
-
-        commodities_size_list.append(df_final[df_final.Commodity == commodity].shape[0])
 
         na_values_list.append(na_values)
         share_of_na_list.append(share_of_na)
+        commodities_size_list.append(df_final[df_final.Commodity == commodity].shape[0])
+        share_commodity_country_list.append(commodities_size_list[-1] / no_overall_entries)
 
     df_sum_stats_commodity = pd.DataFrame({"Commodity" : df_final["Commodity"].unique(),
                                         "No. missings" : na_values_list,
                                         "No. overall entries" : commodities_size_list,
+                                        "Share Commodity / Country" : share_commodity_country_list,
                                         "Share missings" : share_of_na_list},
                                        )
 
@@ -507,6 +515,7 @@ def summary_stats_missings(df_final):
     na_values_list = []
     share_of_na_list = []
     region_size_list = []
+    share_region_country_list = []
     for region in df_final["Region"].unique():
         na_values = df_final[df_final["Region"] == region].Price.isna().sum()
         share_of_na = na_values / df_final[df_final["Region"] == region].shape[0]
@@ -516,10 +525,12 @@ def summary_stats_missings(df_final):
         na_values_list.append(na_values)
         share_of_na_list.append(share_of_na)
         region_size_list.append(df_final[df_final["Region"] == region].shape[0])
+        share_region_country_list.append(region_size_list[-1] / no_overall_entries)
 
     df_sum_stats_region = pd.DataFrame({"Region" : df_final["Region"].unique(),
                                         "No. missings" : na_values_list,
                                         "No. overall entries" : region_size_list,
+                                        "Share Region/ Country" : share_region_country_list,
                                         "Share missings" : share_of_na_list},
                                        )
 
