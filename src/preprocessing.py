@@ -17,7 +17,46 @@ from geopy.distance import great_circle
 import math
 
 
-def get_df_wfp_preprocessed(country, dropped_commodities=None):
+def get_df_wfp_preprocessed_one_excel(country, dropped_commodities=None):
+    """
+    Reads the provided csv for the country
+
+    :param country:
+    :param dropped_commodities:
+
+    :return:
+    """
+    # if no commodities is given -> default value:
+    if dropped_commodities is None:
+        dropped_commodities = ["Maize (white)", "Rice (imported)", "Sorghum (red)"]
+
+    path_to_dir_wfp_csvs_per_region = f"../input/{country}/food-price-dta/csv-prices"
+    if os.path.exists(path_to_dir_wfp_csvs_per_region) is False:
+        raise ValueError(f"Directory containing csvs <{path_to_dir_wfp_csvs_per_region}> not found.\n"
+                         f"Please review your path definition and make sure the directory exists.")
+
+    # iterate over all csvs in that folder
+    for file in glob.glob(f"{path_to_dir_wfp_csvs_per_region}/*.csv"):
+        df_country = pd.read_csv(file)
+
+        # Extract region name / rename column
+        df_country.rename(columns={"Admin 1" : "Region"}, inplace=True)
+
+    # summary stats region
+    for region_name in df_country.Region.unique():
+        # print unique commodities
+        print(f"\nRegion: {region_name}\nNo. of Markets: {df_country.Market.unique().size}\n"
+              f"Commodities before omission:\n{df_country.Commodity.unique()}")
+
+    # drop commodities (southern)
+    df_country = df_country[~df_country.Commodity.isin(dropped_commodities)]
+    print("Unique Commodities after omission:\n", df_country.Commodity.unique())
+
+    print(f"Overall number of markets entire country ({country})", len(df_country["Market"].unique()))
+    return df_country
+
+
+def get_df_wfp_preprocessed_excel_per_region(country, dropped_commodities=None):
     """
     Reads the different csvs per region
 
@@ -304,7 +343,7 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
                              "time": "TimeSpei",
                              "spei": "Spei",
                              "Day": "*DaySpei",
-                             "Region": "*Region",
+                             "Region": "Region",
                              "tuple_lat_lon_markets": "*TupleLatLonMarkets",
                              "tuple_lat_lon_spei": "*TupleLatLonSpei",
                              "Price Type": "PriceType"
@@ -315,7 +354,7 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
 
     # Some reordering
     df_final = df_final.reindex(columns=["Country",
-                                         "*Region",
+                                         "Region",
                                          "Market",
                                          "MarketID",
 
@@ -356,7 +395,7 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
 
 def classify_droughts(df_final):
     """
-    For each point given, classify whether a drought has occured or not
+    For each point given, classify whether a drought has occurred or not
 
     :param df_final:
     :return:
@@ -468,17 +507,17 @@ def summary_stats_missings(df_final):
     na_values_list = []
     share_of_na_list = []
     region_size_list = []
-    for region in df_final["*Region"].unique():
-        na_values = df_final[df_final["*Region"] == region].Price.isna().sum()
-        share_of_na = na_values / df_final[df_final["*Region"] == region].shape[0]
+    for region in df_final["Region"].unique():
+        na_values = df_final[df_final["Region"] == region].Price.isna().sum()
+        share_of_na = na_values / df_final[df_final["Region"] == region].shape[0]
         print(f"\nRegion: {region}\n# missings: {na_values}\nShare: {share_of_na}")
         # df_sum_stats_market = pd.concat([df_sum_stats_market, ])
 
         na_values_list.append(na_values)
         share_of_na_list.append(share_of_na)
-        region_size_list.append(df_final[df_final["*Region"] == region].shape[0])
+        region_size_list.append(df_final[df_final["Region"] == region].shape[0])
 
-    df_sum_stats_region = pd.DataFrame({"*Region" : df_final["*Region"].unique(),
+    df_sum_stats_region = pd.DataFrame({"Region" : df_final["Region"].unique(),
                                         "No. missings" : na_values_list,
                                         "No. overall entries" : region_size_list,
                                         "Share missings" : share_of_na_list},
