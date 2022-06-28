@@ -42,7 +42,8 @@ def get_df_wfp_preprocessed(path_to_dir_wfp_csvs_per_region="../input/food-price
     # as no data available for other regions
 
     print("Southern unique Commodities before omission ", df_southern.Commodity.unique())
-    dropped_commodities = ["Maize (white) - retail", "Rice (imported) - retail", "Sorghum (red) - retail"]
+    # Hint: the - retail (as in the vam base) is omitted here, as stored in another variable
+    dropped_commodities = ["Maize (white)", "Rice (imported)", "Sorghum (red)"]
 
     # drop commodities (southern)
     df_southern = df_southern[~df_southern.Commodity.isin(dropped_commodities)]

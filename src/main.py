@@ -17,6 +17,9 @@ if __name__ == "__main__":
 
     # 1. Read food prices, convert to excel and return as merged df (for all regions)
     df_wfp = preproc.get_df_wfp_preprocessed()
+
+    print(f"UNIQUE COMMODITIES: {df_wfp.Commodity.unique()}")
+
     # 2. Read CSV containing market coordinates and merge to price data
     df_wfp_with_coords = preproc.read_and_merge_wfp_market_coords(df_wfp)
     # 3. Preparation for merge with Part B): Extract range of 3 main variables: time, longitude, latitude
