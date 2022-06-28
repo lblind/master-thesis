@@ -4,7 +4,7 @@ PREPROCESSING
 
 Everything belonging to the preprocessing part
 """
-
+import glob
 import os
 import pandas as pd
 import xarray as xr
@@ -17,72 +17,55 @@ from geopy.distance import great_circle
 import math
 
 
-def get_df_wfp_preprocessed(country):
+def get_df_wfp_preprocessed(country, dropped_commodities=None):
     """
+    Reads the different csvs per region
 
     :param country:
-    :param path_to_dir_wfp_csvs_per_region:
+    :param dropped_commodities:
+
     :return:
     """
+    # if no commodities is given -> default value:
+    if dropped_commodities is None:
+        dropped_commodities = ["Maize (white)", "Rice (imported)", "Sorghum (red)"]
 
     path_to_dir_wfp_csvs_per_region = f"../input/{country}/food-price-dta/csv-prices"
     if os.path.exists(path_to_dir_wfp_csvs_per_region) is False:
         raise ValueError(f"Directory containing csvs <{path_to_dir_wfp_csvs_per_region}> not found.\n"
                          f"Please review your path definition and make sure the directory exists.")
 
-    central_path_to_csv_all = f"{path_to_dir_wfp_csvs_per_region}" \
-                              f"/Central_All_Commodities_WFP_2022Jun14_Malawi_FoodPricesData.csv"
-    northern_path_to_csv_all = f"{path_to_dir_wfp_csvs_per_region}" \
-                               f"/Northern_All_Commodities_WFP_2022Jun14_Malawi_FoodPricesData.csv"
-    southern_path_to_csv_all = f"{path_to_dir_wfp_csvs_per_region}" \
-                               f"/Southern_All_Commodities_WFP_2022Jun14_Malawi_FoodPricesData.csv"
+    df_regions_list = []
+    # iterate over all csvs in that folder
+    for file in glob.glob(f"{path_to_dir_wfp_csvs_per_region}/*.csv"):
+        # Extract region name
+        csv_file_name = os.path.basename(file)
+        region_name = csv_file_name.split("_")[0]
 
-    df_central = pd.read_csv(central_path_to_csv_all)
-    df_northern = pd.read_csv(northern_path_to_csv_all)
-    df_southern = pd.read_csv(southern_path_to_csv_all)
+        df_region = pd.read_csv(file)
 
-    # southern: omit prices for: Maize (white) - retail, Rice (imported) - retail, Sorghum (red) - retail
-    # as no data available for other regions
+        # extract region name
+        df_region["Region"] = region_name
+        df_regions_list.append(df_region)
 
-    print("Southern unique Commodities before omission ", df_southern.Commodity.unique())
-    # Hint: the - retail (as in the vam base) is omitted here, as stored in another variable
-    dropped_commodities = ["Maize (white)", "Rice (imported)", "Sorghum (red)"]
+        # print unique commodities
+        print(f"\nRegion: {region_name}\nNo. of Markets: {df_region.Market.unique().size}\n"
+              f"Commodities before ommission:\n{df_region.Commodity.unique()}")
 
-    # drop commodities (southern)
-    df_southern = df_southern[~df_southern.Commodity.isin(dropped_commodities)]
-    print("Southern unique Commodities after omission", df_southern.Commodity.unique())
+        # drop commodities (southern)
+        df_region = df_region[~df_region.Commodity.isin(dropped_commodities)]
+        print("Unique Commodities after omission:\n", df_region.Commodity.unique())
 
-    # mark dfs corresponding to their region and combine them as one df
-    df_central["Region"] = "Central"
-    df_northern["Region"] = "North"
-    df_southern["Region"] = "South"
-
-    df_merged_all_regions = pd.concat([df_central, df_northern, df_southern], ignore_index=True)
+    df_merged_all_regions = pd.concat(df_regions_list, ignore_index=True)
     print(df_merged_all_regions)
 
-    # Some summary statistics
-    df_regions_list = [df_central, df_northern, df_southern]
-
-    for i, df in enumerate(df_regions_list):
-        print(f"#------------------------------------------------------------------------\n"
-              f"\nSummary statistic"
-              f"# [{i}]\n"
-              f"Size of Market: {df.Market.unique().size}\n"
-              f"\n#------------------------------------------------------------------------\n")
-        # print(df)
-        # print(df.columns)
-        # for column in df.columns:
-        #     print(df[column].unique())
-        #     # print(df["Commodity"].unique())
-        #     # print(df["Year"].unique())
-        #     # print(df["Market"].unique())
-
-    print("Overall size of markets", len(df_merged_all_regions["Market"].unique()))
+    print(f"Overall number of markets entire country ({country})", len(df_merged_all_regions["Market"].unique()))
     return df_merged_all_regions
 
 
 def read_and_merge_wfp_market_coords(df_wfp, country):
     """
+    Match the wfp market coordinates (lats, lons) to the wfp price data
 
     :param country:
     :param df_wfp:
@@ -109,6 +92,7 @@ def read_and_merge_wfp_market_coords(df_wfp, country):
 
 def extract_time_lon_lat_slice(df_wfp_coords):
     """
+    Extract the slices that belong to the wfp data
 
     :param df_wfp_coords:
     :return:
@@ -218,8 +202,9 @@ def read_climate_data(time_slice, long_slice, lat_slice, country, path_to_netcdf
     return df_excel
 
 
-def determine_closest_points_for_markets(df_spei, df_wfp_with_coords, algorithm="great circles"):
+def determine_closest_points_for_markets(df_spei, df_wfp_with_coords):
     """
+    For each market, determine the closest spei measure point (algorithm = great circles)
 
     References
     ----------

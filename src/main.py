@@ -13,14 +13,18 @@ import pandas as pd
 
 if __name__ == "__main__":
 
+    # CONFIGURATION
+    # -----------------------------------
     # 1) set country
     country = "Malawi"
+    # 2) set commmodities to drop
+    dropped_commodities = ["Maize (white)", "Rice (imported)", "Sorghum (red)"]
 
     # PART A) Get food price part of data
     # -----------------------------------
 
     # 1. Read food prices, convert to excel and return as merged df (for all regions)
-    df_wfp = preproc.get_df_wfp_preprocessed(country=country)
+    df_wfp = preproc.get_df_wfp_preprocessed(country=country, dropped_commodities=dropped_commodities)
 
     # 2. Read CSV containing market coordinates and merge to price data
     df_wfp_with_coords = preproc.read_and_merge_wfp_market_coords(df_wfp=df_wfp, country=country)
