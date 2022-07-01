@@ -40,7 +40,7 @@ def get_df_wfp_preprocessed_excel_per_country(country, dropped_commodities=None)
         df_country = pd.read_csv(file)
 
         # Extract region name / rename column
-        df_country.rename(columns={"Admin 1" : "Region"}, inplace=True)
+        df_country.rename(columns={"Admin 1": "Region"}, inplace=True)
 
     # summary stats region
     for region_name in df_country.Region.unique():
@@ -170,7 +170,8 @@ def extract_time_lon_lat_slice(df_wfp_coords):
     return range_time, range_lon_market, range_lat_market
 
 
-def read_climate_data(time_slice, long_slice, lat_slice, country, path_to_netcdf="../input/Global/climate-dta/spei01.nc"):
+def read_climate_data(time_slice, long_slice, lat_slice, country,
+                      path_to_netcdf="../input/Global/climate-dta/spei01.nc"):
     """
     Reads the netcdf and converts it into a pandas df
 
@@ -444,145 +445,76 @@ def summary_stats_missings(df_final, var_list_groups_by=None):
     :param df_final:
     :return:
     """
+
     # Set default values for var_list_group_by
     if var_list_groups_by is None:
-        var_list_groups_by = ["Market", "Region", "Year"]
+        var_list_groups_by = ["Market", "Region", "Commodity", "Year"]
 
-    for group in var_list_groups_by:
-        pass
-
+    # read number of overall entries/ rows
     no_overall_entries = df_final.shape[0]
 
-    print(f"\n----------------------------------------------------------------------------------------------------\n"
-          f"Missings per MARKET"
-          f"\n----------------------------------------------------------------------------------------------------\n"
-          )
-
+    # Make sure that output directory exists
     output_path_stats = f"../output/{df_final.Country.unique()[0]}/summary-statistics"
     if os.path.exists(output_path_stats) is False:
         os.makedirs(output_path_stats)
 
-    na_values_list = []
-    share_of_na_list = []
-    market_size_list = []
-    share_market_country_list = []
+    list_dfs_sum_stats = []
 
-    # Missings per Market
-    for market in df_final["Market"].unique():
-        # print(market)
-        na_values = df_final[df_final.Market == market].Price.isna().sum()
-        share_of_na = na_values / df_final[df_final.Market == market].shape[0]
-        print(f"\nMarket: {market}\n# missings: {na_values}\nShare: {share_of_na}")
-        # df_sum_stats_market = pd.concat([df_sum_stats_market, ])
+    for group in var_list_groups_by:
 
-        na_values_list.append(na_values)
-        share_of_na_list.append(share_of_na)
-        market_size_list.append(df_final[df_final.Market == market].shape[0])
-        share_market_country_list.append(market_size_list[-1]/no_overall_entries)
+        print(
+            f"\n----------------------------------------------------------------------------------------------------\n"
+            f"Missings per variable: <{group}>"
+            f"\n----------------------------------------------------------------------------------------------------\n"
+            )
 
-    df_sum_stats_market = pd.DataFrame({"Market" : df_final["Market"].unique(),
-                                        "No. missings" : na_values_list,
-                                        "No. overall entries" : market_size_list,
-                                        "Share Market / Country" : share_market_country_list,
-                                        "Share missings" : share_of_na_list},
-                                       )
+        # List countaining the number of nan values per unique value in that variable
+        na_values_list = []
+        # List containing the share of nan values per unique value in that variable
+        share_of_na_list = []
+        # List containing the number of entries belonging to that unique value in the variable
+        unique_value_size_list = []
+        # List containing the share of that unique value in the overall number of possible values for that variable
+        share_unique_value_country_list = []
 
-    print(f"\n----------------------------------------------------------------------------------------------------\n"
-          f"Missings per COMMODITY"
-          f"\n----------------------------------------------------------------------------------------------------\n"
-          )
+        # Missings per unique value in that group
+        for value in df_final[group].unique():
+            # print(market)
+            na_values = df_final[df_final[group] == value].Price.isna().sum()
+            share_of_na = na_values / df_final[df_final[group] == value].shape[0]
+            print(f"\n[Var: {group}] Value <{value}>\n# missings: {na_values}\nShare: {share_of_na}")
 
-    na_values_list = []
-    share_of_na_list = []
-    commodities_size_list = []
-    share_commodity_country_list = []
-    # Missings per Commodity
-    for commodity in df_final["Commodity"].unique():
-        na_values = df_final[df_final.Commodity == commodity].Price.isna().sum()
-        share_of_na = na_values / df_final[df_final.Commodity == commodity].shape[0]
-        print(f"\nCommodity: {commodity}\n# missings: {na_values}\nShare: {share_of_na}")
+            na_values_list.append(na_values)
+            share_of_na_list.append(share_of_na)
+            unique_value_size_list.append(df_final[df_final[group] == value].shape[0])
+            share_unique_value_country_list.append(unique_value_size_list[-1] / no_overall_entries)
 
-        na_values_list.append(na_values)
-        share_of_na_list.append(share_of_na)
-        commodities_size_list.append(df_final[df_final.Commodity == commodity].shape[0])
-        share_commodity_country_list.append(commodities_size_list[-1] / no_overall_entries)
+        df_sum_stats_group = pd.DataFrame({group: df_final[group].unique(),
+                                           "No. missings": na_values_list,
+                                           "No. overall entries": unique_value_size_list,
+                                           f"Share {group} / Country": share_unique_value_country_list,
+                                           "Share missings": share_of_na_list},
+                                          )
+        # sort values
+        df_sum_stats_group.sort_values(by=group)
+        # append summary statistics for that group to overall list
+        list_dfs_sum_stats.append(df_sum_stats_group)
 
-    df_sum_stats_commodity = pd.DataFrame({"Commodity" : df_final["Commodity"].unique(),
-                                        "No. missings" : na_values_list,
-                                        "No. overall entries" : commodities_size_list,
-                                        "Share Commodity / Country" : share_commodity_country_list,
-                                        "Share missings" : share_of_na_list},
-                                       )
-
-    print(f"\n----------------------------------------------------------------------------------------------------\n"
-          f"Missings per REGION"
-          f"\n----------------------------------------------------------------------------------------------------\n"
-          )
-    # Missings per Region
-    na_values_list = []
-    share_of_na_list = []
-    region_size_list = []
-    share_region_country_list = []
-    for region in df_final["Region"].unique():
-        na_values = df_final[df_final["Region"] == region].Price.isna().sum()
-        share_of_na = na_values / df_final[df_final["Region"] == region].shape[0]
-        print(f"\nRegion: {region}\n# missings: {na_values}\nShare: {share_of_na}")
-        # df_sum_stats_market = pd.concat([df_sum_stats_market, ])
-
-        na_values_list.append(na_values)
-        share_of_na_list.append(share_of_na)
-        region_size_list.append(df_final[df_final["Region"] == region].shape[0])
-        share_region_country_list.append(region_size_list[-1] / no_overall_entries)
-
-    df_sum_stats_region = pd.DataFrame({"Region" : df_final["Region"].unique(),
-                                        "No. missings" : na_values_list,
-                                        "No. overall entries" : region_size_list,
-                                        "Share Region/ Country" : share_region_country_list,
-                                        "Share missings" : share_of_na_list},
-                                       )
-
-    print(f"\n----------------------------------------------------------------------------------------------------\n"
-          f"Missings per YEAR"
-          f"\n----------------------------------------------------------------------------------------------------\n"
-          )
-    # Missings per Year
-    na_values_list = []
-    share_of_na_list = []
-    year_size_list = []
-    share_year_country_list = []
-    for year in df_final["Year"].unique():
-        na_values = df_final[df_final["Year"] == year].Price.isna().sum()
-        share_of_na = na_values / df_final[df_final["Year"] == year].shape[0]
-        print(f"\nYear: {year}\n# missings: {na_values}\nShare: {share_of_na}")
-        # df_sum_stats_market = pd.concat([df_sum_stats_market, ])
-
-        na_values_list.append(na_values)
-        share_of_na_list.append(share_of_na)
-        year_size_list.append(df_final[df_final["Year"] == year].shape[0])
-        share_year_country_list.append(year_size_list[-1] / no_overall_entries)
-
-    df_sum_stats_year = pd.DataFrame({"Year": df_final["Year"].unique(),
-                                        "No. missings": na_values_list,
-                                        "No. overall entries": year_size_list,
-                                        "Share Year/ Country": share_year_country_list,
-                                        "Share missings": share_of_na_list},
-                                       )
-    df_sum_stats_year.sort_values(by="Year")
-
-    # General data:
+    # Create summary statistics for general statistics
+    # General data
     df_sum_stats_general = pd.DataFrame({
-        "No. missings" : [df_final.Price.isna().sum()],
+        "No. missings": [df_final.Price.isna().sum()],
         "No. overall entries": [df_final.shape[0]],
-        "Share missings" : df_final.Price.isna().sum()/ df_final.shape[0]
+        "Share missings": df_final.Price.isna().sum() / df_final.shape[0]
     })
 
     # Write all dfs into one excel
     with pd.ExcelWriter(f"{output_path_stats}/{df_final.Country.unique()[0]}-missing-values.xlsx") as writer:
         df_sum_stats_general.to_excel(writer, sheet_name="General")
-        df_sum_stats_market.to_excel(writer, sheet_name="Markets")
-        df_sum_stats_commodity.to_excel(writer, sheet_name="Commodity")
-        df_sum_stats_region.to_excel(writer, sheet_name="Region")
-        df_sum_stats_year.to_excel(writer, sheet_name="Year")
+
+        for i, df_sum_stat in enumerate(list_dfs_sum_stats):
+            group = var_list_groups_by[i]
+            df_sum_stat.to_excel(writer, sheet_name=group)
 
 
 def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, df_final, df_drought, df_no_drought):
@@ -621,9 +553,9 @@ def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, df
           f"Summary statistics:\n"
           f"Number of entries: {df_final.shape[0]}\n"
           f"Number of nan/missing values Prices: {df_final.Price.isna().sum()} (Share: "
-          f"{df_final.Price.isna().sum()/ df_final.shape[0]})\n"
+          f"{df_final.Price.isna().sum() / df_final.shape[0]})\n"
           f"Number of nan/missing values SPEI: {df_final.Spei.isna().sum()} (Share: "
-          f"{df_final.Spei.isna().sum()/ df_final.shape[0]})\n"
+          f"{df_final.Spei.isna().sum() / df_final.shape[0]})\n"
           f"----------------------------------------------------------------------------------------------------\n")
 
 
@@ -642,9 +574,3 @@ def drop_values_in_variable(df, variable, value_list):
 
     if type(value_list) is not list:
         raise TypeError(f"Wrong datatype. Parameter value_list must be list, not {type(value_list)}")
-
-
-
-
-
-
