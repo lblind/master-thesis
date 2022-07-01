@@ -435,14 +435,21 @@ def separate_df_drought_non_drought(df_final_classified):
     return df_drought, df_no_drought
 
 
-def summary_stats_missings(df_final):
+def summary_stats_missings(df_final, var_list_groups_by=None):
     """
     Summary statistics for missing values per market and
     commodity
 
+    :param var_list_groups_by:
     :param df_final:
     :return:
     """
+    # Set default values for var_list_group_by
+    if var_list_groups_by is None:
+        var_list_groups_by = ["Market", "Region", "Year"]
+
+    for group in var_list_groups_by:
+        pass
 
     no_overall_entries = df_final.shape[0]
 
@@ -534,6 +541,34 @@ def summary_stats_missings(df_final):
                                         "Share missings" : share_of_na_list},
                                        )
 
+    print(f"\n----------------------------------------------------------------------------------------------------\n"
+          f"Missings per YEAR"
+          f"\n----------------------------------------------------------------------------------------------------\n"
+          )
+    # Missings per Year
+    na_values_list = []
+    share_of_na_list = []
+    year_size_list = []
+    share_year_country_list = []
+    for year in df_final["Year"].unique():
+        na_values = df_final[df_final["Year"] == year].Price.isna().sum()
+        share_of_na = na_values / df_final[df_final["Year"] == year].shape[0]
+        print(f"\nYear: {year}\n# missings: {na_values}\nShare: {share_of_na}")
+        # df_sum_stats_market = pd.concat([df_sum_stats_market, ])
+
+        na_values_list.append(na_values)
+        share_of_na_list.append(share_of_na)
+        year_size_list.append(df_final[df_final["Year"] == year].shape[0])
+        share_year_country_list.append(year_size_list[-1] / no_overall_entries)
+
+    df_sum_stats_year = pd.DataFrame({"Year": df_final["Year"].unique(),
+                                        "No. missings": na_values_list,
+                                        "No. overall entries": year_size_list,
+                                        "Share Year/ Country": share_year_country_list,
+                                        "Share missings": share_of_na_list},
+                                       )
+    df_sum_stats_year.sort_values(by="Year")
+
     # General data:
     df_sum_stats_general = pd.DataFrame({
         "No. missings" : [df_final.Price.isna().sum()],
@@ -547,6 +582,7 @@ def summary_stats_missings(df_final):
         df_sum_stats_market.to_excel(writer, sheet_name="Markets")
         df_sum_stats_commodity.to_excel(writer, sheet_name="Commodity")
         df_sum_stats_region.to_excel(writer, sheet_name="Region")
+        df_sum_stats_year.to_excel(writer, sheet_name="Year")
 
 
 def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, df_final, df_drought, df_no_drought):
@@ -589,6 +625,25 @@ def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, df
           f"Number of nan/missing values SPEI: {df_final.Spei.isna().sum()} (Share: "
           f"{df_final.Spei.isna().sum()/ df_final.shape[0]})\n"
           f"----------------------------------------------------------------------------------------------------\n")
+
+
+def drop_values_in_variable(df, variable, value_list):
+    """
+    Drops specific values for a variable
+
+    E.g.: variable= "commodity", value_list=["Sorghum", "Rice"]
+
+    :param df: pd.DataFrame
+
+    :param variable: str
+    :param value_list: list
+    :return:
+    """
+
+    if type(value_list) is not list:
+        raise TypeError(f"Wrong datatype. Parameter value_list must be list, not {type(value_list)}")
+
+
 
 
 

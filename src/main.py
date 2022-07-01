@@ -22,8 +22,8 @@ if __name__ == "__main__":
     # country = "Kenya"
 
     # 2) set commmodities to drop
-    dropped_commodities = ["Maize (white)", "Rice (imported)", "Sorghum (red)"]
-    # dropped_commodities = None
+    # dropped_commodities = ["Maize (white)", "Rice (imported)", "Sorghum (red)"]
+    dropped_commodities = None
 
     # PART A) Get food price part of data
     # -----------------------------------
