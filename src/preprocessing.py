@@ -446,7 +446,7 @@ def separate_df_drought_non_drought(df_final_classified):
     return df_drought, df_no_drought
 
 
-def summary_stats_missings(df_final, var_list_groups_by=None, stats_spei=True):
+def summary_stats_prices_droughts(df_final, var_list_groups_by=None):
     """
     Summary statistics for missing values per market and
     commodity
@@ -483,60 +483,69 @@ def summary_stats_missings(df_final, var_list_groups_by=None, stats_spei=True):
         # List containing the share of nan values per unique value in that variable
         share_of_na_list_price = []
         # List containing the number of entries belonging to that unique value in the variable
-        unique_value_size_list_price = []
+        unique_value_size_list = []
         # List containing the share of that unique value in the overall number of possible values for that variable
-        share_unique_value_country_list_price = []
+        share_unique_value_country_list = []
 
         # List countaining the number of nan values per unique value in that variable
         na_values_list_drought = []
         # List containing the share of nan values per unique value in that variable
         share_of_na_list_drought = []
-        # List containing the number of entries belonging to that unique value in the variable
-        unique_value_size_list_drought = []
         # List containing the share of that unique value in the overall number of possible values for that variable
         share_unique_value_country_list_drought = []
+
         # Share of droughts in that group
         share_of_droughts_list = []
+
+        # Further distinction:
+        # "Extremely dry (ED)", "Severely dry (SD)", "Moderately dry (MD)"
+        share_of_droughts_list_ed = []
+        share_of_droughts_list_sd = []
+        share_of_droughts_list_md = []
+
+
 
         # SPEI DATA: A drought occured or not (not look at spei, but drought yes/ no)
 
         # Missings per unique value in that group
         for value in df_final[group].unique():
-            na_values_price = df_final[df_final[group] == value].Price.isna().sum()
-            share_of_na_price = na_values_price / df_final[df_final[group] == value].shape[0]
+            df_group_value = df_final[df_final[group] == value]
+            no_entries_group_value = df_group_value.shape[0]
+
+            na_values_price = df_group_value.Price.isna().sum()
+            share_of_na_price = na_values_price / no_entries_group_value
             print(
                 f"\n[Var: {group}] Value <{value}>\n# missings (Price): {na_values_price}\nShare: {share_of_na_price}")
 
+            # Overall statistics value per group
+            unique_value_size_list.append(no_entries_group_value)
+            share_unique_value_country_list.append(unique_value_size_list[-1] / no_overall_entries)
+
+            # Statistics price
             na_values_list_price.append(na_values_price)
             share_of_na_list_price.append(share_of_na_price)
-            unique_value_size_list_price.append(df_final[df_final[group] == value].shape[0])
-            share_unique_value_country_list_price.append(unique_value_size_list_price[-1] / no_overall_entries)
 
-            na_values_drought = df_final[df_final[group] == value].Drought.isna().sum()
-            share_of_na_drought = na_values_drought / df_final[df_final[group] == value].shape[0]
+            # Statistics drought
+            na_values_drought = df_group_value.Drought.isna().sum()
+            share_of_na_drought = na_values_drought / no_entries_group_value
 
             # Calculate overall share of droughts in that group (including missings)
-            df_group_value = df_final[df_final[group] == value]
             share_of_droughts = df_group_value[df_group_value["Drought"] == True].shape[0] / df_group_value.shape[0]
             print(
                 f"\n[Var: {group}] Value <{value}>\n# missings (Drought): {na_values_drought}\nShare: {share_of_na_drought}")
 
             na_values_list_drought.append(na_values_drought)
             share_of_na_list_drought.append(share_of_na_drought)
-            unique_value_size_list_drought.append(df_final[df_final[group] == value].shape[0])
-            share_unique_value_country_list_drought.append(unique_value_size_list_drought[-1] / no_overall_entries)
             share_of_droughts_list.append(share_of_droughts)
 
         df_sum_stats_group = pd.DataFrame({group: df_final[group].unique(),
-                                           "Price: No. overall entries": unique_value_size_list_price,
+                                           "No. overall entries": unique_value_size_list,
+                                           f"Share {group} / Country": share_unique_value_country_list,
                                            "Price: No. missings": na_values_list_price,
-                                           f"Price: Share {group} / Country": share_unique_value_country_list_price,
                                            "Price: Share missings": share_of_na_list_price,
-                                           "Drought: No. overall entries": unique_value_size_list_drought,
                                            "Drought: No. missings": na_values_list_drought,
-                                           f"Drought: Share {group} / Country": share_unique_value_country_list_drought,
                                            "Drought: Share missings": share_of_na_list_drought,
-                                           "Drought: Share of Droughts" : share_of_droughts_list
+                                           "Drought: Share of Droughts": share_of_droughts_list
                                            }
                                           )
         # sort values
@@ -557,7 +566,7 @@ def summary_stats_missings(df_final, var_list_groups_by=None, stats_spei=True):
     # df_sum_stats_general.set_index(["Price", "Drought"])
 
     # Write all dfs into one excel
-    with pd.ExcelWriter(f"{output_path_stats}/{df_final.Country.unique()[0]}-missing-values.xlsx") as writer:
+    with pd.ExcelWriter(f"{output_path_stats}/{df_final.Country.unique()[0]}-summary-stats.xlsx") as writer:
         df_sum_stats_general.to_excel(writer, sheet_name="General")
 
         for i, df_sum_stat in enumerate(list_dfs_sum_stats):
@@ -602,8 +611,8 @@ def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, df
           f"Number of entries: {df_final.shape[0]}\n"
           f"Number of nan/missing values Prices: {df_final.Price.isna().sum()} (Share: "
           f"{df_final.Price.isna().sum() / df_final.shape[0]})\n"
-          f"Number of nan/missing values SPEI: {df_final.Spei.isna().sum()} (Share: "
-          f"{df_final.Spei.isna().sum() / df_final.shape[0]})\n"
+          f"Number of nan/missing values Drought: {df_final.Drought.isna().sum()} (Share: "
+          f"{df_final.Drought.isna().sum() / df_final.shape[0]})\n"
           f"----------------------------------------------------------------------------------------------------\n")
 
 

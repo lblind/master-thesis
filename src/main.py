@@ -68,7 +68,7 @@ if __name__ == "__main__":
     df_drought, df_no_drought = preproc.separate_df_drought_non_drought(df_final)
 
     # Check missings
-    preproc.summary_stats_missings(df_final=df_final)
+    preproc.summary_stats_prices_droughts(df_final=df_final)
     # preproc.summary_stats_missings(df_final=df_wfp)
 
     preproc.write_preprocessing_results_to_excel(df_wfp=df_wfp, df_wfp_with_coords=df_wfp_with_coords,
