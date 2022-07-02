@@ -22,8 +22,12 @@ if __name__ == "__main__":
     # country = "Kenya"
 
     # 2) set commmodities to drop
-    # dropped_commodities = ["Maize (white)", "Rice (imported)", "Sorghum (red)"]
-    dropped_commodities = None
+    dropped_commodities = ["Maize (white)", "Rice (imported)", "Sorghum (red)"]
+    # dropped_commodities = None
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC: PHASE 1 (MERGE DATA)"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
 
     # PART A) Get food price part of data
     # -----------------------------------
@@ -70,6 +74,21 @@ if __name__ == "__main__":
     # Check missings
     preproc.summary_stats_prices_droughts(df_final=df_final)
     # preproc.summary_stats_missings(df_final=df_wfp)
+
+    # ------------------------------------------------------------------------------------------------------------------
+    # TAKE CARE OF MISSING DATA -> SUBSET
+    # ------------------------------------------------------------------------------------------------------------------
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC: PHASE 2 (MISSING DATA: SUBSET CREATION)"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+
+    # drop 2021, 2022 as no data for droughts (/SPEI) is available for those (even though WFP data is)
+    years_to_drop = [2021, 2022]
+    print(f"Dropping years: {years_to_drop}")
+    df_final = preproc.drop_years(df_final=df_final, years_list= years_to_drop)
+
+    preproc.summary_stats_prices_droughts(df_final=df_final, excel_output_extension="preproc-2")
 
     preproc.write_preprocessing_results_to_excel(df_wfp=df_wfp, df_wfp_with_coords=df_wfp_with_coords,
                                                  df_spei=df_spei, df_final=df_final, df_drought=df_drought,

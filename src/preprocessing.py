@@ -446,13 +446,14 @@ def separate_df_drought_non_drought(df_final_classified):
     return df_drought, df_no_drought
 
 
-def summary_stats_prices_droughts(df_final, var_list_groups_by=None):
+def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_output_extension="preproc-1"):
     """
     Summary statistics for missing values per market and
     commodity
 
-    :param var_list_groups_by:
-    :param df_final:
+    :param var_list_groups_by: list
+    :param df_final: pd.DataFrame
+    :param excel_output_extension: str
     :return:
     """
 
@@ -494,6 +495,8 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None):
         # List containing the share of that unique value in the overall number of possible values for that variable
         share_unique_value_country_list_drought = []
 
+        list_no_droughts = []
+
         # Share of droughts in that group
         share_of_droughts_list = []
 
@@ -502,7 +505,14 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None):
         share_of_droughts_list_ed = []
         share_of_droughts_list_sd = []
         share_of_droughts_list_md = []
+        no_of_droughts_list_ed = []
+        no_of_droughts_list_sd = []
+        no_of_droughts_list_md = []
 
+
+        format_number = "#"
+        format_share = "%"
+        format_missings = "nan"
 
 
         # SPEI DATA: A drought occured or not (not look at spei, but drought yes/ no)
@@ -530,22 +540,56 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None):
             share_of_na_drought = na_values_drought / no_entries_group_value
 
             # Calculate overall share of droughts in that group (including missings)
-            share_of_droughts = df_group_value[df_group_value["Drought"] == True].shape[0] / df_group_value.shape[0]
+            df_group_value_drought = df_group_value[df_group_value["Drought"] == True]
+
+            no_droughts_group_value = df_group_value_drought.shape[0]
+            list_no_droughts.append(no_droughts_group_value)
+
+            share_of_droughts = no_droughts_group_value / no_entries_group_value
             print(
                 f"\n[Var: {group}] Value <{value}>\n# missings (Drought): {na_values_drought}\nShare: {share_of_na_drought}")
+
+            # "Extremely dry (ED)", "Severely dry (SD)", "Moderately dry (MD)"
+            no_of_extreme_droughts = df_group_value_drought[df_group_value_drought["SpeiCat"] == "Extremely dry (ED)"].shape[0]
+            share_of_extreme_droughts = 0 if no_droughts_group_value == 0 else no_of_extreme_droughts / no_droughts_group_value
+
+            no_of_severe_droughts = \
+                df_group_value_drought[df_group_value_drought["SpeiCat"] == "Severely dry (SD)"].shape[0]
+            share_of_severe_droughts = 0 if no_droughts_group_value == 0 else no_of_severe_droughts / no_droughts_group_value
+
+            no_of_moderate_droughts = \
+                df_group_value_drought[df_group_value_drought["SpeiCat"] == "Moderately dry (MD)"].shape[0]
+            share_of_moderate_droughts = 0 if no_droughts_group_value == 0 else no_of_severe_droughts / no_droughts_group_value
 
             na_values_list_drought.append(na_values_drought)
             share_of_na_list_drought.append(share_of_na_drought)
             share_of_droughts_list.append(share_of_droughts)
 
+            share_of_droughts_list_ed.append(share_of_extreme_droughts)
+            share_of_droughts_list_sd.append(share_of_severe_droughts)
+            share_of_droughts_list_md.append(share_of_moderate_droughts)
+
+            no_of_droughts_list_ed.append(no_of_extreme_droughts)
+            no_of_droughts_list_sd.append(no_of_severe_droughts)
+            no_of_droughts_list_md.append(no_of_moderate_droughts)
+
         df_sum_stats_group = pd.DataFrame({group: df_final[group].unique(),
-                                           "No. overall entries": unique_value_size_list,
-                                           f"Share {group} / Country": share_unique_value_country_list,
-                                           "Price: No. missings": na_values_list_price,
-                                           "Price: Share missings": share_of_na_list_price,
-                                           "Drought: No. missings": na_values_list_drought,
-                                           "Drought: Share missings": share_of_na_list_drought,
-                                           "Drought: Share of Droughts": share_of_droughts_list
+                                           f"{format_number} overall entries": unique_value_size_list,
+                                           f"{format_share} {group} / Country": share_unique_value_country_list,
+                                           f"Price: {format_number} {format_missings}": na_values_list_price,
+                                           f"Price: {format_share} {format_missings}": share_of_na_list_price,
+                                           f"Drought: {format_number} {format_missings}": na_values_list_drought,
+                                           f"Drought: {format_share} {format_missings}": share_of_na_list_drought,
+                                           f"Drought: {format_share} Droughts": share_of_droughts_list,
+                                           f"{format_share} Extreme (of Droughts)":
+                                               share_of_droughts_list_ed,
+                                           f"{format_share} Severe (of Droughts)":
+                                               share_of_droughts_list_sd,
+                                           f"{format_share} Moderate (of Droughts)":
+                                               share_of_droughts_list_md,
+                                           f"{format_number} Extreme Droughts" : no_of_droughts_list_ed,
+                                           f"{format_number} Severe Droughts": no_of_droughts_list_sd,
+                                           f"{format_number} Moderate Droughts": no_of_droughts_list_md,
                                            }
                                           )
         # sort values
@@ -554,19 +598,30 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None):
         list_dfs_sum_stats.append(df_sum_stats_group)
 
     # Create summary statistics for general statistics
+    df_droughts = df_final[df_final["Drought"] == True]
+    df_ed = df_droughts[df_droughts["SpeiCat"] == "Extremely dry (ED)"]
+    df_sd = df_droughts[df_droughts["SpeiCat"] == "Severely dry (SD)"]
+    df_md = df_droughts[df_droughts["SpeiCat"] == "Moderately dry (MD)"]
+
     # General data
     df_sum_stats_general = pd.DataFrame({
-        "No. missings": [df_final.Price.isna().sum(), df_final.Spei.isna().sum()],
-        "No. overall entries": [df_final.shape[0], df_final.shape[0]],
-        "Share missings": [df_final.Price.isna().sum() / df_final.shape[0],
+        f"{format_number} {format_missings}": [df_final.Price.isna().sum(), df_final.Spei.isna().sum()],
+        f"{format_number} overall entries": [df_final.shape[0], df_final.shape[0]],
+        f"{format_share} {format_missings}": [df_final.Price.isna().sum() / df_final.shape[0],
                            df_final.Drought.isna().sum() / df_final.shape[0]],
-        "No. Droughts": [np.nan, df_final[df_final["Drought"] == True].shape[0]],
-        "Share Droughts": [np.nan, df_final[df_final["Drought"] == True].shape[0] / df_final.shape[0]]
+        f"{format_number} Droughts": [np.nan, df_final[df_final["Drought"] == True].shape[0]],
+        f"{format_share} Droughts": [np.nan, df_droughts.shape[0] / df_final.shape[0]],
+        f"{format_share} Extreme (of Droughts)": [np.nan, df_ed.shape[0] / df_droughts.shape[0]],
+        f"{format_share} Severe (of Droughts)": [np.nan, df_sd.shape[0] / df_droughts.shape[0]],
+        f"{format_share} Moderate (of Droughts)": [np.nan, df_md.shape[0] / df_droughts.shape[0]],
+        f"{format_number} Extreme Droughts" : [np.nan, df_ed.shape[0]],
+        f"{format_number} Severe Droughts": [np.nan, df_sd.shape[0]],
+        f"{format_number} Moderate Droughts": [np.nan, df_md.shape[0]],
     }, ["Price", "Drought"])
     # df_sum_stats_general.set_index(["Price", "Drought"])
 
     # Write all dfs into one excel
-    with pd.ExcelWriter(f"{output_path_stats}/{df_final.Country.unique()[0]}-summary-stats.xlsx") as writer:
+    with pd.ExcelWriter(f"{output_path_stats}/{df_final.Country.unique()[0]}-sum-stats-{excel_output_extension}.xlsx") as writer:
         df_sum_stats_general.to_excel(writer, sheet_name="General")
 
         for i, df_sum_stat in enumerate(list_dfs_sum_stats):
@@ -607,7 +662,7 @@ def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, df
     print(f"\n----------------------------------------------------------------------------------------------------\n"
           f"PREPROCESSING: DONE.\nSuccessfully merged different datasets (wfp, wfp coords, spei)\nand stored them"
           f" as excel workbooks in the output folder.\n"
-          f"Summary statistics:\n"
+          f"Basic Summary statistics:\n"
           f"Number of entries: {df_final.shape[0]}\n"
           f"Number of nan/missing values Prices: {df_final.Price.isna().sum()} (Share: "
           f"{df_final.Price.isna().sum() / df_final.shape[0]})\n"
@@ -616,18 +671,44 @@ def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, df
           f"----------------------------------------------------------------------------------------------------\n")
 
 
-def drop_values_in_variable(df, variable, value_list):
+def drop_years(df_final, years_list):
     """
-    Drops specific values for a variable
+    Drops all data for specific years
 
-    E.g.: variable= "commodity", value_list=["Sorghum", "Rice"]
+    (e.g. 2021, 2022 as no data for SPEI for these years (even though data on food prices)
 
-    :param df: pd.DataFrame
-
-    :param variable: str
-    :param value_list: list
+    :param df_final:
+    :param years_list:
     :return:
     """
+    # Just keep years for
+    return df_final[~df_final["Year"].isin(years_list)]
 
-    if type(value_list) is not list:
-        raise TypeError(f"Wrong datatype. Parameter value_list must be list, not {type(value_list)}")
+
+
+
+def drop_missing_decile_per_region_prices(path_excel_sum_stats, df_final, decile=1):
+    """
+    Drops a certain decile of markets
+
+    :param df_sum_stats:
+    :return:
+    """
+    # for all regions...
+    for region in df_final.Region.unique():
+        # 1) Extract share of missings for that region
+        # 2) Extract last decile (highest percentage)
+        # 3) Drop those markets
+        pass
+
+
+def drop_commodities(df_final, commodity_list):
+    """
+    Drops the commodities in this list and returns the new df
+
+    :param df_final:
+    :param commodity_list:
+    :return:
+    """
+    pass
+
