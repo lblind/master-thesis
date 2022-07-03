@@ -10,6 +10,7 @@ import os
 import preprocessing as preproc
 import pandas as pd
 import utils
+import visualization
 
 if __name__ == "__main__":
 
@@ -128,5 +129,7 @@ if __name__ == "__main__":
           "# ANALYSIS"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-    path_to_final_df = f"../output/{country}/{country}-final-dta.xlsx"
-    df_final = utils.convert_excel_to_df(path_to_final_df)
+    # path_to_final_df = f"../output/{country}/{country}-final-dta.xlsx"
+    # df_final = utils.convert_excel_to_df(path_to_final_df)
+
+    visualization.plot_malawi()
