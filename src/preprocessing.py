@@ -6,6 +6,8 @@ Everything belonging to the preprocessing part
 """
 import glob
 import os
+
+import matplotlib.pyplot as plt
 import pandas as pd
 import xarray as xr
 import netCDF4
@@ -760,21 +762,61 @@ def drop_missing_decile_per_region_prices(path_excel_sum_stats, df_final, cut_of
     return df_reduced
 
 
-def extrapolate_regional_patterns(df_final):
+def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"):
+    """
+    Extrapolates missing values in Prices based on regional patterns
+
+    :param df_final: pd.DataFrame
+    :param interpolation_method: str
+        Interpolation method used to extrapolate the missings. For more information, cf. References
+    :return:
+
+    References
+    ----------
+    https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.interpolate.html
     """
 
-    :param df_final:
-    :return:
-    """
+    country = df_final.Country.unique()[0]
+
+    if len(df_final.Currency.unique()) != 1:
+        raise ValueError(f"More than one currency found in df: {df_final.Currency.unique()}.\n"
+                         f"Cannot visualize prices without one common currency.\n"
+                         f"Please standardize your prices to one currency.")
+    currency = df_final.Currency.unique()[0]
 
     dfs_extrapolated_per_region = {}
     for region in df_final.Region.unique():
+        print(f"Extrapolating Prices for region: <{region}> (Method: {interpolation_method})")
+
         # extract dataframe for that region
         df_region = df_final[df_final.Region == region]
 
+        # make a scatter polt
+        plt.scatter(df_region.TimeSpei, df_region.Price)
+
+        # Plot and color markets separately
+        # for market in df_region.Market.unique():
+        #     df_region_market = df_region[df_region.Market == market]
+        #     plt.scatter(df_region_market.TimeSpei, df_region_market.Price, label=market)
+
+        plt.suptitle("Price Distribution")
+        plt.title(f"Region: '{region}'")
+        # plt.legend()
+        plt.xlabel("Time")
+        plt.ylabel(f"Price [{currency}]")
+        plt.show()
+
+        # store output and make sure it exists
+        output_dir = f"../output/{country}/plots"
+        if os.path.exists(output_dir) is False:
+            os.makedirs(output_dir)
+        plt.savefig(f"{output_dir}/scatter-prices-{region}.png")
+
         # Extrapolate
-        df_region = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method="linear"))
-        # df_region.loc[:, "Price"] =
+        if interpolation_method == "spline":
+            df_region = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method="spline", order=2))
+        else:
+            df_region = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method=interpolation_method))
 
         # append extrapolated dataframe to dictionary
         dfs_extrapolated_per_region[region] = df_region

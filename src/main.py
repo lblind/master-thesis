@@ -111,7 +111,8 @@ if __name__ == "__main__":
     preproc.summary_stats_prices_droughts(df_final=df_final, excel_output_extension=f"-preproc-3-{cut_off_percentile}p")
 
     # EXTRAPOLATE REGIONAL PATTERNS
-    df_final = preproc.extrapolate_regional_patterns(df_final=df_final)
+    # doesn't extrapolate tails for interpolation method: cubic
+    df_final = preproc.extrapolate_prices_regional_patterns(df_final=df_final, interpolation_method="linear")
 
     # Write sum stats
     preproc.summary_stats_prices_droughts(df_final=df_final, excel_output_extension=f"-preproc-4-{cut_off_percentile}p")
