@@ -110,6 +110,12 @@ if __name__ == "__main__":
     # Write sum stats
     preproc.summary_stats_prices_droughts(df_final=df_final, excel_output_extension=f"-preproc-3-{cut_off_percentile}p")
 
+    # EXTRAPOLATE REGIONAL PATTERNS
+    df_final = preproc.extrapolate_regional_patterns(df_final=df_final)
+
+    # Write sum stats
+    preproc.summary_stats_prices_droughts(df_final=df_final, excel_output_extension=f"-preproc-4-{cut_off_percentile}p")
+
     preproc.write_preprocessing_results_to_excel(df_wfp=df_wfp, df_wfp_with_coords=df_wfp_with_coords,
                                                  df_spei=df_spei, df_final=df_final, df_drought=df_drought,
                                                  df_no_drought=df_no_drought)

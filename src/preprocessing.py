@@ -749,7 +749,7 @@ def drop_missing_decile_per_region_prices(path_excel_sum_stats, df_final, cut_of
         # Write cut-offs as excel
         df_cut_offs = pd.DataFrame({"Cut-off" : cut_offs_per_region_dict.values()},
                                    cut_offs_per_region_dict.keys())
-        df_cut_offs.to_excel(writer, sheet_name=f"Cut-offs (decile {cut_off_percentile}")
+        df_cut_offs.to_excel(writer, sheet_name=f"Cut-offs (percentile {cut_off_percentile}")
 
         # Write all dropped markets to excel
         # iterate over all dropped regions
@@ -760,13 +760,29 @@ def drop_missing_decile_per_region_prices(path_excel_sum_stats, df_final, cut_of
     return df_reduced
 
 
-def drop_commodities(df_final, commodity_list):
+def extrapolate_regional_patterns(df_final):
     """
-    Drops the commodities in this list and returns the new df
 
     :param df_final:
-    :param commodity_list:
     :return:
     """
-    pass
+
+    dfs_extrapolated_per_region = {}
+    for region in df_final.Region.unique():
+        # extract dataframe for that region
+        df_region = df_final[df_final.Region == region]
+
+        # Extrapolate
+        df_region = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method="linear"))
+        # df_region.loc[:, "Price"] =
+
+        # append extrapolated dataframe to dictionary
+        dfs_extrapolated_per_region[region] = df_region
+
+    # Merge extrapolated dataframes per region
+    df_merged_all_regions = pd.concat(dfs_extrapolated_per_region.values(), ignore_index=True)
+
+    return df_merged_all_regions
+
+
 
