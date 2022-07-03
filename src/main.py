@@ -97,8 +97,8 @@ if __name__ == "__main__":
           "# PREPROC: PHASE 2.2 (PRICES)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-    # 65
-    cut_off_percentile = 62
+    # 65 (30%), 60 (27%, 30% also for central region)
+    cut_off_percentile = 60
 
     # Cut all regions with missing >= cut_off_percentile of missing values
     df_final = preproc.drop_missing_decile_per_region_prices(

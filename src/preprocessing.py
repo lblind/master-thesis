@@ -738,7 +738,7 @@ def drop_missing_decile_per_region_prices(path_excel_sum_stats, df_final, cut_of
     df_reduced = df_final[~df_final["Market"].isin(markets_to_cut_list)]
 
     # 9) Create statistics -> Store the dropped markets & their shares of missings
-    output_dir = f"../output/{country}/summary-statistics/preproc-missings"
+    output_dir = f"../output/{country}/summary-statistics/preproc-3-dropped-markets"
     if os.path.exists(output_dir) is False:
         os.makedirs(output_dir)
 
