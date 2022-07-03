@@ -16,6 +16,8 @@ import datetime
 
 from geopy.distance import great_circle
 
+import scipy
+
 import math
 
 
@@ -773,8 +775,15 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
 
     References
     ----------
+    Interpolation method:
     https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.interpolate.html
+
+    Plot Interpolation:
+    https://www.geeksforgeeks.org/scipy-interpolation/#:~:text=Interpolation%20is%20a%20technique%20of%20constructing%20data%20points,in%20many%20ways%20some%20of%20them%20are%20%3A
     """
+    # Make sure that prices are sorted chronologically
+    print("Sorting dataframe chronologically")
+    df_final = df_final.sort_values(by=["TimeSpei", "Market"], ignore_index=True)
 
     country = df_final.Country.unique()[0]
 
@@ -792,7 +801,7 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
         df_region = df_final[df_final.Region == region]
 
         # make a scatter polt
-        plt.scatter(df_region.TimeSpei, df_region.Price)
+        plt.scatter(df_region.TimeSpei, df_region.Price, label="Original points")
 
         # Plot and color markets separately
         # for market in df_region.Market.unique():
@@ -804,22 +813,29 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
         # plt.legend()
         plt.xlabel("Time")
         plt.ylabel(f"Price [{currency}]")
-        plt.show()
 
         # store output and make sure it exists
         output_dir = f"../output/{country}/plots"
         if os.path.exists(output_dir) is False:
             os.makedirs(output_dir)
-        plt.savefig(f"{output_dir}/scatter-prices-{region}.png")
+        plt.savefig(f"{output_dir}/{region}-scatter-prices.png")
+        # plt.show()
 
         # Extrapolate
         if interpolation_method == "spline":
-            df_region = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method="spline", order=2))
+            df_region_new = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method="spline", order=2))
         else:
-            df_region = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method=interpolation_method))
+            df_region_new = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method=interpolation_method))
+
+        # Plot post interpolation (/ extrapolated points)
+        plt.scatter(df_region_new.TimeSpei[df_region.Price.isna()], df_region_new.Price[df_region.Price.isna()],
+                    color="green", label="Extrapolated points", marker="*")
+        plt.legend()
+        plt.savefig(f"{output_dir}/{region}-scatter-prices-extrapolated.png")
+        plt.show()
 
         # append extrapolated dataframe to dictionary
-        dfs_extrapolated_per_region[region] = df_region
+        dfs_extrapolated_per_region[region] = df_region_new
 
     # Merge extrapolated dataframes per region
     df_merged_all_regions = pd.concat(dfs_extrapolated_per_region.values(), ignore_index=True)
