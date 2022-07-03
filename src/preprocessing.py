@@ -794,6 +794,8 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
     currency = df_final.Currency.unique()[0]
 
     dfs_extrapolated_per_region = {}
+
+    alpha = 0.5
     for region in df_final.Region.unique():
         print(f"Extrapolating Prices for region: <{region}> (Method: {interpolation_method})")
 
@@ -801,7 +803,8 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
         df_region = df_final[df_final.Region == region]
 
         # make a scatter polt
-        plt.scatter(df_region.TimeSpei, df_region.Price, label="Original points")
+        plt.scatter(df_region.TimeSpei, df_region.Price, label="Original points",
+                    alpha=alpha)
 
         # Plot and color markets separately
         # for market in df_region.Market.unique():
@@ -829,7 +832,7 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
 
         # Plot post interpolation (/ extrapolated points)
         plt.scatter(df_region_new.TimeSpei[df_region.Price.isna()], df_region_new.Price[df_region.Price.isna()],
-                    color="green", label="Extrapolated points", marker="*")
+                    color="green", label="Extrapolated points", marker="*", alpha=alpha)
         plt.legend()
         plt.savefig(f"{output_dir}/{region}-scatter-prices-extrapolated.png")
         plt.show()
