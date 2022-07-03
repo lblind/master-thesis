@@ -19,7 +19,7 @@ import numpy as np
 
 
 
-def plot_malawi():
+def plot_malawi(df_final):
     """
 
     References
@@ -48,13 +48,31 @@ def plot_malawi():
     # pure country
     # malawi_adm0.plot()
     # adm1 -> regions?
-    malawi_adm1.plot()
+    # malawi_adm1.plot()
     print(malawi_adm1.columns)
     # adm2 -> more finegranular (cities?)
     # malawi_adm2.plot()
     # malawi_adm3.plot()
 
-    # gplt.polyplot(malawi_adm1)
 
-    plt.title("Malawi")
+
+    # convert regular dataframe to geopandas df
+    # gdf_final = gpd.GeoDataFrame(
+    #     df_final, geometry=gpd.points_from_xy(df_final.MarketLatitude, df_final.MarketLongitude)
+    # )
+    gdf_final = gpd.GeoDataFrame(
+        df_final, geometry=gpd.points_from_xy(df_final.MarketLongitude, df_final.MarketLatitude)
+    )
+    ax = gplt.polyplot(malawi_adm1)
+    # ax = gplt.polyplot(malawi_adm1, projection=gcrs.AlbersEqualArea())
+
+    gplt.pointplot(gdf_final, ax=ax, hue="Region")
+    # gplt.pointplot(gdf_final, ax=ax)
+
+    plt.xlabel("Longitude")
+    plt.ylabel("Latitude")
+    plt.suptitle("Malawi")
+    plt.title("Markets (per Region)")
+    plt.legend()
+    plt.savefig("../output/Malawi/plots/Map-Markets.png")
     plt.show()

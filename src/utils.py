@@ -1,5 +1,5 @@
 """
-Utils
+UTILS
 -----
 Auxiliary code snipplets that are used by various modules
 """
