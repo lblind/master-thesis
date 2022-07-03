@@ -446,7 +446,7 @@ def separate_df_drought_non_drought(df_final_classified):
     return df_drought, df_no_drought
 
 
-def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_output_extension="preproc-1"):
+def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_output_extension="-preproc-1"):
     """
     Summary statistics for missing values per market and
     commodity
@@ -621,7 +621,7 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_outpu
     # df_sum_stats_general.set_index(["Price", "Drought"])
 
     # Write all dfs into one excel
-    with pd.ExcelWriter(f"{output_path_stats}/{df_final.Country.unique()[0]}-sum-stats-{excel_output_extension}.xlsx") as writer:
+    with pd.ExcelWriter(f"{output_path_stats}/{df_final.Country.unique()[0]}-sum-stats{excel_output_extension}.xlsx") as writer:
         df_sum_stats_general.to_excel(writer, sheet_name="General")
 
         for i, df_sum_stat in enumerate(list_dfs_sum_stats):
@@ -685,21 +685,79 @@ def drop_years(df_final, years_list):
     return df_final[~df_final["Year"].isin(years_list)]
 
 
-
-
-def drop_missing_decile_per_region_prices(path_excel_sum_stats, df_final, decile=1):
+def drop_missing_decile_per_region_prices(path_excel_sum_stats, df_final, cut_off_percentile=90,
+                                          excel_output_extension=""):
     """
     Drops a certain decile of markets
 
     :param df_sum_stats:
     :return:
     """
+    country = df_final.Country.unique()[0]
+
+    # read summary stats
+    df_sum_stats_all_markets = pd.read_excel(path_excel_sum_stats, sheet_name="Market")
+
+    # Drop index column
+    df_sum_stats_all_markets.drop(columns="Unnamed: 0", inplace=True)
+
+    markets_to_cut_per_region_dict = {}
+    cut_offs_per_region_dict = {}
+
+    markets_to_cut_list = []
+
     # for all regions...
     for region in df_final.Region.unique():
-        # 1) Extract share of missings for that region
-        # 2) Extract last decile (highest percentage)
-        # 3) Drop those markets
-        pass
+        # 1) Extract markets belonging to that region
+        df_final_region = df_final[df_final["Region"] == region]
+        unique_markets_region = df_final_region.Market.unique()
+
+        # 2) Extract sum stats for these markets
+        df_sum_stats_markets_region = df_sum_stats_all_markets[df_sum_stats_all_markets.Market.isin(unique_markets_region)]
+
+        # 3) Extract list of missings for that market
+        df_col_missings_prices = df_sum_stats_markets_region["Price: % nan"]
+        if df_col_missings_prices.shape[0] == 0:
+            raise ValueError("SOMETHING IS WRONG HERE. NO ROWS FOUND FOR MISSING VALUES PRICES.")
+
+        # 4) find the 9th decile:
+        cut_off_decile_value = np.percentile(df_col_missings_prices, cut_off_percentile)
+
+        # 5) Find all the markets that belong to that cut-off decile (& their shares)
+        markets_to_cut_df_region = df_sum_stats_markets_region[df_col_missings_prices >= cut_off_decile_value]
+        # markets_to_cut_df_region = markets_to_cut_df_region[["Market", "Price: % nan"]]
+
+        # 6) Store dataframe & cutoff for that region (Market names + share of missings)
+        markets_to_cut_per_region_dict[f"{region}"] = markets_to_cut_df_region
+        cut_offs_per_region_dict[f"{region}"] = cut_off_decile_value
+
+        # 7) Store markets to cut in a list
+        markets_to_cut_list.extend(markets_to_cut_df_region.Market.tolist())
+
+    # 8) Only keep those that don't belong to the cut markets
+    df_reduced = df_final[~df_final["Market"].isin(markets_to_cut_list)]
+
+    # 9) Create statistics -> Store the dropped markets & their shares of missings
+    output_dir = f"../output/{country}/summary-statistics/preproc-missings"
+    if os.path.exists(output_dir) is False:
+        os.makedirs(output_dir)
+
+    # Write all dfs into one excel
+    with pd.ExcelWriter(
+            f"{output_dir}/{country}-dropped-markets{excel_output_extension}.xlsx") as writer:
+
+        # Write cut-offs as excel
+        df_cut_offs = pd.DataFrame({"Cut-off" : cut_offs_per_region_dict.values()},
+                                   cut_offs_per_region_dict.keys())
+        df_cut_offs.to_excel(writer, sheet_name=f"Cut-offs (decile {cut_off_percentile}")
+
+        # Write all dropped markets to excel
+        # iterate over all dropped regions
+        for region, df_region in markets_to_cut_per_region_dict.items():
+            df_region.to_excel(writer, sheet_name=region)
+
+    # returned reduced dataframe
+    return df_reduced
 
 
 def drop_commodities(df_final, commodity_list):

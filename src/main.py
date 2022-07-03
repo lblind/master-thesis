@@ -10,7 +10,6 @@ import os
 import preprocessing as preproc
 import pandas as pd
 
-
 if __name__ == "__main__":
 
     # CONFIGURATION
@@ -46,7 +45,8 @@ if __name__ == "__main__":
     # PART B) Get climate part of data (SPEI)
     # ---------------------------------------
 
-    df_spei = preproc.read_climate_data(time_slice=slice_time, long_slice=slice_lon, lat_slice=slice_lat, country=country)
+    df_spei = preproc.read_climate_data(time_slice=slice_time, long_slice=slice_lon, lat_slice=slice_lat,
+                                        country=country)
 
     # PART C) Merge Outcomes of Part A) and Part C) and store them as excel
     # ---------------------------------------------------------------------
@@ -83,28 +83,33 @@ if __name__ == "__main__":
           "# PREPROC: PHASE 2 (MISSING DATA: SUBSET CREATION)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC: PHASE 2.1 (DROUGHTS)"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
     # drop 2021, 2022 as no data for droughts (/SPEI) is available for those (even though WFP data is)
     years_to_drop = [2021, 2022]
     print(f"Dropping years: {years_to_drop}")
-    df_final = preproc.drop_years(df_final=df_final, years_list= years_to_drop)
+    df_final = preproc.drop_years(df_final=df_final, years_list=years_to_drop)
 
-    preproc.summary_stats_prices_droughts(df_final=df_final, excel_output_extension="preproc-2")
+    preproc.summary_stats_prices_droughts(df_final=df_final, excel_output_extension="-preproc-2")
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC: PHASE 2.2 (PRICES)"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+
+    # 65
+    cut_off_percentile = 62
+
+    # Cut all regions with missing >= cut_off_percentile of missing values
+    df_final = preproc.drop_missing_decile_per_region_prices(
+        path_excel_sum_stats=f"../output/{country}/summary-statistics/{country}-"
+                             f"sum-stats-preproc-2.xlsx",
+        df_final=df_final,
+        cut_off_percentile=cut_off_percentile, excel_output_extension=f"-{cut_off_percentile}p")
+
+    # Write sum stats
+    preproc.summary_stats_prices_droughts(df_final=df_final, excel_output_extension=f"-preproc-3-{cut_off_percentile}p")
 
     preproc.write_preprocessing_results_to_excel(df_wfp=df_wfp, df_wfp_with_coords=df_wfp_with_coords,
                                                  df_spei=df_spei, df_final=df_final, df_drought=df_drought,
                                                  df_no_drought=df_no_drought)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
