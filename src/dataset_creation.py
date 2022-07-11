@@ -21,8 +21,13 @@ def create_dataset(country, dropped_commodities):
     # -----------------------------------
 
     # 1. Read food prices, convert to excel and return as df
-    df_wfp = preproc.get_df_wfp_preprocessed_excel_per_country(country=country, dropped_commodities=dropped_commodities)
+    df_wfp = preproc.get_df_wfp_preprocessed_excel_country_method(country=country,
+                                                                  dropped_commodities=dropped_commodities)
     # df_wfp = preproc.get_df_wfp_preprocessed_excel_per_region(country=country, dropped_commodities=dropped_commodities)
+
+    # TODO: delete
+    # check validity of extracted dataset
+    df_wfp = preproc.check_markets_per_commodity_time(df_wfp=df_wfp)
 
     # 2. Read CSV containing market coordinates and merge to price data
     df_wfp_with_coords = preproc.read_and_merge_wfp_market_coords(df_wfp=df_wfp, country=country)
@@ -98,6 +103,9 @@ def create_dataset(country, dropped_commodities):
 
     # Write sum stats
     preproc.summary_stats_prices_droughts(df_final=df_final, excel_output_extension=f"-preproc-3-{cut_off_percentile}p")
+
+    # TODO: delete
+    # df_final = preproc.check_markets_per_commodity_time(df_wfp=df_final)
 
     # EXTRAPOLATE REGIONAL PATTERNS
     # doesn't extrapolate tails for interpolation method: cubic

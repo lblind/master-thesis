@@ -22,7 +22,7 @@ import scipy
 import math
 
 
-def get_df_wfp_preprocessed_excel_per_country(country, dropped_commodities=None):
+def get_df_wfp_preprocessed_excel_country_method(country, dropped_commodities=None):
     """
     Reads the provided csv for the country
 
@@ -62,7 +62,7 @@ def get_df_wfp_preprocessed_excel_per_country(country, dropped_commodities=None)
     return df_country
 
 
-def get_df_wfp_preprocessed_excel_per_region(country, dropped_commodities=None):
+def get_df_wfp_preprocessed_excel_region_method(country, dropped_commodities=None):
     """
     Reads the different csvs per region
 
@@ -107,6 +107,58 @@ def get_df_wfp_preprocessed_excel_per_region(country, dropped_commodities=None):
 
     print(f"Overall number of markets entire country ({country})", len(df_merged_all_regions["Market"].unique()))
     return df_merged_all_regions
+
+
+def check_markets_per_commodity_time(df_wfp):
+    """
+    Check for each commodity, that the same amount of entries per month/ year
+    exist. If not, fill them up with missing values.
+
+    :param df_wfp:
+    :return:
+    """
+    country = df_wfp.Country.unique()[0]
+    for commodity in df_wfp.Commodity.unique():
+        df_wfp_commodity = df_wfp[df_wfp.Commodity == commodity]
+        markets_commodity = df_wfp_commodity.Market.unique()
+
+        # create a dictionary for each market (counting in how many delta ts/ months it is present)
+        dict_freq_market = dict(zip(markets_commodity, [0] * len(markets_commodity)))
+
+        common_elements = np.array([])
+        for year in df_wfp.Year.unique():
+            df_wfp_year = df_wfp_commodity[df_wfp_commodity.Year == year]
+            for month in df_wfp_year.Month.unique():
+                df_wfp_year_month = df_wfp_year[df_wfp_year.Month == month]
+
+                markets_month = df_wfp_year_month.Market.unique()
+
+                # count all values that occured
+                for market in markets_month:
+                    dict_freq_market[market] += 1
+
+                if np.array_equal(markets_commodity, markets_month) is False:
+                    # find intersection
+                    common_elements = markets_month[np.in1d(markets_month, common_elements)]
+                    common_elements = markets_commodity[np.in1d(markets_commodity, common_elements)]
+                    # raise ValueError(f"[{year}, {month}] does not contain all markets for commodity <{commodity}>\n"
+                    #                  f"Should be ({len(markets_commodity)}): {markets_commodity})\n"
+                    #                  f"Is ({len(markets_month)}): {markets_month}")
+
+            # Write all dfs into one excel
+            with pd.ExcelWriter(
+                    f"../output/{country}/intermediate-results/commodities/{commodity}-common-markets.xlsx") as writer:
+                pd.DataFrame(common_elements).to_excel(writer, sheet_name="Common Markets")
+                pd.DataFrame(dict_freq_market.values(), index=dict_freq_market.keys()).to_excel(writer,
+                                                                                                sheet_name="Frequency "
+                                                                                                           "Markets")
+
+
+    # return df_wfp
+
+
+
+
 
 
 def read_and_merge_wfp_market_coords(df_wfp, country):
