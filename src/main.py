@@ -13,6 +13,8 @@ import utils
 import visualization
 import dataset_creation
 
+import dmd
+
 if __name__ == "__main__":
 
     # CONFIGURATION
@@ -41,4 +43,7 @@ if __name__ == "__main__":
           "# VISUALIZATION"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-    visualization.plot_malawi(df_final=df_final)
+    #visualization.plot_malawi(df_final=df_final)
+
+    dmd.dmd_per_commodity(df_final)
+
