@@ -21,13 +21,16 @@ def create_dataset(country, dropped_commodities):
     # -----------------------------------
 
     # 1. Read food prices, convert to excel and return as df
-    df_wfp = preproc.get_df_wfp_preprocessed_excel_country_method(country=country,
-                                                                  dropped_commodities=dropped_commodities)
-    # df_wfp = preproc.get_df_wfp_preprocessed_excel_per_region(country=country, dropped_commodities=dropped_commodities)
+    # COuntry method: Doesn't propagate missing values (just drops them/ doesn't write them in the dataset)
+    # df_wfp = preproc.get_df_wfp_preprocessed_excel_country_method(country=country,
+    #                                                              dropped_commodities=dropped_commodities)
+    # Region method: Does propagate missing values (doesn't drop missing values for an entry per month)
+    df_wfp = preproc.get_df_wfp_preprocessed_excel_region_method(country=country, dropped_commodities=dropped_commodities)
+    df_wfp.to_excel(f"../output/{country}/intermediate-results/df_wfp.xlsx")
 
     # TODO: delete
     # check validity of extracted dataset
-    df_wfp = preproc.check_markets_per_commodity_time(df_wfp=df_wfp)
+    # df_wfp = preproc.check_markets_per_commodity_time(df_wfp=df_wfp)
 
     # 2. Read CSV containing market coordinates and merge to price data
     df_wfp_with_coords = preproc.read_and_merge_wfp_market_coords(df_wfp=df_wfp, country=country)

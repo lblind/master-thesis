@@ -66,6 +66,9 @@ def get_df_wfp_preprocessed_excel_region_method(country, dropped_commodities=Non
     """
     Reads the different csvs per region
 
+    Difference to :link get_df_wfp_preprocessed_excel_country_method:
+        Difference in propagating missing values (doesn't drop missing values)
+
     :param country:
     :param dropped_commodities:
 
@@ -91,16 +94,20 @@ def get_df_wfp_preprocessed_excel_region_method(country, dropped_commodities=Non
 
         # extract region name
         df_region["Region"] = region_name
-        df_regions_list.append(df_region)
+
 
         # print unique commodities
         print(f"\nRegion: {region_name}\nNo. of Markets: {df_region.Market.unique().size}\n"
               f"Commodities before omission:\n{df_region.Commodity.unique()}")
 
         if dropped_commodities is not None:
+            print("Dropping: ")
             # drop commodities
             df_region = df_region[~df_region.Commodity.isin(dropped_commodities)]
             print("Unique Commodities after omission:\n", df_region.Commodity.unique())
+
+        # append dataframe to list
+        df_regions_list.append(df_region)
 
     df_merged_all_regions = pd.concat(df_regions_list, ignore_index=True)
     print(df_merged_all_regions)
@@ -118,17 +125,23 @@ def check_markets_per_commodity_time(df_wfp):
     :return:
     """
     country = df_wfp.Country.unique()[0]
+
+    dfs_common_markets_per_commodity = []
+    dfs_freq_markets_per_commodity = []
+    max_frequencies_per_commodity = []
+
     for commodity in df_wfp.Commodity.unique():
         df_wfp_commodity = df_wfp[df_wfp.Commodity == commodity]
         markets_commodity = df_wfp_commodity.Market.unique()
 
+        dict_freq_market = {}
         # create a dictionary for each market (counting in how many delta ts/ months it is present)
         dict_freq_market = dict(zip(markets_commodity, [0] * len(markets_commodity)))
 
         common_elements = np.array([])
         for year in df_wfp.Year.unique():
             df_wfp_year = df_wfp_commodity[df_wfp_commodity.Year == year]
-            for month in df_wfp_year.Month.unique():
+            for month in df_wfp.Month.unique():
                 df_wfp_year_month = df_wfp_year[df_wfp_year.Month == month]
 
                 markets_month = df_wfp_year_month.Market.unique()
@@ -145,13 +158,29 @@ def check_markets_per_commodity_time(df_wfp):
                     #                  f"Should be ({len(markets_commodity)}): {markets_commodity})\n"
                     #                  f"Is ({len(markets_month)}): {markets_month}")
 
-            # Write all dfs into one excel
-            with pd.ExcelWriter(
-                    f"../output/{country}/intermediate-results/commodities/{commodity}-common-markets.xlsx") as writer:
-                pd.DataFrame(common_elements).to_excel(writer, sheet_name="Common Markets")
-                pd.DataFrame(dict_freq_market.values(), index=dict_freq_market.keys()).to_excel(writer,
-                                                                                                sheet_name="Frequency "
-                                                                                                           "Markets")
+        max_frequency_commodity = len(df_wfp.Year.unique()) * len(df_wfp.Month.unique())
+        dfs_common_markets_per_commodity.append(pd.DataFrame(common_elements))
+        dfs_freq_markets_per_commodity.append(pd.DataFrame(dict_freq_market.values(), index=dict_freq_market.keys()))
+
+
+    # Write all dfs into one excel
+    with pd.ExcelWriter(
+                    f"../output/{country}/summary-statistics/intersection-markets-per-commodity.xlsx") as writer:
+
+        if len(dfs_freq_markets_per_commodity) != len(df_wfp.Commodity.unique()) or \
+                len(dfs_common_markets_per_commodity) != len(df_wfp.Commodity.unique()):
+            raise ValueError(f"For each commodity, exactly one corresponding dataframe needs to be stored\n"
+                             f"(Commodites: {len(df_wfp.Commodity.unique())})\n"
+                             f"Frequencies per market: {len(dfs_freq_markets_per_commodity)}\n"
+                             f"Common markets: {len(dfs_common_markets_per_commodity)}")
+
+        for i, commodity in enumerate(df_wfp.Commodity.unique()):
+            df_comm_markets = dfs_common_markets_per_commodity[i]
+            df_freq_markets = dfs_freq_markets_per_commodity[i]
+
+            df_comm_markets.to_excel(writer, sheet_name=f"{commodity} - Common Markets")
+            df_freq_markets.to_excel(writer, sheet_name=f"{commodity} - Frequency Markets")
+
 
 
     # return df_wfp

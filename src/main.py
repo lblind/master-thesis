@@ -46,4 +46,3 @@ if __name__ == "__main__":
     #visualization.plot_malawi(df_final=df_final)
 
     dmd.dmd_per_commodity(df_final)
-
