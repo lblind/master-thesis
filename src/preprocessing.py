@@ -6,6 +6,7 @@ Everything belonging to the preprocessing part
 """
 import glob
 import os
+import warnings
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -181,9 +182,32 @@ def check_markets_per_commodity_time(df_wfp):
             df_comm_markets.to_excel(writer, sheet_name=f"{commodity} - Common Markets")
             df_freq_markets.to_excel(writer, sheet_name=f"{commodity} - Frequency Markets")
 
+    print("CHECKED FOR MISSINGS IN COMBINATIONS")
+    return df_wfp
 
 
-    # return df_wfp
+
+def deflate_food_prices(country, df_wfp, data_source="WFP"):
+    """
+
+    :param inflation_data:
+    :return:
+    """
+    path_to_inflation_dir = f"../input/{country}/inflation-dta/{data_source}"
+
+    if os.path.exists(path_to_inflation_dir) is False:
+        raise ValueError(f"Deflation data not defined. Please put the downloaded inflation csv of the chosen source"
+                         f" into the following"
+                         f"folder: {path_to_inflation_dir}.\n(Source: {data_source})")
+
+    for i, filename in enumerate(glob.glob(path_to_inflation_dir + "*.csv")):
+        inflation_df = pd.read_csv(filename)
+
+        if i>0:
+            warnings.warn(f"More than one csv detected in dir for inflation: {path_to_inflation_dir}.\n"
+                          f" Only the first"
+                          f"one will be considered.")
+            break
 
 
 
