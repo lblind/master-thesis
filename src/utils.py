@@ -3,17 +3,19 @@ UTILS
 -----
 Auxiliary code snipplets that are used by various modules
 """
+import numpy as np
 import pandas as pd
 import os
 
 
-def convert_excel_to_df(path_to_excel, sheet_name=None):
+def convert_excel_to_df(path_to_excel, sheet_name=None, nan_char="-"):
     """
     Reads the excel out of the given path and converts it to a
     pandas dataframe
 
     :param path_to_excel:
     :param sheet_name:
+    :param nan_char:
     :return:
     """
     if os.path.exists(path_to_excel) is False:
@@ -24,9 +26,12 @@ def convert_excel_to_df(path_to_excel, sheet_name=None):
     if sheet_name is None:
         df = pd.read_excel(path_to_excel)
     else:
-        df = pd.read_excel(path_to_excel, sheet_name=sheet_name)
+        df = pd.read_excel(path_to_excel, sheet_name=sheet_name, na_values=nan_char)
 
     # Omit index column (Previously written)
     df.drop(columns="Unnamed: 0", inplace=True)
+
+    # replace all - with nan (in case na_values didn't work
+    df.replace("-", np.nan, inplace=True)
 
     return df

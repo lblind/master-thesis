@@ -198,6 +198,11 @@ def deflate_food_prices(country, df_wfp, data_source="WFP"):
 
     :param inflation_data:
     :return:
+
+    References
+    ----------
+    Inflation/ Deflation: https://towardsdatascience.com/adjusting-prices-for-inflation-in-pandas-daaaa782cd89
+
     """
     path_to_inflation_dir = f"../input/{country}/inflation-dta/{data_source}"
 
@@ -216,9 +221,37 @@ def deflate_food_prices(country, df_wfp, data_source="WFP"):
         print(inflation_df.dtypes)
         print(inflation_df)
 
+        # extract year and month for inflation data
+        inflation_df["Year"] = inflation_df.Time.dt.year
+        inflation_df["Month"] = inflation_df.Time.dt.month
+
+        # only keep food inflation
+        inflation_df = inflation_df[inflation_df.Indicator == "Food Inflation"]
+
+        # Create an index multiplier (based on last entry in dataset (-1) -> most current as base year)
+        inflation_df["FoodInflationMult"] = inflation_df["Value (percent)"].iloc[-1] / inflation_df["Value (percent)"]
 
         # write it as excel
         inflation_df.to_excel(f"{path_to_inflation_dir}/{country}-inflation-dta.xlsx")
+
+        # merge df wfp to inflation data
+        df_wfp = df_wfp.merge(inflation_df, on=["Year", "Month"])
+
+        # Adjust prices to real terms / price levels in most recent year (2022, 4 in our case)
+        print(df_wfp.dtypes)
+
+        print(df_wfp.Price.unique())
+
+        # make sure that prices are float, raise error if invalid types are encountered
+        df_wfp["Price"] = pd.to_numeric(df_wfp["Price"], errors="raise")
+
+        print("After conversion\n", df_wfp.dtypes)
+
+        df_wfp["AdjPrice (2022, 4)"] = df_wfp["Price"] * df_wfp["FoodInflationMult"]
+
+        df_wfp.to_excel(f"{path_to_inflation_dir}/{country}-inflation-merged.xlsx")
+
+        # df_wfp["RealPrice"] = df_wfp
 
         if i > 0:
             warnings.warn(f"More than one csv detected in dir for inflation: {path_to_inflation_dir}.\n"
