@@ -236,6 +236,13 @@ def adjust_food_prices(country, df_wfp, data_source="WFP"):
         # Drop indicator column as no use for it anymore
         food_inflation_df = food_inflation_df.drop(columns=["Indicator"])
 
+        # write base year
+        base_year = food_inflation_df["Year"].iloc[-1]
+        base_month = food_inflation_df["Month"].iloc[-1]
+
+        food_inflation_df["PriceAdjBaseDate(Y,M)"] = f"({base_year}, {base_month})"
+
+
         # Create an index multiplier (based on last entry in dataset (-1) -> most current as base year)
         food_inflation_df["FoodInflationMult"] = food_inflation_df["Value (percent)"].iloc[-1] / food_inflation_df[
             "Value (percent)"]
@@ -257,7 +264,7 @@ def adjust_food_prices(country, df_wfp, data_source="WFP"):
         df_wfp["Price"] = pd.to_numeric(df_wfp["Price"], errors="raise")
 
         # Adjust prices to real terms / price levels in most recent year (2022, 4 in our case)
-        df_wfp["AdjPrice (2022,4)"] = df_wfp["Price"] * df_wfp["FoodInflationMult"]
+        df_wfp["AdjPrice"] = df_wfp["Price"] * df_wfp["FoodInflationMult"]
 
         df_wfp.to_excel(f"{path_to_inflation_dir}/{country}-inflation-merged.xlsx")
 
@@ -536,8 +543,9 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
                                          "Price",
                                          "Inflation [%]",
                                          "FoodInflation [%]",
-                                        "FoodInflationMult",
-                                         "AdjPrice (2022,4)",
+                                         "FoodInflationMult",
+                                         "PriceAdjBaseDate(Y,M)",
+                                         "AdjPrice",
                                          "Spei",
 
                                          "*DistanceNN",
@@ -557,7 +565,8 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
                                          "*DaySpei",
 
                                          "TimeFoodInflation",
-                                         "TimeInflation"
+                                         "TimeInflation",
+
 
                                          ])
 
@@ -977,7 +986,7 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
         # make a scatter plot (only for the inflation-adjusted prices)
         # plt.scatter(df_region.TimeSpei, df_region.Price, label="Original points",
         #             alpha=alpha)
-        plt.scatter(df_region.TimeSpei, df_region["AdjPrice (2022,4)"], label="Original points",
+        plt.scatter(df_region.TimeSpei, df_region["AdjPrice"], label="Original points",
                     alpha=alpha)
 
         # Plot and color markets separately
@@ -1002,12 +1011,12 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
             # Extrapolate (nominal) Prices
             df_region_new = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method="spline", order=2))
             # Extrapolate inflation-adjusted prices
-            df_region_new = df_region_new.assign(AdjPrice=df_region_new.loc[:, "AdjPrice (2022,4)"].interpolate(method="spline", order=2))
+            df_region_new = df_region_new.assign(AdjPrice=df_region_new.loc[:, "AdjPrice"].interpolate(method="spline", order=2))
         else:
             # Extrapolate (nominal) prices
             df_region_new = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method=interpolation_method))
             # Extrapolate inflation-adjusted prices
-            df_region_new = df_region_new.assign(AdjPrice=df_region_new.loc[:, "AdjPrice (2022,4)"].interpolate(method=interpolation_method))
+            df_region_new = df_region_new.assign(AdjPrice=df_region_new.loc[:, "AdjPrice"].interpolate(method=interpolation_method))
 
         # Plot post interpolation (/ extrapolated points)
         # plt.scatter(df_region_new.TimeSpei[df_region.Price.isna()], df_region_new.Price[df_region.Price.isna()],
