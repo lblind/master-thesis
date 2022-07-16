@@ -32,11 +32,12 @@ def create_dataset(country, dropped_commodities):
                                                                  dropped_commodities=dropped_commodities)
     df_wfp.to_excel(f"../output/{country}/intermediate-results/df_wfp.xlsx")
 
-    # TODO: delete
-    # check validity of extracted dataset
+    # check validity of extracted dataset (check that for all combinations of markets, commodity & time
+    # food prices have been populated)
     df_wfp = preproc.check_markets_per_commodity_time(df_wfp=df_wfp)
 
-    preproc.deflate_food_prices(country=country, df_wfp=df_wfp, data_source="WFP")
+    # Adjust food prices to one common price level
+    df_wfp = preproc.adjust_food_prices(country=country, df_wfp=df_wfp, data_source="WFP")
 
     # 2. Read CSV containing market coordinates and merge to price data
     df_wfp_with_coords = preproc.read_and_merge_wfp_market_coords(df_wfp=df_wfp, country=country)
@@ -113,15 +114,24 @@ def create_dataset(country, dropped_commodities):
     # Write sum stats
     preproc.summary_stats_prices_droughts(df_final=df_final, excel_output_extension=f"-preproc-3-{cut_off_percentile}p")
 
-    # TODO: delete
-    # df_final = preproc.check_markets_per_commodity_time(df_wfp=df_final)
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC: PHASE 2.2 (PRICES) - EXTRAPOLATION"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
 
     # EXTRAPOLATE REGIONAL PATTERNS
     # doesn't extrapolate tails for interpolation method: cubic
     df_final = preproc.extrapolate_prices_regional_patterns(df_final=df_final, interpolation_method="linear")
 
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC: Summary statistics"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+
     # Write sum stats
     preproc.summary_stats_prices_droughts(df_final=df_final, excel_output_extension=f"-preproc-4-{cut_off_percentile}p")
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC: Writing Results as Excel"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
 
     preproc.write_preprocessing_results_to_excel(df_wfp=df_wfp, df_wfp_with_coords=df_wfp_with_coords,
                                                  df_spei=df_spei, df_final=df_final, df_drought=df_drought,

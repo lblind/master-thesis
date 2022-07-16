@@ -96,7 +96,6 @@ def get_df_wfp_preprocessed_excel_region_method(country, dropped_commodities=Non
         # extract region name
         df_region["Region"] = region_name
 
-
         # print unique commodities
         print(f"\nRegion: {region_name}\nNo. of Markets: {df_region.Market.unique().size}\n"
               f"Commodities before omission:\n{df_region.Commodity.unique()}")
@@ -163,10 +162,9 @@ def check_markets_per_commodity_time(df_wfp):
         dfs_common_markets_per_commodity.append(pd.DataFrame(common_elements))
         dfs_freq_markets_per_commodity.append(pd.DataFrame(dict_freq_market.values(), index=dict_freq_market.keys()))
 
-
     # Write all dfs into one excel
     with pd.ExcelWriter(
-                    f"../output/{country}/summary-statistics/intersection-markets-per-commodity.xlsx") as writer:
+            f"../output/{country}/summary-statistics/intersection-markets-per-commodity.xlsx") as writer:
 
         if len(dfs_freq_markets_per_commodity) != len(df_wfp.Commodity.unique()) or \
                 len(dfs_common_markets_per_commodity) != len(df_wfp.Commodity.unique()):
@@ -186,8 +184,10 @@ def check_markets_per_commodity_time(df_wfp):
     return df_wfp
 
 
-def deflate_food_prices(country, df_wfp, data_source="WFP"):
+def adjust_food_prices(country, df_wfp, data_source="WFP"):
     """
+    Adjust food prices to one common price level (most recent one)
+    If WFP: Food inflation
 
     Preprocessing Step input csv WFP:
     - Deleted last comma in the header row (was too much), otherwise new column
@@ -204,6 +204,7 @@ def deflate_food_prices(country, df_wfp, data_source="WFP"):
     Inflation/ Deflation: https://towardsdatascience.com/adjusting-prices-for-inflation-in-pandas-daaaa782cd89
 
     """
+
     path_to_inflation_dir = f"../input/{country}/inflation-dta/{data_source}"
 
     if os.path.exists(path_to_inflation_dir) is False:
@@ -217,41 +218,48 @@ def deflate_food_prices(country, df_wfp, data_source="WFP"):
                                    engine="python")
 
         print(f"Read inflation dir from csv {filename}.")
-        print(inflation_df.columns)
-        print(inflation_df.dtypes)
-        print(inflation_df)
 
         # extract year and month for inflation data
         inflation_df["Year"] = inflation_df.Time.dt.year
         inflation_df["Month"] = inflation_df.Time.dt.month
 
-        # only keep food inflation
-        inflation_df = inflation_df[inflation_df.Indicator == "Food Inflation"]
+        # extract inflation data
+        only_inflation_df = inflation_df[inflation_df.Indicator == "Inflation"]
+        # Drop indicator column as no use for it anymore
+        only_inflation_df = only_inflation_df.drop(columns=["Indicator"])
+        # Rename columns
+        only_inflation_df = only_inflation_df.rename(columns={"Value (percent)": "Inflation [%]",
+                                                              "Time": "TimeInflation"})
+
+        # only keep food inflation (not inflation data)
+        food_inflation_df = inflation_df[inflation_df.Indicator == "Food Inflation"]
+        # Drop indicator column as no use for it anymore
+        food_inflation_df = food_inflation_df.drop(columns=["Indicator"])
 
         # Create an index multiplier (based on last entry in dataset (-1) -> most current as base year)
-        inflation_df["FoodInflationMult"] = inflation_df["Value (percent)"].iloc[-1] / inflation_df["Value (percent)"]
+        food_inflation_df["FoodInflationMult"] = food_inflation_df["Value (percent)"].iloc[-1] / food_inflation_df[
+            "Value (percent)"]
+
+        # Rename columns
+        food_inflation_df = food_inflation_df.rename(columns={"Value (percent)": "FoodInflation [%]",
+                                                              "Time": "TimeFoodInflation"})
 
         # write it as excel
-        inflation_df.to_excel(f"{path_to_inflation_dir}/{country}-inflation-dta.xlsx")
+        food_inflation_df.to_excel(f"{path_to_inflation_dir}/{country}-food-inflation-dta.xlsx")
 
         # merge df wfp to inflation data
-        df_wfp = df_wfp.merge(inflation_df, on=["Year", "Month"])
+        df_wfp = df_wfp.merge(food_inflation_df, on=["Year", "Month"], how="left")
 
-        # Adjust prices to real terms / price levels in most recent year (2022, 4 in our case)
-        print(df_wfp.dtypes)
-
-        print(df_wfp.Price.unique())
+        # merge inflation data to it
+        df_wfp = df_wfp.merge(only_inflation_df, on=["Year", "Month"], how="left")
 
         # make sure that prices are float, raise error if invalid types are encountered
         df_wfp["Price"] = pd.to_numeric(df_wfp["Price"], errors="raise")
 
-        print("After conversion\n", df_wfp.dtypes)
-
+        # Adjust prices to real terms / price levels in most recent year (2022, 4 in our case)
         df_wfp["AdjPrice (2022, 4)"] = df_wfp["Price"] * df_wfp["FoodInflationMult"]
 
         df_wfp.to_excel(f"{path_to_inflation_dir}/{country}-inflation-merged.xlsx")
-
-        # df_wfp["RealPrice"] = df_wfp
 
         if i > 0:
             warnings.warn(f"More than one csv detected in dir for inflation: {path_to_inflation_dir}.\n"
@@ -259,6 +267,8 @@ def deflate_food_prices(country, df_wfp, data_source="WFP"):
                           f" Only the first"
                           f"one will be considered.")
             break
+
+    return df_wfp
 
 
 def read_and_merge_wfp_market_coords(df_wfp, country):
@@ -524,6 +534,10 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
                                          "Unit",
                                          "Currency",
                                          "Price",
+                                         "Inflation [%]",
+                                         "FoodInflation [%]",
+                                        "FoodInflationMult",
+                                         "AdjPrice (2022, 4)",
                                          "Spei",
 
                                          "*DistanceNN",
@@ -540,7 +554,11 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
                                          "*LonSpeiNN",
                                          "*TupleLatLonSpei",
                                          "TimeSpei",
-                                         "*DaySpei"
+                                         "*DaySpei",
+
+                                         "TimeFoodInflation",
+                                         "TimeInflation"
+
                                          ])
 
     set_cols_after_reordering = set(df_final.columns.tolist())
@@ -666,11 +684,9 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_outpu
         no_of_droughts_list_sd = []
         no_of_droughts_list_md = []
 
-
         format_number = "#"
         format_share = "%"
         format_missings = "nan"
-
 
         # SPEI DATA: A drought occured or not (not look at spei, but drought yes/ no)
 
@@ -707,7 +723,8 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_outpu
                 f"\n[Var: {group}] Value <{value}>\n# missings (Drought): {na_values_drought}\nShare: {share_of_na_drought}")
 
             # "Extremely dry (ED)", "Severely dry (SD)", "Moderately dry (MD)"
-            no_of_extreme_droughts = df_group_value_drought[df_group_value_drought["SpeiCat"] == "Extremely dry (ED)"].shape[0]
+            no_of_extreme_droughts = \
+            df_group_value_drought[df_group_value_drought["SpeiCat"] == "Extremely dry (ED)"].shape[0]
             share_of_extreme_droughts = 0 if no_droughts_group_value == 0 else no_of_extreme_droughts / no_droughts_group_value
 
             no_of_severe_droughts = \
@@ -744,7 +761,7 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_outpu
                                                share_of_droughts_list_sd,
                                            f"{format_share} Moderate (of Droughts)":
                                                share_of_droughts_list_md,
-                                           f"{format_number} Extreme Droughts" : no_of_droughts_list_ed,
+                                           f"{format_number} Extreme Droughts": no_of_droughts_list_ed,
                                            f"{format_number} Severe Droughts": no_of_droughts_list_sd,
                                            f"{format_number} Moderate Droughts": no_of_droughts_list_md,
                                            }
@@ -765,20 +782,21 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_outpu
         f"{format_number} {format_missings}": [df_final.Price.isna().sum(), df_final.Spei.isna().sum()],
         f"{format_number} overall entries": [df_final.shape[0], df_final.shape[0]],
         f"{format_share} {format_missings}": [df_final.Price.isna().sum() / df_final.shape[0],
-                           df_final.Drought.isna().sum() / df_final.shape[0]],
+                                              df_final.Drought.isna().sum() / df_final.shape[0]],
         f"{format_number} Droughts": [np.nan, df_final[df_final["Drought"] == True].shape[0]],
         f"{format_share} Droughts": [np.nan, df_droughts.shape[0] / df_final.shape[0]],
         f"{format_share} Extreme (of Droughts)": [np.nan, df_ed.shape[0] / df_droughts.shape[0]],
         f"{format_share} Severe (of Droughts)": [np.nan, df_sd.shape[0] / df_droughts.shape[0]],
         f"{format_share} Moderate (of Droughts)": [np.nan, df_md.shape[0] / df_droughts.shape[0]],
-        f"{format_number} Extreme Droughts" : [np.nan, df_ed.shape[0]],
+        f"{format_number} Extreme Droughts": [np.nan, df_ed.shape[0]],
         f"{format_number} Severe Droughts": [np.nan, df_sd.shape[0]],
         f"{format_number} Moderate Droughts": [np.nan, df_md.shape[0]],
     }, ["Price", "Drought"])
     # df_sum_stats_general.set_index(["Price", "Drought"])
 
     # Write all dfs into one excel
-    with pd.ExcelWriter(f"{output_path_stats}/{df_final.Country.unique()[0]}-sum-stats{excel_output_extension}.xlsx") as writer:
+    with pd.ExcelWriter(
+            f"{output_path_stats}/{df_final.Country.unique()[0]}-sum-stats{excel_output_extension}.xlsx") as writer:
         df_sum_stats_general.to_excel(writer, sheet_name="General")
 
         for i, df_sum_stat in enumerate(list_dfs_sum_stats):
@@ -870,7 +888,8 @@ def drop_missing_decile_per_region_prices(path_excel_sum_stats, df_final, cut_of
         unique_markets_region = df_final_region.Market.unique()
 
         # 2) Extract sum stats for these markets
-        df_sum_stats_markets_region = df_sum_stats_all_markets[df_sum_stats_all_markets.Market.isin(unique_markets_region)]
+        df_sum_stats_markets_region = df_sum_stats_all_markets[
+            df_sum_stats_all_markets.Market.isin(unique_markets_region)]
 
         # 3) Extract list of missings for that market
         df_col_missings_prices = df_sum_stats_markets_region["Price: % nan"]
@@ -904,7 +923,7 @@ def drop_missing_decile_per_region_prices(path_excel_sum_stats, df_final, cut_of
             f"{output_dir}/{country}-dropped-markets{excel_output_extension}.xlsx") as writer:
 
         # Write cut-offs as excel
-        df_cut_offs = pd.DataFrame({"Cut-off" : cut_offs_per_region_dict.values()},
+        df_cut_offs = pd.DataFrame({"Cut-off": cut_offs_per_region_dict.values()},
                                    cut_offs_per_region_dict.keys())
         df_cut_offs.to_excel(writer, sheet_name=f"Cut-offs (percentile {cut_off_percentile}")
 
@@ -997,6 +1016,3 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
     df_merged_all_regions = pd.concat(dfs_extrapolated_per_region.values(), ignore_index=True)
 
     return df_merged_all_regions
-
-
-
