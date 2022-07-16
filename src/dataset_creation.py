@@ -143,45 +143,68 @@ def create_dataset(country, dropped_commodities):
     # 65 (30%), 60 (27%, 30% also for central region)
     cut_off_percentile = 60
 
-    # for commodity in df_final.Commodity.unique():
+    df_commodities_dict = {}
+
+    for commodity in df_final.Commodity.unique():
+        # Extract df for commodity
+        df_final_commodity = df_final[df_final.Commodity == commodity]
+
+        # calculate summary statistics PER commodity
+        print(
+            "\n# ------------------------------------------------------------------------------------------------------\n"
+            f"# [{commodity}] PREPROC: Write summary statistics 2"
+            "\n# ------------------------------------------------------------------------------------------------------\n")
+        preproc.summary_stats_prices_droughts(df_final=df_final_commodity, excel_output_extension=f"-preproc-2-{commodity}")
+
+        print("\n# ------------------------------------------------------------------------------------------------------\n"
+              f"# [{commodity}] PREPROC: Cut off missing values after certain percentile"
+              "\n# ------------------------------------------------------------------------------------------------------\n")
+
+        # Cut all regions with missing >= cut_off_percentile of missing values
+        df_final_commodity = preproc.drop_missing_decile_per_region_prices(
+            path_excel_sum_stats=f"../output/{country}/summary-statistics/{country}-"
+                                 f"sum-stats-preproc-2-{commodity}.xlsx",
+            df_final=df_final_commodity,
+            cut_off_percentile=cut_off_percentile, excel_output_extension=f"-{cut_off_percentile}p")
+
+        print("\n# ------------------------------------------------------------------------------------------------------\n"
+              f"# [{commodity}] PREPROC: Write summary statistics 3"
+              "\n# ------------------------------------------------------------------------------------------------------\n")
+
+        # Write sum stats
+        preproc.summary_stats_prices_droughts(df_final=df_final_commodity, excel_output_extension=
+                f"-preproc-3-{cut_off_percentile}p-{commodity}")
+
+        print("\n# ------------------------------------------------------------------------------------------------------\n"
+              f"# [{commodity}] PREPROC: PHASE 2.2 (PRICES) - EXTRAPOLATION"
+              "\n# ------------------------------------------------------------------------------------------------------\n")
+
+        # EXTRAPOLATE REGIONAL PATTERNS
+        # doesn't extrapolate tails for interpolation method: cubic
+        df_final_commodity = preproc.extrapolate_prices_regional_patterns(df_final=df_final_commodity,
+                                                                          interpolation_method="linear")
+
+        # add result to dictionary
+        df_commodities_dict[commodity] = df_final_commodity
+
+        print("\n# ------------------------------------------------------------------------------------------------------\n"
+              f"# [{commodity}] PREPROC: Write summary statistics 4"
+              "\n# ------------------------------------------------------------------------------------------------------\n")
+
+        # Write sum stats
+        preproc.summary_stats_prices_droughts(df_final=df_final_commodity, excel_output_extension=f"-preproc-4"
+                                                                                                  f"-{cut_off_percentile}p"
+                                                                                                  f"-{commodity}")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
-          "# PREPROC: Cut off missing values after certain percentile"
+          "# PREPROC: Combining all results as excel"
           "\n# ------------------------------------------------------------------------------------------------------\n")
-
-    # Cut all regions with missing >= cut_off_percentile of missing values
-    df_final = preproc.drop_missing_decile_per_region_prices(
-        path_excel_sum_stats=f"../output/{country}/summary-statistics/{country}-"
-                             f"sum-stats-preproc-2.xlsx",
-        df_final=df_final,
-        cut_off_percentile=cut_off_percentile, excel_output_extension=f"-{cut_off_percentile}p")
-
-    print("\n# ------------------------------------------------------------------------------------------------------\n"
-          "# PREPROC: Write summary statistics 3"
-          "\n# ------------------------------------------------------------------------------------------------------\n")
-
-    # Write sum stats
-    preproc.summary_stats_prices_droughts(df_final=df_final, excel_output_extension=f"-preproc-3-{cut_off_percentile}p")
-
-    print("\n# ------------------------------------------------------------------------------------------------------\n"
-          "# PREPROC: PHASE 2.2 (PRICES) - EXTRAPOLATION"
-          "\n# ------------------------------------------------------------------------------------------------------\n")
-
-    # EXTRAPOLATE REGIONAL PATTERNS
-    # doesn't extrapolate tails for interpolation method: cubic
-    df_final = preproc.extrapolate_prices_regional_patterns(df_final=df_final, interpolation_method="linear")
-
-    print("\n# ------------------------------------------------------------------------------------------------------\n"
-          "# PREPROC: Write summary statistics 4"
-          "\n# ------------------------------------------------------------------------------------------------------\n")
-
-    # Write sum stats
-    preproc.summary_stats_prices_droughts(df_final=df_final, excel_output_extension=f"-preproc-4-{cut_off_percentile}p")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: Writing Results as Excel"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
+    # TODO: change df_final: pass dictionary and write commodities in separate sheets in df_final
     preproc.write_preprocessing_results_to_excel(df_wfp=df_wfp, df_wfp_with_coords=df_wfp_with_coords,
                                                  df_spei=df_spei, df_final=df_final, df_drought=df_drought,
                                                  df_no_drought=df_no_drought)

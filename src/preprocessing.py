@@ -976,6 +976,12 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
 
     country = df_final.Country.unique()[0]
 
+    commodity = df_final.Commodity.unique()[0]
+    if len(df_final.Commodity.unique()) > 1:
+        warnings.warn(f"Expected to extrapolate dataset only for one commodity, not {len(df_final.Commodity.unique())} "
+                      f"({df_final.Commodity.unique()})")
+        commodity += "+"
+
     if len(df_final.Currency.unique()) != 1:
         raise ValueError(f"More than one currency found in df: {df_final.Currency.unique()}.\n"
                          f"Cannot visualize prices without one common currency.\n"
@@ -1003,7 +1009,7 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
         #     plt.scatter(df_region_market.TimeSpei, df_region_market.Price, label=market)
 
         plt.suptitle("(Inflation-Adjusted) Price Distribution")
-        plt.title(f"Region: '{region}'")
+        plt.title(f"Region: '{region}', Commodity: {commodity}")
         plt.xlabel("Time")
         plt.ylabel(f"Price [{currency}]")
 
@@ -1011,7 +1017,7 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
         output_dir = f"../output/{country}/plots"
         if os.path.exists(output_dir) is False:
             os.makedirs(output_dir)
-        plt.savefig(f"{output_dir}/{region}-scatter-adj-prices.png")
+        plt.savefig(f"{output_dir}/{region}-scatter-adj-prices-{commodity}.png")
         # plt.show()
 
         # Extrapolate (limit_direction = to allow for extrapolation)
