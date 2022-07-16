@@ -630,7 +630,8 @@ def separate_df_drought_non_drought(df_final_classified):
     return df_drought, df_no_drought
 
 
-def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_output_extension="-preproc-1"):
+def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_output_extension="-preproc-1",
+                                  commodity=None):
     """
     Summary statistics for missing values per market and
     commodity
@@ -649,7 +650,10 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_outpu
     no_overall_entries = df_final.shape[0]
 
     # Make sure that output directory exists
-    output_path_stats = f"../output/{df_final.Country.unique()[0]}/summary-statistics"
+    if commodity is not None:
+        output_path_stats = f"../output/{df_final.Country.unique()[0]}/summary-statistics/{commodity}"
+    else:
+        output_path_stats = f"../output/{df_final.Country.unique()[0]}/summary-statistics"
     if os.path.exists(output_path_stats) is False:
         os.makedirs(output_path_stats)
 
@@ -813,13 +817,13 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_outpu
             df_sum_stat.to_excel(writer, sheet_name=group)
 
 
-def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, df_final, df_drought, df_no_drought):
+def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, dict_df_final_per_commodity, df_drought, df_no_drought):
     """
 
     :param df_wfp:
     :param df_wfp_with_coords:
     :param df_spei:
-    :param df_final:
+    :param dict_df_final_per_commodity:
     :param df_drought:
     :param df_no_drought:
     :return:
@@ -839,7 +843,18 @@ def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, df
 
     df_drought.to_excel(f"{output_path_final}/{country}-drought.xlsx", na_rep="-")
     df_no_drought.to_excel(f"{output_path_final}/{country}-no-drought.xlsx", na_rep="-")
-    df_final.to_excel(f"{output_path_final}/{country}-final-dta.xlsx", na_rep="-")
+
+    # Combine all dataframes to one large one
+    df_final_all = pd.concat(dict_df_final_per_commodity.values(), ignore_index=True)
+
+    # Write all dfs into one excel
+    with pd.ExcelWriter(
+            f"{output_path_final}/{country}-final-dta.xlsx") as writer:
+
+        df_final_all.to_excel(writer, sheet_name="All Commodities", na_rep="-")
+
+        for commodity in dict_df_final_per_commodity.keys():
+            dict_df_final_per_commodity[commodity].to_excel(writer, sheet_name=f"{commodity}", na_rep="-")
 
     print(f"Df drought shape: {df_drought.shape}\ndf_no_drought: {df_no_drought.shape}")
 
@@ -847,11 +862,11 @@ def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, df
           f"PREPROCESSING: DONE.\nSuccessfully merged different datasets (wfp, wfp coords, spei)\nand stored them"
           f" as excel workbooks in the output folder.\n"
           f"Basic Summary statistics:\n"
-          f"Number of entries: {df_final.shape[0]}\n"
-          f"Number of nan/missing values Prices: {df_final.Price.isna().sum()} (Share: "
-          f"{df_final.Price.isna().sum() / df_final.shape[0]})\n"
-          f"Number of nan/missing values Drought: {df_final.Drought.isna().sum()} (Share: "
-          f"{df_final.Drought.isna().sum() / df_final.shape[0]})\n"
+          f"Number of entries: {df_final_all.shape[0]}\n"
+          f"Number of nan/missing values Prices: {df_final_all.Price.isna().sum()} (Share: "
+          f"{df_final_all.Price.isna().sum() / df_final_all.shape[0]})\n"
+          f"Number of nan/missing values Drought: {df_final_all.Drought.isna().sum()} (Share: "
+          f"{df_final_all.Drought.isna().sum() / df_final_all.shape[0]})\n"
           f"----------------------------------------------------------------------------------------------------\n")
 
 
@@ -869,8 +884,8 @@ def drop_years(df_final, years_list):
     return df_final[~df_final["Year"].isin(years_list)]
 
 
-def drop_missing_decile_per_region_prices(path_excel_sum_stats, df_final, cut_off_percentile=90,
-                                          excel_output_extension=""):
+def drop_missing_percentile_per_region_prices(path_excel_sum_stats, df_final, cut_off_percentile=90,
+                                              excel_output_extension=""):
     """
     Drops a certain decile of markets
 
@@ -878,6 +893,12 @@ def drop_missing_decile_per_region_prices(path_excel_sum_stats, df_final, cut_of
     :return:
     """
     country = df_final.Country.unique()[0]
+    commodity = df_final.Commodity.unique()[0]
+
+    if len(df_final.Commodity.unique()) > 1:
+        warnings.warn(f"Determination of cutoff (drop_missing. Expecting only one commodity, not "
+                      f"{len(df_final.Commodity.unique())}. ({df_final.Commodity.unique()}).\n"
+                      f"Only the first one is used")
 
     # read summary stats
     df_sum_stats_all_markets = pd.read_excel(path_excel_sum_stats, sheet_name="Market")
@@ -923,7 +944,7 @@ def drop_missing_decile_per_region_prices(path_excel_sum_stats, df_final, cut_of
     df_reduced = df_final[~df_final["Market"].isin(markets_to_cut_list)]
 
     # 9) Create statistics -> Store the dropped markets & their shares of missings
-    output_dir = f"../output/{country}/summary-statistics/preproc-3-dropped-markets"
+    output_dir = f"../output/{country}/summary-statistics/preproc-3-dropped-markets/{cut_off_percentile}p"
     if os.path.exists(output_dir) is False:
         os.makedirs(output_dir)
 
@@ -945,7 +966,7 @@ def drop_missing_decile_per_region_prices(path_excel_sum_stats, df_final, cut_of
     return df_reduced
 
 
-def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear", order=2):
+def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear", order=None):
     """
     Extrapolates missing values in Prices based on regional patterns
 
@@ -990,6 +1011,12 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
 
     dfs_extrapolated_per_region = {}
 
+    # Make sure Output dir exists
+    output_dir = f"../output/{country}/plots/scatter-plots/{commodity}"
+    output_dir_extrapolation = output_dir + "/extrapolation"
+    if os.path.exists(output_dir_extrapolation) is False:
+        os.makedirs(output_dir_extrapolation)
+
     alpha = 0.5
     for region in df_final.Region.unique():
         print(f"Extrapolating Prices for region: <{region}> (Method: {interpolation_method})")
@@ -1013,11 +1040,7 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
         plt.xlabel("Time")
         plt.ylabel(f"Price [{currency}]")
 
-        # store output and make sure it exists
-        output_dir = f"../output/{country}/plots"
-        if os.path.exists(output_dir) is False:
-            os.makedirs(output_dir)
-        plt.savefig(f"{output_dir}/{region}-scatter-adj-prices-{commodity}.png")
+        plt.savefig(f"{output_dir}/{region}-{commodity}-scatter-adj-prices.png")
         # plt.show()
 
         # Extrapolate (limit_direction = to allow for extrapolation)
@@ -1044,7 +1067,8 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
         plt.scatter(df_region_new.TimeSpei[df_region.Price.isna()], df_region_new.AdjPrice[df_region.Price.isna()],
                     color="green", label="Extrapolated points", marker="*", alpha=alpha)
         plt.legend()
-        plt.savefig(f"{output_dir}/{region}-scatter-prices-extrapolated.png")
+        plt.savefig(f"{output_dir_extrapolation}/{region}-{commodity}-scatter-prices-extrapolated-"
+                    f"{interpolation_method}-{order}.png")
         plt.show()
 
         # append extrapolated dataframe to dictionary

@@ -141,6 +141,7 @@ def create_dataset(country, dropped_commodities):
     # ------------------------------------------------------------------------------------------------------------------
 
     # 65 (30%), 60 (27%, 30% also for central region)
+    # without populated missings: 60
     cut_off_percentile = 60
 
     df_commodities_dict = {}
@@ -154,18 +155,19 @@ def create_dataset(country, dropped_commodities):
             "\n# ------------------------------------------------------------------------------------------------------\n"
             f"# [{commodity}] PREPROC: Write summary statistics 2"
             "\n# ------------------------------------------------------------------------------------------------------\n")
-        preproc.summary_stats_prices_droughts(df_final=df_final_commodity, excel_output_extension=f"-preproc-2-{commodity}")
+        preproc.summary_stats_prices_droughts(df_final=df_final_commodity, excel_output_extension=f"-preproc-2-{commodity}",
+                                              commodity=commodity)
 
         print("\n# ------------------------------------------------------------------------------------------------------\n"
               f"# [{commodity}] PREPROC: Cut off missing values after certain percentile"
               "\n# ------------------------------------------------------------------------------------------------------\n")
 
         # Cut all regions with missing >= cut_off_percentile of missing values
-        df_final_commodity = preproc.drop_missing_decile_per_region_prices(
-            path_excel_sum_stats=f"../output/{country}/summary-statistics/{country}-"
+        df_final_commodity = preproc.drop_missing_percentile_per_region_prices(
+            path_excel_sum_stats=f"../output/{country}/summary-statistics/{commodity}/{country}-"
                                  f"sum-stats-preproc-2-{commodity}.xlsx",
             df_final=df_final_commodity,
-            cut_off_percentile=cut_off_percentile, excel_output_extension=f"-{cut_off_percentile}p")
+            cut_off_percentile=cut_off_percentile, excel_output_extension=f"-{cut_off_percentile}p-{commodity}")
 
         print("\n# ------------------------------------------------------------------------------------------------------\n"
               f"# [{commodity}] PREPROC: Write summary statistics 3"
@@ -173,7 +175,7 @@ def create_dataset(country, dropped_commodities):
 
         # Write sum stats
         preproc.summary_stats_prices_droughts(df_final=df_final_commodity, excel_output_extension=
-                f"-preproc-3-{cut_off_percentile}p-{commodity}")
+                f"-preproc-3-{cut_off_percentile}p-{commodity}", commodity=commodity)
 
         print("\n# ------------------------------------------------------------------------------------------------------\n"
               f"# [{commodity}] PREPROC: PHASE 2.2 (PRICES) - EXTRAPOLATION"
@@ -194,7 +196,8 @@ def create_dataset(country, dropped_commodities):
         # Write sum stats
         preproc.summary_stats_prices_droughts(df_final=df_final_commodity, excel_output_extension=f"-preproc-4"
                                                                                                   f"-{cut_off_percentile}p"
-                                                                                                  f"-{commodity}")
+                                                                                                  f"-{commodity}",
+                                              commodity=commodity)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: Combining all results as excel"
@@ -204,9 +207,9 @@ def create_dataset(country, dropped_commodities):
           "# PREPROC: Writing Results as Excel"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-    # TODO: change df_final: pass dictionary and write commodities in separate sheets in df_final
     preproc.write_preprocessing_results_to_excel(df_wfp=df_wfp, df_wfp_with_coords=df_wfp_with_coords,
-                                                 df_spei=df_spei, df_final=df_final, df_drought=df_drought,
+                                                 df_spei=df_spei, dict_df_final_per_commodity=df_commodities_dict,
+                                                 df_drought=df_drought,
                                                  df_no_drought=df_no_drought)
 
     return df_final
