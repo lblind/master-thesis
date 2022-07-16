@@ -24,6 +24,8 @@ import numpy as np
 def plot_malawi(df_final):
     """
 
+    Admin1: Regions
+    Admin2: Markets
     Structure Shape File
     NAME_0: Name of country
     NAME_1: Name of bigger regions
@@ -35,58 +37,66 @@ def plot_malawi(df_final):
     Data source/ shape files extracted via: https://www.diva-gis.org/datadown
     :return:
     """
+    # Read shape file(s)
+    # WFP GeoData
+    malawi_adm1 = gpd.read_file("../input/Malawi/maps/WFPGeoNode/mwi_bnd_admin1/mwi_bnd_admin1.shp")
+    malawi_adm2 = gpd.read_file("../input/Malawi/maps/WFPGeoNode/mwi_bnd_admin2/mwi_bnd_admin2.shp")
 
-    # VERSION 2 -> Shae files via external source (e.g. diva-gis)
-    malawi_adm0 = gpd.read_file("../input/Malawi/maps/diva-gis/MWI_adm/MWI_adm0.shp")
-    malawi_adm1 = gpd.read_file("../input/Malawi/maps/diva-gis/MWI_adm/MWI_adm1.shp")
-    malawi_adm2 = gpd.read_file("../input/Malawi/maps/diva-gis/MWI_adm/MWI_adm2.shp")
-    malawi_adm3 = gpd.read_file("../input/Malawi/maps/diva-gis/MWI_adm/MWI_adm3.shp")
+    # Humanitarian Data Exchange
+    malawi_adm3 = gpd.read_file("../input/Malawi/maps/hum-data-exchange/mwi_adm_nso_20181016_shp"
+                                "/mwi_admbnda_adm3_nso_20181016.shp")
 
-    malawi_adm1.rename(columns={"NAME_1" : "Market"}, inplace=True)
+    print("Malawi admin 1\n", malawi_adm1, "\nColumns", malawi_adm1.columns)
+    print("Malawi admin 2\n", malawi_adm2, "\nColumns", malawi_adm2.columns)
+    print("Malawi admin 3\n", malawi_adm3, "\nColumns", malawi_adm3.columns)
 
+    # print(malawi_adm3.Market.unique(), len(malawi_adm2.Market.unique()))
+
+    malawi_adm1.rename(columns={"NAME_1": "Region"}, inplace=True)
+    malawi_adm2.rename(columns={"NAME_2": "Market"}, inplace=True)
+    malawi_adm3.rename(columns={"ADM3_EN": "TA"}, inplace=True)
+
+    print(malawi_adm1.Region.unique())
+    print(malawi_adm2.Market.unique(), len(malawi_adm2.Market.unique()))
+    print(malawi_adm3.TA.unique(), len(malawi_adm3.TA.unique()))
     # merge adm1 data (for now) with df_final
-    df_final_merged = malawi_adm1.merge(df_final, left_on="Market", right_on="Market")
+    # df_final_merged = malawi_adm1.merge(df_final, on="Market")
+    df_final_merged = malawi_adm2.merge(df_final, on="Market")
 
-    # pure country
-    # malawi_adm0.plot()
-    # adm1 -> regions?
-    # malawi_adm1.plot()
-    # adm2 -> more finegranular (cities?)
-    # malawi_adm2.plot()
-    # malawi_adm3.plot()
-
-
-
-    # # print(malawi_adm1.NAME_1)
-    # print("NAME 0\n", malawi_adm3.NAME_0.unique())
-    # print("NAME 1\n", malawi_adm3.NAME_1.unique(), len(malawi_adm3.NAME_1.unique()))
-    # print("NAME 2\n",malawi_adm3.NAME_2.unique(), len(malawi_adm3.NAME_2.unique()))
-    # print("NAME 3\n",malawi_adm3.NAME_3.unique())
-    # # Merge df_final with shape dataset
-    #
-    # print("ID 0\n", malawi_adm3.ID_0.unique())
-    # print("ID 1\n", malawi_adm3.ID_1.unique(), len(malawi_adm3.ID_1.unique()))
-    # print("ID 2\n", malawi_adm3.ID_2.unique(), len(malawi_adm3.ID_2.unique()))
-    # print("ID 3\n", malawi_adm3.ID_3.unique(), len(malawi_adm3.ID_3.unique()))
-    #
-    # print("NL NAME 3 3\n", malawi_adm3.NL_NAME_3.unique(), len(malawi_adm3.NL_NAME_3.unique()))
-
-    # print(malawi_adm3)
+    print("Unique Markets\n",
+          len(df_final_merged.Market.unique()), len(df_final.Market.unique()))
 
     # convert regular dataframe to geopandas df
-    # gdf_final = gpd.GeoDataFrame(
-    #     df_final, geometry=gpd.points_from_xy(df_final.MarketLatitude, df_final.MarketLongitude)
-    # )
     gdf_final = gpd.GeoDataFrame(
         df_final, geometry=gpd.points_from_xy(df_final.MarketLongitude, df_final.MarketLatitude)
     )
-    ax = gplt.polyplot(malawi_adm1)
+
+    gdf_markets_with_admin3 = gpd.sjoin(gdf_final, malawi_adm3, how="inner", predicate="intersects")
+    print(gdf_markets_with_admin3.columns, gdf_markets_with_admin3.shape)
+
+    print(f"Merged shape: {df_final_merged.shape}")
+
+    print(malawi_adm2.Admin2.unique())
+    print(malawi_adm1.Admin1.unique())
+
+    # Plot boundaries Admin 1
+
+    # Plot boundaries Admin 2
+    # ax = gplt.polyplot(malawi_adm2)
+    ax = gplt.polyplot(malawi_adm2)
+
+
+    # PLOT POINTS / Markets on it
+    gplt.pointplot(gdf_final, ax=ax, hue="Region")
+    # gplt.pointplot(gdf_final, ax=ax)
+
+
     # ax = gplt.polyplot(df_final_merged, hue="Region")
     # ax = gplt.polyplot(malawi_adm1, projection=gcrs.AlbersEqualArea())
-    print(df_final_merged.head())
+    # print(df_final_merged.head())
     # gplt.choropleth(
-    #     df_final_merged,
-    #     hue="Region",
+    #     gdf_markets_with_admin3,
+    #     hue="Market",
     #     edgecolor="white",
     #     linewidth=1,
     #     cmap="Greens",
@@ -95,8 +105,6 @@ def plot_malawi(df_final):
     #     ax=ax
     # )
 
-    gplt.pointplot(gdf_final, ax=ax, hue="Region")
-    # gplt.pointplot(gdf_final, ax=ax)
 
     plt.xlabel("Longitude")
     plt.ylabel("Latitude")

@@ -30,7 +30,7 @@ if __name__ == "__main__":
     # dropped_commodities = None
 
     # TODO: Outcomment this line if dataset hat not yet been created
-    df_final = dataset_creation.create_dataset(country=country, dropped_commodities=dropped_commodities)
+    # df_final = dataset_creation.create_dataset(country=country, dropped_commodities=dropped_commodities)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# ANALYSIS"
@@ -39,10 +39,12 @@ if __name__ == "__main__":
     path_to_final_df = f"../output/{country}/{country}-final-dta.xlsx"
     df_final = utils.convert_excel_to_df(path_to_final_df)
 
+    preproc.deflate_food_prices(country=country, df_wfp=df_final)
+
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# VISUALIZATION"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-    #visualization.plot_malawi(df_final=df_final)
+    # visualization.plot_malawi(df_final=df_final)
 
-    dmd.dmd_per_commodity(df_final)
+    # dmd.dmd_per_commodity(df_final)

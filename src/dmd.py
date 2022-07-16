@@ -3,7 +3,6 @@ Dynamic Mode Decomposition
 """
 
 import pydmd
-
 from pydmd import DMD
 
 import pandas as pd

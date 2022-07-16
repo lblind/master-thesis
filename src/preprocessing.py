@@ -186,9 +186,15 @@ def check_markets_per_commodity_time(df_wfp):
     return df_wfp
 
 
-
 def deflate_food_prices(country, df_wfp, data_source="WFP"):
     """
+
+    Preprocessing Step input csv WFP:
+    - Deleted last comma in the header row (was too much), otherwise new column
+    - Removed "" for the 2 following columns in header (time, value(percent), otherwise they are not detected
+      as separate columns
+
+    - Replaced all "" with blank (via Excel) - otherwise separation is not properly detected
 
     :param inflation_data:
     :return:
@@ -200,18 +206,26 @@ def deflate_food_prices(country, df_wfp, data_source="WFP"):
                          f" into the following"
                          f"folder: {path_to_inflation_dir}.\n(Source: {data_source})")
 
-    for i, filename in enumerate(glob.glob(path_to_inflation_dir + "*.csv")):
-        inflation_df = pd.read_csv(filename)
+    for i, filename in enumerate(glob.glob(path_to_inflation_dir + "/*.csv")):
+        # don't read last row into excel
+        inflation_df = pd.read_csv(filename, sep=",", header=0, skipfooter=1, parse_dates=[1],
+                                   engine="python")
 
-        if i>0:
+        print(f"Read inflation dir from csv {filename}.")
+        print(inflation_df.columns)
+        print(inflation_df.dtypes)
+        print(inflation_df)
+
+
+        # write it as excel
+        inflation_df.to_excel(f"{path_to_inflation_dir}/{country}-inflation-dta.xlsx")
+
+        if i > 0:
             warnings.warn(f"More than one csv detected in dir for inflation: {path_to_inflation_dir}.\n"
+                          f"({os.listdir(path_to_inflation_dir)})\n"
                           f" Only the first"
                           f"one will be considered.")
             break
-
-
-
-
 
 
 def read_and_merge_wfp_market_coords(df_wfp, country):
