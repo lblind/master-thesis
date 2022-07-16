@@ -945,7 +945,7 @@ def drop_missing_decile_per_region_prices(path_excel_sum_stats, df_final, cut_of
     return df_reduced
 
 
-def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"):
+def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear", order=2):
     """
     Extrapolates missing values in Prices based on regional patterns
 
@@ -961,6 +961,14 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
 
     Plot Interpolation:
     https://www.geeksforgeeks.org/scipy-interpolation/#:~:text=Interpolation%20is%20a%20technique%20of%20constructing%20data%20points,in%20many%20ways%20some%20of%20them%20are%20%3A
+
+    Numpy Polyfit (LS-Fit):
+    https://numpy.org/doc/stable/reference/generated/numpy.polyfit.html
+    https://stackoverflow.com/questions/19406049/extrapolating-data-with-numpy-python
+
+    Extrapolate with Scipy:
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp1d.html
+    (fill_value = extrapolate)
     """
     # Make sure that prices are sorted chronologically
     print("Sorting dataframe chronologically")
@@ -1006,17 +1014,22 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
         plt.savefig(f"{output_dir}/{region}-scatter-adj-prices.png")
         # plt.show()
 
-        # Extrapolate
+        # Extrapolate (limit_direction = to allow for extrapolation)
         if interpolation_method == "spline":
             # Extrapolate (nominal) Prices
-            df_region_new = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method="spline", order=2))
+            df_region_new = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method="spline", order=order,
+                                                                                         limit_direction="both"))
             # Extrapolate inflation-adjusted prices
-            df_region_new = df_region_new.assign(AdjPrice=df_region_new.loc[:, "AdjPrice"].interpolate(method="spline", order=2))
+            df_region_new = df_region_new.assign(AdjPrice=df_region_new.loc[:, "AdjPrice"].interpolate(method="spline",
+                                                                                                       order=order,
+                                                                                                       limit_direction="both"))
         else:
             # Extrapolate (nominal) prices
-            df_region_new = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method=interpolation_method))
+            df_region_new = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method=interpolation_method,
+                                                                                         limit_direction="both"))
             # Extrapolate inflation-adjusted prices
-            df_region_new = df_region_new.assign(AdjPrice=df_region_new.loc[:, "AdjPrice"].interpolate(method=interpolation_method))
+            df_region_new = df_region_new.assign(AdjPrice=df_region_new.loc[:, "AdjPrice"].interpolate(method=interpolation_method,
+                                                                                                       limit_direction="both"))
 
         # Plot post interpolation (/ extrapolated points)
         # plt.scatter(df_region_new.TimeSpei[df_region.Price.isna()], df_region_new.Price[df_region.Price.isna()],
