@@ -257,7 +257,7 @@ def adjust_food_prices(country, df_wfp, data_source="WFP"):
         df_wfp["Price"] = pd.to_numeric(df_wfp["Price"], errors="raise")
 
         # Adjust prices to real terms / price levels in most recent year (2022, 4 in our case)
-        df_wfp["AdjPrice (2022, 4)"] = df_wfp["Price"] * df_wfp["FoodInflationMult"]
+        df_wfp["AdjPrice (2022,4)"] = df_wfp["Price"] * df_wfp["FoodInflationMult"]
 
         df_wfp.to_excel(f"{path_to_inflation_dir}/{country}-inflation-merged.xlsx")
 
@@ -537,7 +537,7 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
                                          "Inflation [%]",
                                          "FoodInflation [%]",
                                         "FoodInflationMult",
-                                         "AdjPrice (2022, 4)",
+                                         "AdjPrice (2022,4)",
                                          "Spei",
 
                                          "*DistanceNN",
@@ -974,8 +974,10 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
         # extract dataframe for that region
         df_region = df_final[df_final.Region == region]
 
-        # make a scatter polt
-        plt.scatter(df_region.TimeSpei, df_region.Price, label="Original points",
+        # make a scatter plot (only for the inflation-adjusted prices)
+        # plt.scatter(df_region.TimeSpei, df_region.Price, label="Original points",
+        #             alpha=alpha)
+        plt.scatter(df_region.TimeSpei, df_region["AdjPrice (2022,4)"], label="Original points",
                     alpha=alpha)
 
         # Plot and color markets separately
@@ -983,9 +985,8 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
         #     df_region_market = df_region[df_region.Market == market]
         #     plt.scatter(df_region_market.TimeSpei, df_region_market.Price, label=market)
 
-        plt.suptitle("Price Distribution")
+        plt.suptitle("(Inflation-Adjusted) Price Distribution")
         plt.title(f"Region: '{region}'")
-        # plt.legend()
         plt.xlabel("Time")
         plt.ylabel(f"Price [{currency}]")
 
@@ -993,17 +994,26 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
         output_dir = f"../output/{country}/plots"
         if os.path.exists(output_dir) is False:
             os.makedirs(output_dir)
-        plt.savefig(f"{output_dir}/{region}-scatter-prices.png")
+        plt.savefig(f"{output_dir}/{region}-scatter-adj-prices.png")
         # plt.show()
 
         # Extrapolate
         if interpolation_method == "spline":
+            # Extrapolate (nominal) Prices
             df_region_new = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method="spline", order=2))
+            # Extrapolate inflation-adjusted prices
+            df_region_new = df_region_new.assign(AdjPrice=df_region_new.loc[:, "AdjPrice (2022,4)"].interpolate(method="spline", order=2))
         else:
+            # Extrapolate (nominal) prices
             df_region_new = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method=interpolation_method))
+            # Extrapolate inflation-adjusted prices
+            df_region_new = df_region_new.assign(AdjPrice=df_region_new.loc[:, "AdjPrice (2022,4)"].interpolate(method=interpolation_method))
 
         # Plot post interpolation (/ extrapolated points)
-        plt.scatter(df_region_new.TimeSpei[df_region.Price.isna()], df_region_new.Price[df_region.Price.isna()],
+        # plt.scatter(df_region_new.TimeSpei[df_region.Price.isna()], df_region_new.Price[df_region.Price.isna()],
+        #             color="green", label="Extrapolated points", marker="*", alpha=alpha)
+
+        plt.scatter(df_region_new.TimeSpei[df_region.Price.isna()], df_region_new.AdjPrice[df_region.Price.isna()],
                     color="green", label="Extrapolated points", marker="*", alpha=alpha)
         plt.legend()
         plt.savefig(f"{output_dir}/{region}-scatter-prices-extrapolated.png")
