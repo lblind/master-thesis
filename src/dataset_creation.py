@@ -280,9 +280,9 @@ def create_dataset(country, dropped_commodities):
     # write the subsets of time
     pd.DataFrame({
         "Commodity": min_max_times_dict.keys(),
-        "Time Span Min": [time_min.strftime("(%Y, %m)") for time_min, time_max in min_max_times_dict.values()],
-        "Time Span Max": [time_max.strftime("(%Y, %m)") for time_min, time_max in min_max_times_dict.values()],
-        "Epsilon (Month)": [epsilon_entries_interpolation] * len(min_max_times_dict.keys())
+        "Time Span Min (Y,M)": [time_min.strftime("(%Y,%m)") for time_min, time_max in min_max_times_dict.values()],
+        "Time Span Max (Y,M)": [time_max.strftime("(%Y,%m)") for time_min, time_max in min_max_times_dict.values()],
+        "Epsilon (Month)": [epsilon_month_extrapolation] * len(min_max_times_dict.keys())
     }).to_excel(f"../output/{country}/summary-statistics/time-spans-per-commodity.xlsx")
 
     return df_final_all
