@@ -130,13 +130,20 @@ def create_dataset(country, dropped_commodities):
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: Write summary statistics 2 (General)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
-    preproc.summary_stats_prices_droughts(df_final=df_final, excel_output_extension="-preproc-2")
+    df_sum_stats_commodities = preproc.summary_stats_prices_droughts(df_final=df_final,
+                                                                     excel_output_extension="-preproc-2",
+                                                                     return_df_by_group_sheet="Commodity")
+    print("Sum stats commodity\n", df_sum_stats_commodities)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: Drop commodities with missings > 90%"
           "\n# ------------------------------------------------------------------------------------------------------\n")
-    cut_off_perc_commodities = 90
-
+    cut_off_percent_commodities = 90
+    df_final = preproc.drop_commodities_too_sparse(df=df_final, df_sum_stats_commodities=df_sum_stats_commodities,
+                                                   cut_off_percent=cut_off_percent_commodities,
+                                                   excel_to_write_dropped_commodities=
+                                                   f"../output/{country}/summary-statistics/"
+                                                   f"{country}-sum-stats-preproc-2.xlsx")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: PHASE 2.2 (PRICES)"
@@ -148,7 +155,7 @@ def create_dataset(country, dropped_commodities):
 
     # 65 (30%), 60 (27%, 30% also for central region)
     # without populated missings: 60
-    cut_off_percentile = 60
+    cut_off_percentile = 40
 
     df_commodities_dict = {}
 
@@ -213,9 +220,13 @@ def create_dataset(country, dropped_commodities):
           "# PREPROC: Writing Results as Excel"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-    preproc.write_preprocessing_results_to_excel(df_wfp=df_wfp, df_wfp_with_coords=df_wfp_with_coords,
+    df_final_all = preproc.write_preprocessing_results_to_excel(df_wfp=df_wfp, df_wfp_with_coords=df_wfp_with_coords,
                                                  df_spei=df_spei, dict_df_final_per_commodity=df_commodities_dict,
                                                  df_drought=df_drought,
                                                  df_no_drought=df_no_drought)
 
-    return df_final
+    # Write sum stats for general thing
+    preproc.summary_stats_prices_droughts(df_final=df_final_all, excel_output_extension=f"-preproc-4"
+                                                                                        f"-{cut_off_percentile}p")
+
+    return df_final_all

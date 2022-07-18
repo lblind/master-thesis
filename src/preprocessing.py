@@ -648,12 +648,59 @@ def separate_df_drought_non_drought(df_final_classified):
     return df_drought, df_no_drought
 
 
+def drop_commodities_too_sparse(df, df_sum_stats_commodities, cut_off_percent,
+                                excel_to_write_dropped_commodities):
+    """
+    Drop commodities with a too large share of missing data in prices.
+
+    :param df_final:
+    :param df_sum_stats_commodities:
+    :param cut_off_percent:
+    :return:
+    """
+    commodities_to_drop = df_sum_stats_commodities[df_sum_stats_commodities["Price: % nan"] >= (cut_off_percent / 100) ]["Commodity"]
+
+    print(f"Dropping commodities: {commodities_to_drop}\n"
+          f"because they have too sparse (share of missings >= {cut_off_percent}%)  price data.")
+    df = drop_commodities(df=df, dropped_commodities=commodities_to_drop)
+
+    # write dropped commodities to (existing) excel as new sheet
+    with pd.ExcelWriter(
+           excel_to_write_dropped_commodities, mode="a") as writer:
+        df_sum_stats_dropped_commodities = pd.DataFrame(
+            {
+                "Dropped Commodity" : commodities_to_drop,
+                "Price: % nan" : df_sum_stats_commodities[df_sum_stats_commodities.Commodity.isin(commodities_to_drop)]["Price: % nan"],
+                "Cut off (share of missings >=) [%]" : [cut_off_percent] * len(commodities_to_drop)
+            }
+        )
+        df_sum_stats_dropped_commodities.to_excel(writer, sheet_name="Commodities dropped afterwards")
+
+    country = df.Country.unique()[0]
+    output_dir = f"../output/{country}/summary-statistics/preproc-2-dropped-commodities"
+    if os.path.exists(output_dir) is False:
+        os.makedirs(output_dir)
+    df_sum_stats_dropped_commodities.to_excel(output_dir + f"/{country}-additionally-dropped-"
+                                                           f"commodities-{cut_off_percent}%.xlsx")
+
+
+    return df
+
+
+
+
 def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_output_extension="-preproc-1",
-                                  commodity=None):
+                                  commodity=None, return_df_by_group_sheet="General"):
     """
     Summary statistics for missing values per market and
     commodity
 
+    :param return_df_by_group_sheet: str
+        if the dataframe should be returned directly (in order to save reading it afterwards from the excel)
+        define which sheet / df to return afterwards.
+    :param commodity: str
+        if df_final is only a subset for a specific commoditiy, denote that such that
+        it will be stored in the correct folder
     :param var_list_groups_by: list
     :param df_final: pd.DataFrame
     :param excel_output_extension: str
@@ -675,7 +722,8 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_outpu
     if os.path.exists(output_path_stats) is False:
         os.makedirs(output_path_stats)
 
-    list_dfs_sum_stats = []
+    # list_dfs_sum_stats = []
+    dict_dfs_sum_stats = {}
 
     for group in var_list_groups_by:
 
@@ -800,7 +848,10 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_outpu
         # sort values
         df_sum_stats_group.sort_values(by=group)
         # append summary statistics for that group to overall list
-        list_dfs_sum_stats.append(df_sum_stats_group)
+        # list_dfs_sum_stats.append(df_sum_stats_group)
+
+        # append summary statistics for that group to overall dictionary
+        dict_dfs_sum_stats[group] = df_sum_stats_group
 
     # Create summary statistics for general statistics
     df_droughts = df_final[df_final["Drought"] == True]
@@ -830,9 +881,21 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_outpu
             f"{output_path_stats}/{df_final.Country.unique()[0]}-sum-stats{excel_output_extension}.xlsx") as writer:
         df_sum_stats_general.to_excel(writer, sheet_name="General")
 
-        for i, df_sum_stat in enumerate(list_dfs_sum_stats):
-            group = var_list_groups_by[i]
+        for group in dict_dfs_sum_stats.keys():
+            df_sum_stat = dict_dfs_sum_stats[group]
             df_sum_stat.to_excel(writer, sheet_name=group)
+
+    # return a specific dataframe
+    if return_df_by_group_sheet == "General":
+        return df_sum_stats_general
+    elif return_df_by_group_sheet in dict_dfs_sum_stats.keys():
+        return dict_dfs_sum_stats[return_df_by_group_sheet]
+    else:
+        raise ValueError(f"Nothing will be returned, as "
+                         f"{return_df_by_group_sheet} is neither "
+                         f"General, nor part of the valid groups:"
+                         f"{dict_dfs_sum_stats.keys()}.\n"
+                         f"Plesae revise your definition.")
 
 
 def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, dict_df_final_per_commodity, df_drought,
@@ -887,6 +950,7 @@ def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, di
           f"Number of nan/missing values Drought: {df_final_all.Drought.isna().sum()} (Share: "
           f"{df_final_all.Drought.isna().sum() / df_final_all.shape[0]})\n"
           f"----------------------------------------------------------------------------------------------------\n")
+    return df_final_all
 
 
 def drop_years(df_final, years_list):
