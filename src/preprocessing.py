@@ -132,6 +132,15 @@ def get_df_wfp_preprocessed_excel_region_method(country, dropped_commodities=Non
     df_merged_all_regions = pd.concat(df_regions_list, ignore_index=True)
     print(df_merged_all_regions)
 
+    # Create a separate column for (Year, Month) as datetime (easier to handle)
+    # df_merged_all_regions["TimeWFP"] = pd.to_datetime([df_merged_all_regions["Year"].str, df_merged_all_regions["Month"].str, 1])
+
+    date_column = [datetime.date(year=row.Year, month=row.Month, day=1) for idx, row in df_merged_all_regions.iterrows()]
+    df_merged_all_regions["TimeWFP"] = date_column
+
+    # df_merged_all_regions["TimeWFP"] = datetime.date(
+    #     year=df_merged_all_regions["Year"], month=df_merged_all_regions["Month"], day=[1] * len(df_merged_all_regions.Year))
+
     print(f"Overall number of markets entire country ({country})", len(df_merged_all_regions["Market"].unique()))
     return df_merged_all_regions
 
@@ -363,6 +372,45 @@ def extract_time_lon_lat_slice(df_wfp_coords):
     return range_time, range_lon_market, range_lat_market
 
 
+def extract_df_subset_time_prices(df_commodity, epsilon_month=3):
+    """
+    Extract subset of df based on the first and last price entry (+ epsilon)
+    that occurs over all regions (time-wise).
+
+    :param df_commodity: pd.DataFrame
+    :param epsilon_month: int
+        Additional time span that is added/ subtracted to the max/min time
+        found in the dataset.
+        (e.g.: epsilon_month = 3: limit the dataset to the time range
+        of the first and last dataset -/+ 3 additional months)
+
+    :return:
+    """
+
+    # extract prices where prices are NOT nan
+    df_commodity_not_nan = df_commodity[~df_commodity.Price.isna()]
+
+    # find min and max time
+    # max_time = df_commodity_not_nan.loc[df_commodity_not_nan["TimeWFP"].idxmax(), "TimeWFP"]
+    # min_time = df_commodity_not_nan.loc[df_commodity_not_nan["TimeWFP"].idxmin(), "TimeWFP"]
+
+    max_time = np.max(df_commodity_not_nan["TimeWFP"])
+    min_time = np.min(df_commodity_not_nan["TimeWFP"])
+
+    # Define an epsilon of delta ts/ months for the tails
+    max_time += pd.DateOffset(months=epsilon_month)
+    min_time -= pd.DateOffset(months=epsilon_month)
+
+    # Extract only the subset of data
+    # everything <= maxdate
+    df_commodity = df_commodity[df_commodity.TimeWFP <= max_time]
+    # everything >= mindate
+    df_commodity = df_commodity[df_commodity.TimeWFP >= min_time]
+
+    return df_commodity, min_time, max_time
+
+
+
 def read_climate_data(time_slice, long_slice, lat_slice, country,
                       path_to_netcdf="../input/Global/climate-dta/spei01.nc"):
     """
@@ -581,6 +629,7 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
                                          "*LonSpeiNN",
                                          "*TupleLatLonSpei",
                                          "TimeSpei",
+                                         "TimeWFP",
                                          "*DaySpei",
 
                                          "TimeFoodInflation",
@@ -951,6 +1000,8 @@ def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, di
           f"{df_final_all.Drought.isna().sum() / df_final_all.shape[0]})\n"
           f"----------------------------------------------------------------------------------------------------\n")
     return df_final_all
+
+
 
 
 def drop_years(df_final, years_list):

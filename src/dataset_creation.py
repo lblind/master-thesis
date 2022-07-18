@@ -3,6 +3,8 @@ CREATION OF DATASET
 -------------------
 
 """
+import pandas as pd
+
 import preprocessing as preproc
 
 
@@ -127,6 +129,7 @@ def create_dataset(country, dropped_commodities):
     print(f"Dropping years: {years_to_drop}")
     df_final = preproc.drop_years(df_final=df_final, years_list=years_to_drop)
 
+
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: Write summary statistics 2 (General)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
@@ -158,10 +161,20 @@ def create_dataset(country, dropped_commodities):
     cut_off_percentile = 40
 
     df_commodities_dict = {}
+    min_max_times_dict = {}
+
+    # how many months do you want to look left/right after the first and last data entry.
+    epsilon_month = 3
 
     for commodity in df_final.Commodity.unique():
         # Extract df for commodity
         df_final_commodity = df_final[df_final.Commodity == commodity]
+
+        # Limit the dfs to specific subset
+        df_final_commodity, min_time, max_time = preproc.extract_df_subset_time_prices(df_commodity=df_final_commodity,
+                                                                   epsilon_month=epsilon_month)
+        # store min and max time for further use/ documentation
+        min_max_times_dict[commodity] = (min_time, max_time)
 
         # calculate summary statistics PER commodity
         print(
@@ -225,8 +238,23 @@ def create_dataset(country, dropped_commodities):
                                                  df_drought=df_drought,
                                                  df_no_drought=df_no_drought)
 
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC: Writing Sum Stats (General) as Excel"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+
     # Write sum stats for general thing
     preproc.summary_stats_prices_droughts(df_final=df_final_all, excel_output_extension=f"-preproc-4"
-                                                                                        f"-{cut_off_percentile}p")
+                                                                       f"-{cut_off_percentile}p")
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC: Writing Time Spans as Excel"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+
+    # write the subsets of time
+    pd.DataFrame({
+        "Commodity" : min_max_times_dict.keys(),
+        "Time Span" : min_max_times_dict.values(),
+        "Epsilon (Month)" : [epsilon_month] * len(min_max_times_dict.keys())
+    }).to_excel(f"../output/{country}/summary-statistics/time-spans-per-commodity.xlsx")
 
     return df_final_all
