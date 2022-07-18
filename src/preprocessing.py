@@ -135,7 +135,8 @@ def get_df_wfp_preprocessed_excel_region_method(country, dropped_commodities=Non
     # Create a separate column for (Year, Month) as datetime (easier to handle)
     # df_merged_all_regions["TimeWFP"] = pd.to_datetime([df_merged_all_regions["Year"].str, df_merged_all_regions["Month"].str, 1])
 
-    date_column = [datetime.date(year=row.Year, month=row.Month, day=1) for idx, row in df_merged_all_regions.iterrows()]
+    date_column = [datetime.date(year=row.Year, month=row.Month, day=1) for idx, row in
+                   df_merged_all_regions.iterrows()]
     df_merged_all_regions["TimeWFP"] = date_column
 
     # df_merged_all_regions["TimeWFP"] = datetime.date(
@@ -408,7 +409,6 @@ def extract_df_subset_time_prices(df_commodity, epsilon_month=3):
     df_commodity = df_commodity[df_commodity.TimeWFP >= min_time]
 
     return df_commodity, min_time, max_time
-
 
 
 def read_climate_data(time_slice, long_slice, lat_slice, country,
@@ -707,7 +707,8 @@ def drop_commodities_too_sparse(df, df_sum_stats_commodities, cut_off_percent,
     :param cut_off_percent:
     :return:
     """
-    commodities_to_drop = df_sum_stats_commodities[df_sum_stats_commodities["Price: % nan"] >= (cut_off_percent / 100) ]["Commodity"]
+    commodities_to_drop = df_sum_stats_commodities[df_sum_stats_commodities["Price: % nan"] >= (cut_off_percent / 100)][
+        "Commodity"]
 
     print(f"Dropping commodities: {commodities_to_drop}\n"
           f"because they have too sparse (share of missings >= {cut_off_percent}%)  price data.")
@@ -715,12 +716,13 @@ def drop_commodities_too_sparse(df, df_sum_stats_commodities, cut_off_percent,
 
     # write dropped commodities to (existing) excel as new sheet
     with pd.ExcelWriter(
-           excel_to_write_dropped_commodities, mode="a") as writer:
+            excel_to_write_dropped_commodities, mode="a") as writer:
         df_sum_stats_dropped_commodities = pd.DataFrame(
             {
-                "Dropped Commodity" : commodities_to_drop,
-                "Price: % nan" : df_sum_stats_commodities[df_sum_stats_commodities.Commodity.isin(commodities_to_drop)]["Price: % nan"],
-                "Cut off (share of missings >=) [%]" : [cut_off_percent] * len(commodities_to_drop)
+                "Dropped Commodity": commodities_to_drop,
+                "Price: % nan": df_sum_stats_commodities[df_sum_stats_commodities.Commodity.isin(commodities_to_drop)][
+                    "Price: % nan"],
+                "Cut off (share of missings >=) [%]": [cut_off_percent] * len(commodities_to_drop)
             }
         )
         df_sum_stats_dropped_commodities.to_excel(writer, sheet_name="Commodities dropped afterwards")
@@ -732,10 +734,7 @@ def drop_commodities_too_sparse(df, df_sum_stats_commodities, cut_off_percent,
     df_sum_stats_dropped_commodities.to_excel(output_dir + f"/{country}-additionally-dropped-"
                                                            f"commodities-{cut_off_percent}%.xlsx")
 
-
     return df
-
-
 
 
 def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_output_extension="-preproc-1",
@@ -1002,8 +1001,6 @@ def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, di
     return df_final_all
 
 
-
-
 def drop_years(df_final, years_list):
     """
     Drops all data for specific years
@@ -1128,9 +1125,20 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
     https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp1d.html
     (fill_value = extrapolate)
     """
+    # TODO: actually do not sort by market, as missings are often concentrated in one spot/
+    # one without random sorting doesn't interpolate by region, but in effect by market again
+
+    # Shuffle dataframe
+    seed = 42
+    df_final = df_final.sample(frac=1, random_state=seed)
+
     # Make sure that prices are sorted chronologically
     print("Sorting dataframe chronologically")
-    df_final = df_final.sort_values(by=["TimeSpei", "Market"], ignore_index=True)
+    df_final = df_final.sort_values(by=["TimeWFP"], ignore_index=True)
+
+    # # Make sure that prices are sorted chronologically
+    # print("Sorting dataframe chronologically")
+    # df_final = df_final.sort_values(by=["TimeWFP", "Market"], ignore_index=True)
 
     country = df_final.Country.unique()[0]
 
@@ -1207,7 +1215,7 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
         #             color="green", label="Extrapolated points", marker="*", alpha=alpha)
 
         plt.scatter(df_region_new.TimeSpei[df_region.Price.isna()], df_region_new.AdjPrice[df_region.Price.isna()],
-                    color="green", label="Extrapolated points", marker="*", alpha=alpha)
+                    color="green", label="Extra-/Interpolated points", marker="*", alpha=alpha)
         plt.legend()
         plt.savefig(f"{output_dir_extrapolation}/{region}-{commodity}-scatter-prices-extrapolated-"
                     f"{interpolation_method}-{order}.png")
@@ -1220,3 +1228,45 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
     df_merged_all_regions = pd.concat(dfs_extrapolated_per_region.values(), ignore_index=True)
 
     return df_merged_all_regions
+
+
+def drop_markets_missing_beyond_interp_range(df_final_commodity, df_sum_stats_market,
+                                             interpolation_limit):
+    """
+
+    :param df_final_commodity:
+    :param df_sum_stats_market:
+    :return:
+    """
+    markets_to_drop = df_sum_stats_market[df_sum_stats_market["Price: % nan"] != 0]["Market"]
+
+    # only keep entries that do not belong to these markets
+    df_final_commodity = df_final_commodity[~ df_final_commodity.Market.isin(markets_to_drop)]
+
+    # write statistics about dropped stuff
+    commodity = df_final_commodity.Commodity.unique()[0]
+    country = df_final_commodity.Country.unique()[0]
+
+    print(f"# Dropped markets: {markets_to_drop} for commodity: {commodity}, as"
+          f"number of missings exceeds interpolation limit of {interpolation_limit}")
+
+    output_dir = f"../output/{country}/summary-statistics/preproc-4-dropped-markets"
+    if os.path.exists(output_dir) is False:
+        os.makedirs(output_dir)
+
+    output_excel = f"{output_dir}/dropped-markets-eps-{interpolation_limit}-{commodity}.xlsx"
+
+    mode = "a" if os.path.exists(output_excel) else "w"
+
+    # write dropped commodities to (existing) excel as new sheet
+    with pd.ExcelWriter(
+            output_excel, mode=mode) as writer:
+        df_sum_stats_dropped_markets = pd.DataFrame(
+            {
+                "Dropped Markets": markets_to_drop,
+                "Max. entries to interp." : [interpolation_limit] * len(markets_to_drop)
+            }
+        )
+        df_sum_stats_dropped_markets.to_excel(writer, sheet_name=f"{commodity}")
+
+    return df_final_commodity

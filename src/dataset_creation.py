@@ -165,7 +165,7 @@ def create_dataset(country, dropped_commodities):
     # how many months do you want to look left/right after the first and last data entry. +
     epsilon_month_extrapolation = 3
     # how many entries are you willing to consecutively inter-/ extrapolate afterwards
-    epsilon_entries_intrapolation = 24
+    epsilon_entries_interpolation = 24
 
     for commodity in df_final.Commodity.unique():
         # Extract df for commodity
@@ -220,10 +220,7 @@ def create_dataset(country, dropped_commodities):
         # doesn't extrapolate tails for interpolation method: cubic
         df_final_commodity = preproc.extrapolate_prices_regional_patterns(df_final=df_final_commodity,
                                                                           interpolation_method=interpolation_method,
-                                                                          intrapolation_limit=epsilon_entries_intrapolation)
-
-        # add result to dictionary
-        df_commodities_dict[commodity] = df_final_commodity
+                                                                          intrapolation_limit=epsilon_entries_interpolation)
 
         print(
             "\n# ----------------------------------------------------------------------------------------------------\n"
@@ -231,12 +228,26 @@ def create_dataset(country, dropped_commodities):
             "\n# ----------------------------------------------------------------------------------------------------\n")
 
         # Write sum stats
-        preproc.summary_stats_prices_droughts(df_final=df_final_commodity,
+        df_sum_stats_market = preproc.summary_stats_prices_droughts(df_final=df_final_commodity,
                                               excel_output_extension=f"-preproc-4"
                                                                      f"-{cut_off_percentile}p"
                                                                      f"-{commodity}"
-                                                                     f"-eps-{epsilon_entries_intrapolation}",
-                                              commodity=commodity)
+                                                                     f"-eps-{epsilon_entries_interpolation}",
+                                              commodity=commodity, return_df_by_group_sheet="Market")
+
+        print(
+            "\n# ----------------------------------------------------------------------------------------------------\n"
+            f"# [{commodity}] PREPROC: Drop markets with missings beyond interpolation range"
+            "\n# ----------------------------------------------------------------------------------------------------\n")
+
+        # DROP ALL MARKETS THAT STILL HAVE MISSING VALUES / missing values beyond interpolation range.
+        df_final_commodity = preproc.drop_markets_missing_beyond_interp_range(df_final_commodity=df_final_commodity,
+                                                                              df_sum_stats_market=df_sum_stats_market,
+                                                                              interpolation_limit
+                                                                              =epsilon_entries_interpolation)
+
+        # add result to dictionary
+        df_commodities_dict[commodity] = df_final_commodity
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: Combining all results as excel"
@@ -260,7 +271,7 @@ def create_dataset(country, dropped_commodities):
     preproc.summary_stats_prices_droughts(df_final=df_final_all,
                                           excel_output_extension=f"-preproc-4"
                                                                  f"-{cut_off_percentile}p"
-                                                                 f"-eps-{epsilon_entries_intrapolation}")
+                                                                 f"-eps-{epsilon_entries_interpolation}")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: Writing Time Spans as Excel"
@@ -271,7 +282,7 @@ def create_dataset(country, dropped_commodities):
         "Commodity": min_max_times_dict.keys(),
         "Time Span Min": [time_min.strftime("(%Y, %m)") for time_min, time_max in min_max_times_dict.values()],
         "Time Span Max": [time_max.strftime("(%Y, %m)") for time_min, time_max in min_max_times_dict.values()],
-        "Epsilon (Month)": [epsilon_entries_intrapolation] * len(min_max_times_dict.keys())
+        "Epsilon (Month)": [epsilon_entries_interpolation] * len(min_max_times_dict.keys())
     }).to_excel(f"../output/{country}/summary-statistics/time-spans-per-commodity.xlsx")
 
     return df_final_all
