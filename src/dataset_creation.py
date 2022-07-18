@@ -128,9 +128,15 @@ def create_dataset(country, dropped_commodities):
     df_final = preproc.drop_years(df_final=df_final, years_list=years_to_drop)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
-          "# PREPROC: Write summary statistics 2"
+          "# PREPROC: Write summary statistics 2 (General)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
     preproc.summary_stats_prices_droughts(df_final=df_final, excel_output_extension="-preproc-2")
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC: Drop commodities with missings > 90%"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+    cut_off_perc_commodities = 90
+
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: PHASE 2.2 (PRICES)"
@@ -153,7 +159,7 @@ def create_dataset(country, dropped_commodities):
         # calculate summary statistics PER commodity
         print(
             "\n# ------------------------------------------------------------------------------------------------------\n"
-            f"# [{commodity}] PREPROC: Write summary statistics 2"
+            f"# [{commodity}] PREPROC: Write summary statistics 2 (Per Commodity)"
             "\n# ------------------------------------------------------------------------------------------------------\n")
         preproc.summary_stats_prices_droughts(df_final=df_final_commodity, excel_output_extension=f"-preproc-2-{commodity}",
                                               commodity=commodity)

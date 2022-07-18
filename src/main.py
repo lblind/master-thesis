@@ -26,6 +26,8 @@ if __name__ == "__main__":
     # country = "Kenya"
 
     # 2) set commmodities to drop
+    # Drop because not available in all regions (only south): "Maize (white)", "Rice (imported)", "Sorghum (red)"
+    # Drop because the data is just so bad:
     dropped_commodities = ["Maize (white)", "Rice (imported)", "Sorghum (red)"]
     # dropped_commodities = None
 

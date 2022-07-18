@@ -63,6 +63,28 @@ def get_df_wfp_preprocessed_excel_country_method(country, dropped_commodities=No
     return df_country
 
 
+def drop_commodities(df, dropped_commodities):
+    """
+
+    :param df:
+    :param commodities:
+    :return:
+    """
+    if dropped_commodities is not None:
+        print("Unique Commodities before omission:\n", df.Commodity.unique())
+        print("Dropping: ")
+        # drop commodities
+        df = df[~df.Commodity.isin(dropped_commodities)]
+        print("Unique Commodities after omission:\n", df.Commodity.unique())
+    else:
+        warnings.warn("No commodities to drop defined. Nothing will be dropped.\n"
+                      "If something else is desired, please set the parameter"
+                      "`dropped_commodities` to something != None ("
+                      "the list of commodities to be dropped).")
+
+    return df
+
+
 def get_df_wfp_preprocessed_excel_region_method(country, dropped_commodities=None):
     """
     Reads the different csvs per region
@@ -101,10 +123,8 @@ def get_df_wfp_preprocessed_excel_region_method(country, dropped_commodities=Non
               f"Commodities before omission:\n{df_region.Commodity.unique()}")
 
         if dropped_commodities is not None:
-            print("Dropping: ")
             # drop commodities
-            df_region = df_region[~df_region.Commodity.isin(dropped_commodities)]
-            print("Unique Commodities after omission:\n", df_region.Commodity.unique())
+            df_region = drop_commodities(df_region, dropped_commodities)
 
         # append dataframe to list
         df_regions_list.append(df_region)
@@ -241,7 +261,6 @@ def adjust_food_prices(country, df_wfp, data_source="WFP"):
         base_month = food_inflation_df["Month"].iloc[-1]
 
         food_inflation_df["PriceAdjBaseDate(Y,M)"] = f"({base_year}, {base_month})"
-
 
         # Create an index multiplier (based on last entry in dataset (-1) -> most current as base year)
         food_inflation_df["FoodInflationMult"] = food_inflation_df["Value (percent)"].iloc[-1] / food_inflation_df[
@@ -567,7 +586,6 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
                                          "TimeFoodInflation",
                                          "TimeInflation",
 
-
                                          ])
 
     set_cols_after_reordering = set(df_final.columns.tolist())
@@ -737,7 +755,7 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_outpu
 
             # "Extremely dry (ED)", "Severely dry (SD)", "Moderately dry (MD)"
             no_of_extreme_droughts = \
-            df_group_value_drought[df_group_value_drought["SpeiCat"] == "Extremely dry (ED)"].shape[0]
+                df_group_value_drought[df_group_value_drought["SpeiCat"] == "Extremely dry (ED)"].shape[0]
             share_of_extreme_droughts = 0 if no_droughts_group_value == 0 else no_of_extreme_droughts / no_droughts_group_value
 
             no_of_severe_droughts = \
@@ -817,7 +835,8 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_outpu
             df_sum_stat.to_excel(writer, sheet_name=group)
 
 
-def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, dict_df_final_per_commodity, df_drought, df_no_drought):
+def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, dict_df_final_per_commodity, df_drought,
+                                         df_no_drought):
     """
 
     :param df_wfp:
@@ -1057,8 +1076,9 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
             df_region_new = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method=interpolation_method,
                                                                                          limit_direction="both"))
             # Extrapolate inflation-adjusted prices
-            df_region_new = df_region_new.assign(AdjPrice=df_region_new.loc[:, "AdjPrice"].interpolate(method=interpolation_method,
-                                                                                                       limit_direction="both"))
+            df_region_new = df_region_new.assign(
+                AdjPrice=df_region_new.loc[:, "AdjPrice"].interpolate(method=interpolation_method,
+                                                                      limit_direction="both"))
 
         # Plot post interpolation (/ extrapolated points)
         # plt.scatter(df_region_new.TimeSpei[df_region.Price.isna()], df_region_new.Price[df_region.Price.isna()],
