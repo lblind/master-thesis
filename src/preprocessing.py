@@ -1100,10 +1100,13 @@ def drop_missing_percentile_per_region_prices(path_excel_sum_stats, df_final, cu
     return df_reduced
 
 
-def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear", order=None):
+def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear", order=None,
+                                         intrapolation_limit=3):
     """
     Extrapolates missing values in Prices based on regional patterns
 
+    :param intrapolation_limit: int
+        Max consecutive nans to inter-/extrapolate
     :param df_final: pd.DataFrame
     :param interpolation_method: str
         Interpolation method used to extrapolate the missings. For more information, cf. References
@@ -1181,19 +1184,23 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
         if interpolation_method == "spline":
             # Extrapolate (nominal) Prices
             df_region_new = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method="spline", order=order,
-                                                                                         limit_direction="both"))
+                                                                                         limit_direction="both",
+                                                                                         limit=intrapolation_limit))
             # Extrapolate inflation-adjusted prices
             df_region_new = df_region_new.assign(AdjPrice=df_region_new.loc[:, "AdjPrice"].interpolate(method="spline",
                                                                                                        order=order,
-                                                                                                       limit_direction="both"))
+                                                                                                       limit_direction="both",
+                                                                                                       limit=intrapolation_limit))
         else:
             # Extrapolate (nominal) prices
             df_region_new = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method=interpolation_method,
-                                                                                         limit_direction="both"))
+                                                                                         limit_direction="both",
+                                                                                         limit=intrapolation_limit))
             # Extrapolate inflation-adjusted prices
             df_region_new = df_region_new.assign(
                 AdjPrice=df_region_new.loc[:, "AdjPrice"].interpolate(method=interpolation_method,
-                                                                      limit_direction="both"))
+                                                                      limit_direction="both",
+                                                                      limit=intrapolation_limit))
 
         # Plot post interpolation (/ extrapolated points)
         # plt.scatter(df_region_new.TimeSpei[df_region.Price.isna()], df_region_new.Price[df_region.Price.isna()],
