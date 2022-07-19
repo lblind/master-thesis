@@ -930,14 +930,15 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_outpu
         df_sum_stats_general.to_excel(writer, sheet_name="General")
 
         for group in dict_dfs_sum_stats.keys():
-            df_sum_stat = dict_dfs_sum_stats[group]
+            # take it and sort it by the group
+            df_sum_stat = dict_dfs_sum_stats[group].sort_values(by=[group], ignore_index=True)
             df_sum_stat.to_excel(writer, sheet_name=group)
 
     # return a specific dataframe
     if return_df_by_group_sheet == "General":
         return df_sum_stats_general
     elif return_df_by_group_sheet in dict_dfs_sum_stats.keys():
-        return dict_dfs_sum_stats[return_df_by_group_sheet]
+        return dict_dfs_sum_stats[return_df_by_group_sheet].sort_values(by=[return_df_by_group_sheet], ignore_index=True)
     else:
         raise ValueError(f"Nothing will be returned, as "
                          f"{return_df_by_group_sheet} is neither "
@@ -984,6 +985,7 @@ def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, di
         df_final_all.to_excel(writer, sheet_name="All Commodities", na_rep="-")
 
         for commodity in dict_df_final_per_commodity.keys():
+
             dict_df_final_per_commodity[commodity].to_excel(writer, sheet_name=f"{commodity}", na_rep="-")
 
     print(f"Df drought shape: {df_drought.shape}\ndf_no_drought: {df_no_drought.shape}")
@@ -1221,6 +1223,9 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
                     f"{interpolation_method}-{order}.png")
         plt.show()
 
+        print("Sorting dataframe chronologically AND by market again")
+        df_region_new = df_region_new.sort_values(by=["TimeWFP", "Market"], ignore_index=True)
+
         # append extrapolated dataframe to dictionary
         dfs_extrapolated_per_region[region] = df_region_new
 
@@ -1234,6 +1239,7 @@ def drop_markets_missing_beyond_interp_range(df_final_commodity, df_sum_stats_ma
                                              interpolation_limit):
     """
 
+    :param interpolation_limit:
     :param df_final_commodity:
     :param df_sum_stats_market:
     :return:
@@ -1254,9 +1260,11 @@ def drop_markets_missing_beyond_interp_range(df_final_commodity, df_sum_stats_ma
     if os.path.exists(output_dir) is False:
         os.makedirs(output_dir)
 
-    output_excel = f"{output_dir}/dropped-markets-eps-{interpolation_limit}-{commodity}.xlsx"
+    output_excel = f"{output_dir}/dropped-markets-eps-{interpolation_limit}.xlsx"
 
-    mode = "a" if os.path.exists(output_excel) else "w"
+    # mode = "a" if os.path.exists(output_excel) else "w"
+    # write excel new everytime you execute it
+    mode = "w"
 
     # write dropped commodities to (existing) excel as new sheet
     with pd.ExcelWriter(

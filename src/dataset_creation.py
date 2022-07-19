@@ -98,6 +98,7 @@ def create_dataset(country, dropped_commodities):
     print(f"Counts Drought:\n{counts_drought}")
     print(f"Share of droughts: {counts_drought[True]}/ {(counts_drought[True] + counts_drought[False])}")
 
+    # TODO: move part below (separation of datasets below + write one sheet per commodity)
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: Separate datasets droughts/ no droughts"
           "\n# ------------------------------------------------------------------------------------------------------\n")
@@ -229,11 +230,12 @@ def create_dataset(country, dropped_commodities):
 
         # Write sum stats
         df_sum_stats_market = preproc.summary_stats_prices_droughts(df_final=df_final_commodity,
-                                              excel_output_extension=f"-preproc-4"
-                                                                     f"-{cut_off_percentile}p"
-                                                                     f"-{commodity}"
-                                                                     f"-eps-{epsilon_entries_interpolation}",
-                                              commodity=commodity, return_df_by_group_sheet="Market")
+                                                                    excel_output_extension=f"-preproc-4"
+                                                                                           f"-{cut_off_percentile}p"
+                                                                                           f"-{commodity}"
+                                                                                           f"-eps-{epsilon_entries_interpolation}",
+                                                                    commodity=commodity,
+                                                                    return_df_by_group_sheet="Market")
 
         print(
             "\n# ----------------------------------------------------------------------------------------------------\n"
