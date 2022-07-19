@@ -103,19 +103,12 @@ def dmd_per_commodity(df_final, write_excels=True):
                                                            sheet_name=commodity)
 
         df_time_span_commodity = df_time_spans[df_time_spans.Commodity == commodity]
-        time_span_min = (df_time_span_commodity["TimeSpanMinY"][0], df_time_span_commodity["TimeSpanMinM"][0])
-        time_span_max = (df_time_span_commodity["TimeSpanMaxY"][0], df_time_span_commodity["TimeSpanMaxM"][0])
-
-        # if write_excels:
-        #     output_dir = f"../output/{country}/intermediate-results/commodities"
-        #     if os.path.exists(output_dir) is False:
-        #         os.makedirs(output_dir)
-        #     df_final_per_commodity.to_excel(f"{output_dir}/{commodity}-df_final.xlsx")
-
-        # print(df_final_per_commodity)
 
         # read time spans for commodity
+        time_span_min = (int(df_time_span_commodity["TimeSpanMinY"]), int(df_time_span_commodity["TimeSpanMinM"]))
+        time_span_max = (int(df_time_span_commodity["TimeSpanMaxY"]), int(df_time_span_commodity["TimeSpanMaxM"]))
 
+        # construct the snapshot matrix per commodity
         x = get_snapshot_matrix_x_for_commodity(df_final_per_commodity, time_span_min=time_span_min,
                                                 time_span_max=time_span_max, write_excel=write_excels)
         # append snapshot matrix to dict
