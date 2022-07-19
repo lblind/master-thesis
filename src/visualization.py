@@ -7,6 +7,7 @@ VISUALIZATION
 # TODO: color regions
 # TODO: visualize prices (e.g. color scale, kdeplot)
 # from mpl_toolkits.basemap import Basemap
+import os
 
 import geoplot as gplt
 import geopandas as gpd
@@ -18,6 +19,73 @@ import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import mapclassify as mc
 import numpy as np
+import folium
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+
+def plot_malawi_regions(df_final):
+    """
+    Plot malawi and color the specific regions
+
+    :param df_final:
+    :return:
+    """
+    country = df_final.Country.unique()[0]
+    output_path_maps = f"../output/{country}/plots/maps"
+    if os.path.exists(output_path_maps) is False:
+        os.makedirs(output_path_maps)
+
+    malawi_adm2 = gpd.read_file("../input/Malawi/maps/WFPGeoNode/mwi_bnd_admin2/mwi_bnd_admin2.shp")
+    malawi_adm1 = gpd.read_file("../input/Malawi/maps/WFPGeoNode/mwi_bnd_admin1/mwi_bnd_admin1.shp")
+
+    malawi_adm1.rename(columns={"NAME_1": "Region"}, inplace=True)
+    malawi_adm2.rename(columns={"NAME_2": "Market"}, inplace=True)
+
+    print(malawi_adm1.Region.unique())
+
+    fig, ax = plt.subplots(1, 1)
+    #divider = make_axes_locatable(ax)
+
+    # cax = divider.append_axes("right", size="5%", pad=0.8)
+    # lower right
+    # malawi_adm1.plot(column="Region", ax=ax, legend=True, legend_kwds={"loc": "upper left",
+    #
+    #                                                                    "bbox_to_anchor" : (0.8, 0.1)})
+    # lower left
+    # malawi_adm1.plot(column="Region", ax=ax, legend=True, legend_kwds={"loc": "upper right",
+    #                                                                    "bbox_to_anchor": (0.8, 0.1)})
+
+    possible_cmaps = ["magma", "viridis", "Blues", "plasma", "cividis", "jet",
+                      "rainbow", "turbo", "cubehelix", "terrain", "tab20b", "seismic", "Blues_r",
+                      "bone", "winter", "summer", "Purples"]
+    # 4, winter (not enough contrast), summer (nice, but creates wrong image)
+    # magma or plasma
+    cmap = possible_cmaps[3]
+    malawi_adm1.plot(column="Region", ax=ax, legend=True, legend_kwds={"loc": "lower left",
+                                                                       "bbox_to_anchor": (0.6, 0.8)},
+                     cmap=cmap)
+
+    # plt.tight_layout()
+
+    # convert regular dataframe to geopandas df
+    gdf_final = gpd.GeoDataFrame(
+        df_final, geometry=gpd.points_from_xy(df_final.MarketLongitude, df_final.MarketLatitude)
+    )
+
+    # gdf_markets_with_admin2 = gpd.sjoin(gdf_final, malawi_adm2, how="inner", predicate="intersects")
+
+    # plt.grid()
+    plt.xlabel("Longitude")
+    plt.ylabel("Latitude")
+    plt.suptitle("Malawi - Regions")
+    # plt.title("Regions")
+
+    # plt.title("Malawi - Regions")
+
+    plt.savefig(f"{output_path_maps}/{country}-Regions.png")
+
+    plt.show()
+
 
 
 

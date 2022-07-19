@@ -43,16 +43,15 @@ if __name__ == "__main__":
     # TODO outcomment this line if dataset has already been created
     df_final = utils.convert_excel_to_df(path_to_final_df)
 
-    print(df_final)
-
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# VISUALIZATION"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
     # visualization.plot_malawi(df_final=df_final)
+    visualization.plot_malawi_regions(df_final)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# DYNAMIC MODE DECOMPOSITION (DMD)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-    dmd.dmd_per_commodity(df_final)
+    #dmd.dmd_per_commodity(df_final)
