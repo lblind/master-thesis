@@ -54,16 +54,26 @@ def plot_malawi_regions(df_final):
     # lower left
     # malawi_adm1.plot(column="Region", ax=ax, legend=True, legend_kwds={"loc": "upper right",
     #                                                                    "bbox_to_anchor": (0.8, 0.1)})
-
-    possible_cmaps = ["magma", "viridis", "Blues", "plasma", "cividis", "jet",
+    # jet, rainbow too colorful
+    # doesn't work/ white: terrain, Purples, greens, Blues
+    possible_cmaps = ["magma", "viridis", "Blues", "plasma", "jet",
                       "rainbow", "turbo", "cubehelix", "terrain", "tab20b", "seismic", "Blues_r",
-                      "bone", "winter", "summer", "Purples"]
+                      "bone", "winter", "summer", "Purples", "Greens_r", "viridis_r", "YlGn",
+                      "YlGn_r", "YlGnBu_r", "YlGnBu", "Spectral_r", "Purples_r",
+                      "PuBuGn_r", "PiYG_r", "BrBG_r", "BrBG", "Dark2_r"]
     # 4, winter (not enough contrast), summer (nice, but creates wrong image)
-    # magma or plasma
-    cmap = possible_cmaps[3]
+    # magma, plasma, turbo
+    cmap = possible_cmaps[-1]
+    cmap = "summer"
+
+    # ax.set_prop_cycle(color=cmap[1:])
     malawi_adm1.plot(column="Region", ax=ax, legend=True, legend_kwds={"loc": "lower left",
                                                                        "bbox_to_anchor": (0.6, 0.8)},
                      cmap=cmap)
+
+    # default
+    # malawi_adm1.plot(column="Region", ax=ax, legend=True, legend_kwds={"loc": "lower left",
+    #                                                                    "bbox_to_anchor": (0.6, 0.8)})
 
     # plt.tight_layout()
 
@@ -72,15 +82,17 @@ def plot_malawi_regions(df_final):
         df_final, geometry=gpd.points_from_xy(df_final.MarketLongitude, df_final.MarketLatitude)
     )
 
+    plt.scatter(df_final.MarketLongitude, df_final.MarketLatitude)
+
     # gdf_markets_with_admin2 = gpd.sjoin(gdf_final, malawi_adm2, how="inner", predicate="intersects")
 
+    # gplt.pointplot(gdf_final, ax=ax)
+    # gdf_final.plot(kind="scatter", ax=ax)
     # plt.grid()
     plt.xlabel("Longitude")
     plt.ylabel("Latitude")
     plt.suptitle("Malawi - Regions")
-    # plt.title("Regions")
-
-    # plt.title("Malawi - Regions")
+    # plt.title("Malawi - Regions", loc="left")
 
     plt.savefig(f"{output_path_maps}/{country}-Regions.png")
 
