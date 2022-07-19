@@ -26,13 +26,14 @@ if __name__ == "__main__":
     # country = "Kenya"
 
     # 2) set commmodities to drop
-    # Drop because not available in all regions (only south): "Maize (white)", "Rice (imported)", "Sorghum (red)"
-    # Drop because the data is just so bad:
+    # Drop because not available in all regions (only south)
     dropped_commodities = ["Maize (white)", "Rice (imported)", "Sorghum (red)"]
+
+    # Drop nothing
     # dropped_commodities = None
 
     # TODO: Outcomment this line if dataset hat not yet been created
-    df_final = dataset_creation.create_dataset(country=country, dropped_commodities=dropped_commodities)
+    # df_final = dataset_creation.create_dataset(country=country, dropped_commodities=dropped_commodities)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# ANALYSIS"
@@ -40,7 +41,9 @@ if __name__ == "__main__":
 
     path_to_final_df = f"../output/{country}/{country}-final-dta.xlsx"
     # TODO outcomment this line if dataset has already been created
-    # df_final = utils.convert_excel_to_df(path_to_final_df)
+    df_final = utils.convert_excel_to_df(path_to_final_df)
+
+    print(df_final)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# VISUALIZATION"
@@ -48,4 +51,8 @@ if __name__ == "__main__":
 
     # visualization.plot_malawi(df_final=df_final)
 
-    # dmd.dmd_per_commodity(df_final)
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# DYNAMIC MODE DECOMPOSITION (DMD)"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+
+    dmd.dmd_per_commodity(df_final)

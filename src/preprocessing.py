@@ -135,12 +135,26 @@ def get_df_wfp_preprocessed_excel_region_method(country, dropped_commodities=Non
     # Create a separate column for (Year, Month) as datetime (easier to handle)
     # df_merged_all_regions["TimeWFP"] = pd.to_datetime([df_merged_all_regions["Year"].str, df_merged_all_regions["Month"].str, 1])
 
+    # drop possible duplicates
+    print(f"Start dropping possible duplicates... df wfp BEFORE dropping: {df_merged_all_regions.shape}")
+    df_2020 = df_merged_all_regions[df_merged_all_regions.Year == 2020]
+    df_2020_2 = df_2020[df_2020.Month == 2]
+    print("Markets BEFORE dropping\n", df_2020_2.Market, "\n", df_2020_2.shape)
+    df_merged_all_regions = df_merged_all_regions.drop_duplicates(keep="first", ignore_index=True)
+    df_2020 = df_merged_all_regions[df_merged_all_regions.Year == 2020]
+    df_2020_2 = df_2020[df_2020.Month == 2]
+    print("Markets AFTER dropping\n", df_2020_2.Market, "\n", df_2020_2.shape)
+    print(f"End Dropping possible duplicates... df wfp AFTER dropping: {df_merged_all_regions.shape}")
+
+    # add a time column
     date_column = [datetime.date(year=row.Year, month=row.Month, day=1) for idx, row in
                    df_merged_all_regions.iterrows()]
     df_merged_all_regions["TimeWFP"] = date_column
 
     # df_merged_all_regions["TimeWFP"] = datetime.date(
     #     year=df_merged_all_regions["Year"], month=df_merged_all_regions["Month"], day=[1] * len(df_merged_all_regions.Year))
+
+
 
     print(f"Overall number of markets entire country ({country})", len(df_merged_all_regions["Market"].unique()))
     return df_merged_all_regions
@@ -283,11 +297,17 @@ def adjust_food_prices(country, df_wfp, data_source="WFP"):
         # write it as excel
         food_inflation_df.to_excel(f"{path_to_inflation_dir}/{country}-food-inflation-dta.xlsx")
 
+        no_rows_before_merge = df_wfp.shape[0]
+
+        # drop duplicates in food inflation data, only keep one entry per month
+        food_inflation_df = food_inflation_df.drop_duplicates(subset=["Year", "Month"], keep="first")
+
         # merge df wfp to inflation data
-        df_wfp = df_wfp.merge(food_inflation_df, on=["Year", "Month"], how="left")
+        df_wfp = utils.merge_dfs_left(df_left=df_wfp, df_right=food_inflation_df, on=["Year", "Month"])
+
 
         # merge inflation data to it
-        df_wfp = df_wfp.merge(only_inflation_df, on=["Year", "Month"], how="left")
+        df_wfp = utils.merge_dfs_left(df_left=df_wfp, df_right=only_inflation_df, on=["Year", "Month"])
 
         # make sure that prices are float, raise error if invalid types are encountered
         df_wfp["Price"] = pd.to_numeric(df_wfp["Price"], errors="raise")
@@ -326,10 +346,7 @@ def read_and_merge_wfp_market_coords(df_wfp, country):
     df_wfp_coords_markets.rename(columns={'MarketName': 'Market'}, inplace=True)
 
     # Merge Food Price data with provided coordinates of markets
-    df_wfp_coords = pd.merge(df_wfp, df_wfp_coords_markets, on="Market", how="left")
-
-    # df_wfp_coords_north = pd.merge(df_wfp_north, df_wfp_coords_markets, on="Market", how="inner")
-    # df_wfp_coords_south = pd.merge(df_wfp_central, df_wfp_coords_markets, on="Market", how="inner")
+    df_wfp_coords = utils.merge_dfs_left(df_left=df_wfp, df_right=df_wfp_coords_markets, on="Market")
 
     return df_wfp_coords
 
@@ -573,8 +590,10 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
 
     # Merge Food Price data with provided coordinates of markets (nearest neighbor market to
     # JOIN SPEI: (lat_spei, lon_spei) ON WFP nearest neighbour (lat_spei, lon_spei)
-    df_final = pd.merge(df_wfp_with_coords, df_spei, on=["Year", "Month", "lat_spei_nn", "lon_spei_nn"],
-                        how="left")
+    df_final = utils.merge_dfs_left(df_left=df_wfp_with_coords, df_right=df_spei,
+                                    on=["Year", "Month", "lat_spei_nn", "lon_spei_nn"])
+    # df_final = pd.merge(df_wfp_with_coords, df_spei, on=["Year", "Month", "lat_spei_nn", "lon_spei_nn"],
+    #                     how="left")
 
     # BEAUTIFY DF
 
@@ -1100,7 +1119,7 @@ def drop_missing_percentile_per_region_prices(path_excel_sum_stats, df_final, cu
 
 
 def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear", order=None,
-                                         intrapolation_limit=3):
+                                         intrapolation_limit=3, extrapolate=False):
     """
     Extrapolates missing values in Prices based on regional patterns
 
@@ -1133,6 +1152,11 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
     # Shuffle dataframe
     seed = 42
     df_final = df_final.sample(frac=1, random_state=seed)
+
+    if extrapolate:
+        interpolation_direction="both"
+    else:
+        interpolation_direction="forward"
 
     # Make sure that prices are sorted chronologically
     print("Sorting dataframe chronologically")
@@ -1194,22 +1218,22 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
         if interpolation_method == "spline":
             # Extrapolate (nominal) Prices
             df_region_new = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method="spline", order=order,
-                                                                                         limit_direction="both",
+                                                                                         limit_direction=interpolation_direction,
                                                                                          limit=intrapolation_limit))
             # Extrapolate inflation-adjusted prices
             df_region_new = df_region_new.assign(AdjPrice=df_region_new.loc[:, "AdjPrice"].interpolate(method="spline",
                                                                                                        order=order,
-                                                                                                       limit_direction="both",
+                                                                                                       limit_direction=interpolation_direction,
                                                                                                        limit=intrapolation_limit))
         else:
             # Extrapolate (nominal) prices
             df_region_new = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method=interpolation_method,
-                                                                                         limit_direction="both",
+                                                                                         limit_direction=interpolation_direction,
                                                                                          limit=intrapolation_limit))
             # Extrapolate inflation-adjusted prices
             df_region_new = df_region_new.assign(
                 AdjPrice=df_region_new.loc[:, "AdjPrice"].interpolate(method=interpolation_method,
-                                                                      limit_direction="both",
+                                                                      limit_direction=interpolation_direction,
                                                                       limit=intrapolation_limit))
 
         # Plot post interpolation (/ extrapolated points)

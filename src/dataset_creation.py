@@ -40,7 +40,7 @@ def create_dataset(country, dropped_commodities):
 
     # check validity of extracted dataset (check that for all combinations of markets, commodity & time
     # food prices have been populated)
-    df_wfp = preproc.check_markets_per_commodity_time(df_wfp=df_wfp)
+    # df_wfp = preproc.check_markets_per_commodity_time(df_wfp=df_wfp)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: Adjust food prices to inflation (last recent (food) inflation level)"
@@ -164,7 +164,8 @@ def create_dataset(country, dropped_commodities):
     min_max_times_dict = {}
 
     # how many months do you want to look left/right after the first and last data entry. +
-    epsilon_month_extrapolation = 3
+    # epsilon_month_extrapolation = 3
+    epsilon_month_extrapolation = 0
     # how many entries are you willing to consecutively inter-/ extrapolate afterwards
     epsilon_entries_interpolation = 24
 
@@ -215,13 +216,22 @@ def create_dataset(country, dropped_commodities):
 
         # Define inter-/ extrapolation method
         interpolation_method = "linear"
+        # interpolation_method = "cubicspline"
+        # interpolation_method = "quadratic"
         order = None
+        interpolation_method = "spline"
+        # order = 2
+        order = 1
+        # extrapolate?
+        extrapolate=True
 
         # EXTRAPOLATE REGIONAL PATTERNS
         # doesn't extrapolate tails for interpolation method: cubic
         df_final_commodity = preproc.extrapolate_prices_regional_patterns(df_final=df_final_commodity,
                                                                           interpolation_method=interpolation_method,
-                                                                          intrapolation_limit=epsilon_entries_interpolation)
+                                                                          intrapolation_limit=epsilon_entries_interpolation,
+                                                                          order=order,
+                                                                          extrapolate=extrapolate)
 
         print(
             "\n# ----------------------------------------------------------------------------------------------------\n"
@@ -282,8 +292,10 @@ def create_dataset(country, dropped_commodities):
     # write the subsets of time
     pd.DataFrame({
         "Commodity": min_max_times_dict.keys(),
-        "Time Span Min (Y,M)": [time_min.strftime("(%Y,%m)") for time_min, time_max in min_max_times_dict.values()],
-        "Time Span Max (Y,M)": [time_max.strftime("(%Y,%m)") for time_min, time_max in min_max_times_dict.values()],
+        "TimeSpanMinY": [time_min.strftime("%Y") for time_min, time_max in min_max_times_dict.values()],
+        "TimeSpanMinM": [time_min.strftime("%m") for time_min, time_max in min_max_times_dict.values()],
+        "TimeSpanMaxY": [time_max.strftime("%Y") for time_min, time_max in min_max_times_dict.values()],
+        "TimeSpanMaxM": [time_max.strftime("%m") for time_min, time_max in min_max_times_dict.values()],
         "Epsilon (Month)": [epsilon_month_extrapolation] * len(min_max_times_dict.keys())
     }).to_excel(f"../output/{country}/summary-statistics/time-spans-per-commodity.xlsx")
 
