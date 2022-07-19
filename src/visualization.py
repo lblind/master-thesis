@@ -82,7 +82,7 @@ def plot_malawi_regions(df_final):
         df_final, geometry=gpd.points_from_xy(df_final.MarketLongitude, df_final.MarketLatitude)
     )
 
-    plt.scatter(df_final.MarketLongitude, df_final.MarketLatitude)
+    plt.scatter(df_final.MarketLongitude, df_final.MarketLatitude, c="darkblue", edgecolor="orange")
 
     # gdf_markets_with_admin2 = gpd.sjoin(gdf_final, malawi_adm2, how="inner", predicate="intersects")
 
