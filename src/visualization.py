@@ -164,9 +164,11 @@ def plot_malawi_adm2_prices_for_year(df_final, year, month):
 
     #adj_prices_scaled = gdf_merged.AdjPrice * 0.02
 
+    color_array = ["darkred" if row.Drought else "darkblue" for idx, row in gdf_merged.iterrows()]
+
     scale_factor_percent = 5
     adj_prices_scaled = gdf_merged.AdjPrice * (scale_factor_percent/100)
-    sc = plt.scatter(gdf_merged.MarketLongitude, gdf_merged.MarketLatitude, c="darkred", edgecolor="orange",
+    sc = plt.scatter(gdf_merged.MarketLongitude, gdf_merged.MarketLatitude, c=color_array, edgecolor="orange",
                      s=adj_prices_scaled, alpha=0.7, zorder=2, label=adj_prices_scaled)
 
     currency = df_final.Currency.unique()[0]
