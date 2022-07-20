@@ -48,7 +48,12 @@ if __name__ == "__main__":
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
     # visualization.plot_malawi(df_final=df_final)
-    visualization.plot_malawi_regions(df_final)
+    # visualization.plot_malawi_regions(df_final)
+
+    # plot districts
+    visualization.plot_markets_malawi_amin2(df_final)
+
+    # visualization.plot_missings(df_final, "Price")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# DYNAMIC MODE DECOMPOSITION (DMD)"

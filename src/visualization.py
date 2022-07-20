@@ -22,6 +22,24 @@ import numpy as np
 import folium
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+import missingno as msgo
+
+
+def plot_missings(df_final, column):
+    """
+    Plot number and percent of missing values
+
+    :param df_final:
+    :param column:
+    :return:
+    """
+    msgo.bar(df_final)
+
+    plt.title("Missing values")
+    plt.xlabel("Variable")
+    plt.ylabel("Percent")
+    plt.show()
+
 
 def plot_malawi_regions(df_final):
     """
@@ -44,7 +62,7 @@ def plot_malawi_regions(df_final):
     print(malawi_adm1.Region.unique())
 
     fig, ax = plt.subplots(1, 1)
-    #divider = make_axes_locatable(ax)
+    # divider = make_axes_locatable(ax)
 
     # cax = divider.append_axes("right", size="5%", pad=0.8)
     # lower right
@@ -64,6 +82,7 @@ def plot_malawi_regions(df_final):
     # 4, winter (not enough contrast), summer (nice, but creates wrong image)
     # magma, plasma, turbo
     cmap = possible_cmaps[-1]
+    # cmap = "summer" +"_r"
     cmap = "summer"
 
     # ax.set_prop_cycle(color=cmap[1:])
@@ -78,16 +97,14 @@ def plot_malawi_regions(df_final):
     # plt.tight_layout()
 
     # convert regular dataframe to geopandas df
-    gdf_final = gpd.GeoDataFrame(
+    gdf_final_markets = gpd.GeoDataFrame(
         df_final, geometry=gpd.points_from_xy(df_final.MarketLongitude, df_final.MarketLatitude)
     )
 
     plt.scatter(df_final.MarketLongitude, df_final.MarketLatitude, c="darkblue", edgecolor="orange")
 
-    # gdf_markets_with_admin2 = gpd.sjoin(gdf_final, malawi_adm2, how="inner", predicate="intersects")
-
-    # gplt.pointplot(gdf_final, ax=ax)
-    # gdf_final.plot(kind="scatter", ax=ax)
+    # gplt.pointplot(gdf_final_markets, ax=ax)
+    # gdf_final_markets.plot(kind="scatter", ax=ax)
     # plt.grid()
     plt.xlabel("Longitude")
     plt.ylabel("Latitude")
@@ -99,6 +116,62 @@ def plot_malawi_regions(df_final):
     plt.show()
 
 
+def plot_prices_malawi():
+    """
+    """
+    pass
+
+
+def plot_markets_malawi_amin2(df_final):
+    """
+
+    :return:
+    """
+    country = df_final.Country.unique()[0]
+    output_path_maps = f"../output/{country}/plots/maps"
+    if os.path.exists(output_path_maps) is False:
+        os.makedirs(output_path_maps)
+
+    malawi_adm2 = gpd.read_file("../input/Malawi/maps/WFPGeoNode/mwi_bnd_admin2/mwi_bnd_admin2.shp")
+    malawi_adm2.rename(columns={"NAME_2": "District"}, inplace=True)
+    fig, ax = plt.subplots(1, 1)
+
+    crs_adm2 = malawi_adm2.crs
+
+    # convert regular dataframe to geopandas df
+    gdf_final_markets = gpd.GeoDataFrame(
+        df_final, geometry=gpd.points_from_xy(df_final.MarketLongitude, df_final.MarketLatitude)
+    )
+
+    gdf_final_markets.crs = crs_adm2
+
+    print(gdf_final_markets.columns)
+    print(malawi_adm2.columns)
+    cmap = "summer"
+
+    malawi_adm2.plot(column="District", ax=ax, legend=True, legend_kwds={"loc": "lower left",
+                                                                         "bbox_to_anchor": (1.1, -0.1),
+                                                                         "fontsize": "x-small"},
+                     cmap=cmap)
+
+    # spatial join: find the fitting admin 2 for each market
+    gdf_markets_with_admin2 = gpd.sjoin(gdf_final_markets.to_crs(crs=crs_adm2), malawi_adm2, how="inner",
+                                        predicate="intersects")
+
+    # gdf_markets_with_admin2.plot(kind="geo", column="Region", ax=ax, legend=True, legend_kwds={"loc": "lower left",
+    #                                                                    "bbox_to_anchor": (0.6, 0.8)},
+    #                  cmap=cmap)
+
+    plt.scatter(df_final.MarketLongitude, df_final.MarketLatitude, c="darkblue", edgecolor="orange")
+    # plt.tight_layout()
+    plt.xlabel("Longitude")
+    plt.ylabel("Latitude")
+    plt.suptitle("Malawi - Districts")
+    # plt.title("Malawi - Regions", loc="left")
+
+    plt.savefig(f"{output_path_maps}/{country}-Districts-Adm2.png")
+
+    plt.show()
 
 
 def plot_malawi(df_final):
@@ -165,11 +238,9 @@ def plot_malawi(df_final):
     # ax = gplt.polyplot(malawi_adm2)
     ax = gplt.polyplot(malawi_adm2)
 
-
     # PLOT POINTS / Markets on it
     gplt.pointplot(gdf_final, ax=ax, hue="Region")
     # gplt.pointplot(gdf_final, ax=ax)
-
 
     # ax = gplt.polyplot(df_final_merged, hue="Region")
     # ax = gplt.polyplot(malawi_adm1, projection=gcrs.AlbersEqualArea())
@@ -184,7 +255,6 @@ def plot_malawi(df_final):
     #     scheme="FisherJenks",
     #     ax=ax
     # )
-
 
     plt.xlabel("Longitude")
     plt.ylabel("Latitude")
