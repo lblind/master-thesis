@@ -119,9 +119,16 @@ def plot_malawi_regions_adm1(df_final):
     plt.show()
 
 
-def plot_malawi_adm2_prices(df_final):
+def plot_malawi_adm2_prices_for_year(df_final, year, month):
     """
     """
+    # TODO: don't plot prices for all years, but just subset for ONE year, month
+    # just extract subset, year
+    df_final = df_final[df_final.Year == year]
+
+    # just extract subset, month
+    df_final = df_final[df_final.Month == month]
+
     country = df_final.Country.unique()[0]
     output_path_maps = f"../output/{country}/plots/maps"
     if os.path.exists(output_path_maps) is False:
@@ -156,14 +163,20 @@ def plot_malawi_adm2_prices(df_final):
     print(len(gdf_merged.District.unique()))
 
     #adj_prices_scaled = gdf_merged.AdjPrice * 0.02
-    adj_prices_scaled = gdf_merged.AdjPrice * 0.04
-    sc = plt.scatter(gdf_merged.MarketLongitude, gdf_merged.MarketLatitude, c="darkred", edgecolor="orange",
-                     s=adj_prices_scaled, alpha=0.5, zorder=2, label=adj_prices_scaled)
 
-    legend_prices = ax.legend(*sc.legend_elements("sizes", num=6), loc="lower left", bbox_to_anchor=(-1.1, 0.35),
-                              title="Price Market")
+    scale_factor_percent = 5
+    adj_prices_scaled = gdf_merged.AdjPrice * (scale_factor_percent/100)
+    sc = plt.scatter(gdf_merged.MarketLongitude, gdf_merged.MarketLatitude, c="darkred", edgecolor="orange",
+                     s=adj_prices_scaled, alpha=0.7, zorder=2, label=adj_prices_scaled)
+
+    currency = df_final.Currency.unique()[0]
+    legend_prices = ax.legend(*sc.legend_elements("sizes", num=6), loc="lower left", bbox_to_anchor=(-1.3, 0.35),
+                              title=f"Price [{scale_factor_percent}% {currency}]")
 
     # legend_prices = ax.legend(scatterpoints=5)
+
+    print("Adj prices scaled\n", adj_prices_scaled.unique())
+    print(f"Adj prices scaled min: {np.min(adj_prices_scaled)}, max: {np.max(adj_prices_scaled)}")
 
     # 1) Plot Malawi
     malawi_adm2.plot(column="District", ax=ax, legend=True, legend_kwds={"loc": "lower left",
@@ -179,9 +192,9 @@ def plot_malawi_adm2_prices(df_final):
     plt.ylabel("Latitude")
 
     plt.suptitle("Malawi - Markets")
-    plt.title("AdjPrices")
+    plt.title(f"{year}, {month}")
 
-    plt.savefig(f"{output_path_maps}/{country}-Districts-Adm2-Prices.png")
+    plt.savefig(f"{output_path_maps}/{country}-Districts-Adm2-Prices-{year}.png")
 
     plt.show()
 
