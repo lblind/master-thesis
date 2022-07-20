@@ -22,6 +22,8 @@ import numpy as np
 import folium
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+import plotly.express as px
+
 import missingno as msgo
 import statistics_snippets as stats
 
@@ -142,17 +144,54 @@ def plot_prices_malawi(df_final):
     print(malawi_adm2.columns)
     cmap = "summer"
 
-    malawi_adm2.plot(column="District", ax=ax, legend=True, legend_kwds={"loc": "lower left",
-                                                                         "bbox_to_anchor": (1.1, -0.1),
-                                                                         "fontsize": "x-small"},
-                     cmap=cmap)
+
 
     # spatial join: find the fitting admin 2 for each market
     gdf_markets_with_admin2 = gpd.sjoin(gdf_final_markets.to_crs(crs=crs_adm2), malawi_adm2, how="inner",
                                         predicate="intersects")
 
-    stats.mean_per_column(gdf_markets_with_admin2, group="District")
+    gdf_merged = stats.mean_per_column(gdf_markets_with_admin2, group="District")
 
+    # add spei mean
+    gdf_merged = stats.mean_per_column(gdf_merged, group="Spei")
+
+    print("Shape: ", gdf_merged.shape)
+    print(len(gdf_merged.MeanAdjPricePerDistrict.unique()))
+    print(len(gdf_merged.District.unique()))
+
+    # 1) Plot Malawi
+    malawi_adm2.plot(column="District", ax=ax, legend=True, legend_kwds={"loc": "lower left",
+                                                                         "bbox_to_anchor": (1.1, -0.1),
+                                                                         "fontsize": "x-small"},
+                     cmap=cmap)
+
+    cmap = "winter"
+    # gdf_merged.plot(kind="geo", column="MeanAdjPricePerDistrict", ax=ax,
+    #                  cmap=cmap)
+
+    print(gdf_merged.District)
+    # gdf_merged.plot(kind = "geo", column="MeanAdjPricePerDistrict")
+
+    print(type(gdf_merged))
+    # gdf_merged.explore(column="District")
+
+    # gplt.choropleth(gdf_merged, hue="MeanAdjPricePerDistrict")
+
+    print(gdf_merged.AdjPrice.dtype)
+
+    column_scaled = gdf_merged.AdjPrice * 0.02
+
+    # gdf_merged.plot(column="AdjPrice", markersize=column_scaled, ax=ax)
+
+    plt.scatter(gdf_merged.MarketLongitude, gdf_merged.MarketLatitude, c="darkblue", edgecolor="orange",
+                s=column_scaled)
+
+    plt.xlabel("Longitude")
+    plt.ylabel("Latitude")
+
+    plt.suptitle("Malawi - Markets")
+    plt.title("AdjPrices")
+    plt.show()
 
 def plot_malawi_districts_adm2(df_final):
     """

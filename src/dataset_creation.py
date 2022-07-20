@@ -141,6 +141,7 @@ def create_dataset(country, dropped_commodities):
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: Drop commodities with missings > 90%"
           "\n# ------------------------------------------------------------------------------------------------------\n")
+
     cut_off_percent_commodities = 90
     df_final = preproc.drop_commodities_too_sparse(df=df_final, df_sum_stats_commodities=df_sum_stats_commodities,
                                                    cut_off_percent=cut_off_percent_commodities,
