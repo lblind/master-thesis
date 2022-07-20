@@ -119,7 +119,7 @@ def plot_malawi_regions_adm1(df_final):
     plt.show()
 
 
-def plot_prices_malawi(df_final):
+def plot_malawi_adm2_prices(df_final):
     """
     """
     country = df_final.Country.unique()[0]
@@ -148,10 +148,80 @@ def plot_prices_malawi(df_final):
     gdf_markets_with_admin2 = gpd.sjoin(gdf_final_markets.to_crs(crs=crs_adm2), malawi_adm2, how="inner",
                                         predicate="intersects")
 
-    gdf_merged = stats.mean_per_column(gdf_markets_with_admin2, group="District")
+    gdf_merged = stats.mean_column_per_group(gdf_markets_with_admin2, group="District", column="AdjPrice")
+
+
+    print("Shape: ", gdf_merged.shape)
+    print(len(gdf_merged.MeanAdjPricePerDistrict.unique()))
+    print(len(gdf_merged.District.unique()))
+
+    #adj_prices_scaled = gdf_merged.AdjPrice * 0.02
+    adj_prices_scaled = gdf_merged.AdjPrice * 0.04
+    sc = plt.scatter(gdf_merged.MarketLongitude, gdf_merged.MarketLatitude, c="darkred", edgecolor="orange",
+                     s=adj_prices_scaled, alpha=0.5, zorder=2, label=adj_prices_scaled)
+
+    legend_prices = ax.legend(*sc.legend_elements("sizes", num=6), loc="lower left", bbox_to_anchor=(-1.1, 0.35),
+                              title="Price Market")
+
+    # legend_prices = ax.legend(scatterpoints=5)
+
+    # 1) Plot Malawi
+    malawi_adm2.plot(column="District", ax=ax, legend=True, legend_kwds={"loc": "lower left",
+                                                                         "bbox_to_anchor": (1.1, -0.105),
+                                                                         "fontsize": "x-small",
+                                                                         "title" : "District"},
+                     cmap=cmap)
+
+    # manually add legend for prices back
+    ax.add_artist(legend_prices)
+
+    plt.xlabel("Longitude")
+    plt.ylabel("Latitude")
+
+    plt.suptitle("Malawi - Markets")
+    plt.title("AdjPrices")
+
+    plt.savefig(f"{output_path_maps}/{country}-Districts-Adm2-Prices.png")
+
+    plt.show()
+
+
+def plot_prices_and_spei_adm2(df_final):
+    """
+    Plot relative prices and color districts based on their mean spei value
+    :param df_final:
+    :return:
+    """
+    country = df_final.Country.unique()[0]
+    output_path_maps = f"../output/{country}/plots/maps"
+    if os.path.exists(output_path_maps) is False:
+        os.makedirs(output_path_maps)
+
+    malawi_adm2 = gpd.read_file("../input/Malawi/maps/WFPGeoNode/mwi_bnd_admin2/mwi_bnd_admin2.shp")
+    malawi_adm2.rename(columns={"NAME_2": "District"}, inplace=True)
+    fig, ax = plt.subplots(1, 1)
+
+    crs_adm2 = malawi_adm2.crs
+
+    # convert regular dataframe to geopandas df
+    gdf_final_markets = gpd.GeoDataFrame(
+        df_final, geometry=gpd.points_from_xy(df_final.MarketLongitude, df_final.MarketLatitude)
+    )
+
+    gdf_final_markets.crs = crs_adm2
+
+    print(gdf_final_markets.columns)
+    print(malawi_adm2.columns)
+    cmap = "summer"
+
+    # spatial join: find the fitting admin 2 for each market
+    gdf_markets_with_admin2 = gpd.sjoin(gdf_final_markets.to_crs(crs=crs_adm2), malawi_adm2, how="inner",
+                                        predicate="intersects")
+
+    gdf_merged = stats.mean_column_per_group(gdf_markets_with_admin2, group="District", column="AdjPrice")
 
     # add spei mean
-    gdf_merged = stats.mean_per_column(gdf_merged, group="Spei")
+    gdf_merged = stats.mean_column_per_group(gdf_merged, group="District", column="Spei")
 
     print("Shape: ", gdf_merged.shape)
     print(len(gdf_merged.MeanAdjPricePerDistrict.unique()))
@@ -159,14 +229,18 @@ def plot_prices_malawi(df_final):
 
     adj_prices_scaled = gdf_merged.AdjPrice * 0.02
     sc = plt.scatter(gdf_merged.MarketLongitude, gdf_merged.MarketLatitude, c="darkblue", edgecolor="orange",
-                     s=adj_prices_scaled, alpha=0.7, zorder=2)
+                     s=adj_prices_scaled, alpha=0.7, zorder=2, label=adj_prices_scaled)
 
-    legend_prices = ax.legend(*sc.legend_elements("sizes", num=6), loc="lower left", bbox_to_anchor=(-1.15, 0.35))
+    legend_prices = ax.legend(*sc.legend_elements("sizes", num=6), loc="lower left", bbox_to_anchor=(-1.1, 0.35),
+                              title="Prices")
+
+    # legend_prices = ax.legend(scatterpoints=5)
 
     # 1) Plot Malawi
-    malawi_adm2.plot(column="District", ax=ax, legend=True, legend_kwds={"loc": "lower left",
+    malawi_adm2.plot(column="MeanSpeiPerDistrict", ax=ax, legend=True, legend_kwds={"loc": "lower left",
                                                                          "bbox_to_anchor": (1.1, -0.1),
-                                                                         "fontsize": "x-small"},
+                                                                         "fontsize": "x-small",
+                                                                                    "title" : "Districts"},
                      cmap=cmap)
 
     # manually add legend for prices back

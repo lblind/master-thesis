@@ -54,7 +54,8 @@ if __name__ == "__main__":
     # plot districts
     # visualization.plot_malawi_districts_adm2(df_final)
 
-    visualization.plot_prices_malawi(df_final)
+    visualization.plot_malawi_adm2_prices(df_final)
+    # visualization.plot_prices_and_spei_adm2(df_final)
 
     # visualization.plot_missings(df_final, "Price")
 
