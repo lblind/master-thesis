@@ -23,6 +23,7 @@ import folium
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import missingno as msgo
+import statistics_snippets as stats
 
 
 def plot_missings(df_final, column):
@@ -41,7 +42,7 @@ def plot_missings(df_final, column):
     plt.show()
 
 
-def plot_malawi_regions(df_final):
+def plot_malawi_regions_adm1(df_final):
     """
     Plot malawi and color the specific regions
 
@@ -116,13 +117,44 @@ def plot_malawi_regions(df_final):
     plt.show()
 
 
-def plot_prices_malawi():
+def plot_prices_malawi(df_final):
     """
     """
-    pass
+    country = df_final.Country.unique()[0]
+    output_path_maps = f"../output/{country}/plots/maps"
+    if os.path.exists(output_path_maps) is False:
+        os.makedirs(output_path_maps)
+
+    malawi_adm2 = gpd.read_file("../input/Malawi/maps/WFPGeoNode/mwi_bnd_admin2/mwi_bnd_admin2.shp")
+    malawi_adm2.rename(columns={"NAME_2": "District"}, inplace=True)
+    fig, ax = plt.subplots(1, 1)
+
+    crs_adm2 = malawi_adm2.crs
+
+    # convert regular dataframe to geopandas df
+    gdf_final_markets = gpd.GeoDataFrame(
+        df_final, geometry=gpd.points_from_xy(df_final.MarketLongitude, df_final.MarketLatitude)
+    )
+
+    gdf_final_markets.crs = crs_adm2
+
+    print(gdf_final_markets.columns)
+    print(malawi_adm2.columns)
+    cmap = "summer"
+
+    malawi_adm2.plot(column="District", ax=ax, legend=True, legend_kwds={"loc": "lower left",
+                                                                         "bbox_to_anchor": (1.1, -0.1),
+                                                                         "fontsize": "x-small"},
+                     cmap=cmap)
+
+    # spatial join: find the fitting admin 2 for each market
+    gdf_markets_with_admin2 = gpd.sjoin(gdf_final_markets.to_crs(crs=crs_adm2), malawi_adm2, how="inner",
+                                        predicate="intersects")
+
+    stats.mean_per_column(gdf_markets_with_admin2, group="District")
 
 
-def plot_markets_malawi_amin2(df_final):
+def plot_malawi_districts_adm2(df_final):
     """
 
     :return:

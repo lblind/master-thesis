@@ -12,6 +12,7 @@ import pandas as pd
 import utils
 import visualization
 import dataset_creation
+import statistics_snippets as stats
 
 import dmd
 
@@ -51,9 +52,13 @@ if __name__ == "__main__":
     # visualization.plot_malawi_regions(df_final)
 
     # plot districts
-    visualization.plot_markets_malawi_amin2(df_final)
+    # visualization.plot_malawi_districts_adm2(df_final)
+
+    visualization.plot_prices_malawi(df_final)
 
     # visualization.plot_missings(df_final, "Price")
+
+
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# DYNAMIC MODE DECOMPOSITION (DMD)"
