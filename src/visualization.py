@@ -161,7 +161,7 @@ def plot_prices_malawi(df_final):
     sc = plt.scatter(gdf_merged.MarketLongitude, gdf_merged.MarketLatitude, c="darkblue", edgecolor="orange",
                      s=adj_prices_scaled, alpha=0.7, zorder=2)
 
-    legend_prices = ax.legend(*sc.legend_elements("sizes", num=6), loc="lower left")
+    legend_prices = ax.legend(*sc.legend_elements("sizes", num=6), loc="lower left", bbox_to_anchor=(-1.15, 0.35))
 
     # 1) Plot Malawi
     malawi_adm2.plot(column="District", ax=ax, legend=True, legend_kwds={"loc": "lower left",
@@ -171,7 +171,6 @@ def plot_prices_malawi(df_final):
 
     # manually add legend for prices back
     ax.add_artist(legend_prices)
-
 
     plt.xlabel("Longitude")
     plt.ylabel("Latitude")
