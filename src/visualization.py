@@ -119,7 +119,7 @@ def plot_malawi_regions_adm1(df_final):
     plt.show()
 
 
-def plot_malawi_adm2_prices_for_year(df_final, year, month):
+def plot_malawi_adm2_prices_for_year_month(df_final, year, month, commodity=None):
     """
     """
     # TODO: don't plot prices for all years, but just subset for ONE year, month
@@ -128,6 +128,14 @@ def plot_malawi_adm2_prices_for_year(df_final, year, month):
 
     # just extract subset, month
     df_final = df_final[df_final.Month == month]
+
+    # plot only subset of commodity
+    if commodity is not None:
+        if commodity in df_final.Commodity.unique():
+            df_final = df_final[df_final.Commodity == commodity]
+        else:
+            raise ValueError(f"Commodity {commodity} not valid. Please choose "
+                             f"one of the following commodities: {df_final.Commodity.unique()}")
 
     country = df_final.Country.unique()[0]
     output_path_maps = f"../output/{country}/plots/maps"
@@ -157,17 +165,16 @@ def plot_malawi_adm2_prices_for_year(df_final, year, month):
 
     gdf_merged = stats.mean_column_per_group(gdf_markets_with_admin2, group="District", column="AdjPrice")
 
-
     print("Shape: ", gdf_merged.shape)
     print(len(gdf_merged.MeanAdjPricePerDistrict.unique()))
     print(len(gdf_merged.District.unique()))
 
-    #adj_prices_scaled = gdf_merged.AdjPrice * 0.02
+    # adj_prices_scaled = gdf_merged.AdjPrice * 0.02
 
     color_array = ["darkred" if row.Drought else "darkblue" for idx, row in gdf_merged.iterrows()]
 
     scale_factor_percent = 5
-    adj_prices_scaled = gdf_merged.AdjPrice * (scale_factor_percent/100)
+    adj_prices_scaled = gdf_merged.AdjPrice * (scale_factor_percent / 100)
     sc = plt.scatter(gdf_merged.MarketLongitude, gdf_merged.MarketLatitude, c=color_array, edgecolor="orange",
                      s=adj_prices_scaled, alpha=0.7, zorder=2, label=adj_prices_scaled)
 
@@ -184,8 +191,11 @@ def plot_malawi_adm2_prices_for_year(df_final, year, month):
     malawi_adm2.plot(column="District", ax=ax, legend=True, legend_kwds={"loc": "lower left",
                                                                          "bbox_to_anchor": (1.1, -0.105),
                                                                          "fontsize": "x-small",
-                                                                         "title" : "District"},
+                                                                         "title": "District"},
                      cmap=cmap)
+    # TODO: check dtype gdf_merged and malawi_adm2
+    # gdf_merged.plot(column="Spei", ax=ax, legend=True,
+    #                  cmap=cmap)
 
     # manually add legend for prices back
     ax.add_artist(legend_prices)
@@ -193,10 +203,13 @@ def plot_malawi_adm2_prices_for_year(df_final, year, month):
     plt.xlabel("Longitude")
     plt.ylabel("Latitude")
 
-    plt.suptitle("Malawi - Markets")
+    if commodity is not None:
+        plt.suptitle(f"Malawi - {commodity}")
+    else:
+        plt.suptitle("Malawi - Markets")
     plt.title(f"{year}, {month}")
 
-    plt.savefig(f"{output_path_maps}/{country}-Districts-Adm2-Prices-{year}.png")
+    plt.savefig(f"{output_path_maps}/{country}-Districts-Adm2-Prices-{year}-{month}.png")
 
     plt.show()
 
@@ -253,9 +266,9 @@ def plot_prices_and_spei_adm2(df_final):
 
     # 1) Plot Malawi
     malawi_adm2.plot(column="MeanSpeiPerDistrict", ax=ax, legend=True, legend_kwds={"loc": "lower left",
-                                                                         "bbox_to_anchor": (1.1, -0.1),
-                                                                         "fontsize": "x-small",
-                                                                                    "title" : "Districts"},
+                                                                                    "bbox_to_anchor": (1.1, -0.1),
+                                                                                    "fontsize": "x-small",
+                                                                                    "title": "Districts"},
                      cmap=cmap)
 
     # manually add legend for prices back
