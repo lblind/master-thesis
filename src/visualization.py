@@ -119,6 +119,30 @@ def plot_malawi_regions_adm1(df_final):
     plt.show()
 
 
+def histogram(df, column, commodity, year, month, bins=20, save_fig=False):
+    """
+
+    :param df:
+    :param column:
+    :param bins:
+    :return:
+    """
+    country = df.Country.unique()[0]
+    output_path_maps = f"../output/{country}/plots/histograms"
+    if os.path.exists(output_path_maps) is False:
+        os.makedirs(output_path_maps)
+
+    df[column].hist(bins=bins)
+    plt.xlabel("SPEI")
+    plt.ylabel("Number of markets")
+    plt.suptitle(f"Histogram {column} - {commodity}")
+    plt.title(f"{year}, {month}")
+    plt.show()
+
+    if save_fig:
+        plt.savefig(output_path_maps + f"/{commodity}-{year}-{month}-hist.png")
+
+
 def plot_malawi_adm2_prices_for_year_month(df_final, year, month, commodity=None):
     """
     """
@@ -155,25 +179,28 @@ def plot_malawi_adm2_prices_for_year_month(df_final, year, month, commodity=None
 
     gdf_final_markets.crs = crs_adm2
 
-    print(gdf_final_markets.columns)
-    print(malawi_adm2.columns)
     cmap = "summer"
 
+    # TODO: keep both geometry columns
+
     # spatial join: find the fitting admin 2 for each market
-    gdf_markets_with_admin2 = gpd.sjoin(gdf_final_markets.to_crs(crs=crs_adm2), malawi_adm2, how="inner",
+    # as the geometries of the right df should be sustained (District Polygons not Market Points)
+    join_method = "right"
+    gdf_markets_with_admin2 = gpd.sjoin(gdf_final_markets.to_crs(crs=crs_adm2), malawi_adm2, how="right",
                                         predicate="intersects")
 
-    gdf_merged = stats.mean_column_per_group(gdf_markets_with_admin2, group="District", column="AdjPrice")
+    # TODO: not necessary (created mean column is not used)
+    # gdf_merged = stats.mean_column_per_group(gdf_markets_with_admin2, group="District", column="AdjPrice")
 
-    print("Shape: ", gdf_merged.shape)
-    print(len(gdf_merged.MeanAdjPricePerDistrict.unique()))
-    print(len(gdf_merged.District.unique()))
+    gdf_merged = gdf_markets_with_admin2
 
-    # adj_prices_scaled = gdf_merged.AdjPrice * 0.02
-
+    # ------------------------------------------------------------------------------------------------------------------
+    # Scatterplot - Prices
+    # ------------------------------------------------------------------------------------------------------------------
     color_array = ["darkred" if row.Drought else "darkblue" for idx, row in gdf_merged.iterrows()]
 
-    scale_factor_percent = 5
+    # TODO maybe change that to a pointplot
+    scale_factor_percent = 25
     adj_prices_scaled = gdf_merged.AdjPrice * (scale_factor_percent / 100)
     sc = plt.scatter(gdf_merged.MarketLongitude, gdf_merged.MarketLatitude, c=color_array, edgecolor="orange",
                      s=adj_prices_scaled, alpha=0.7, zorder=2, label=adj_prices_scaled)
@@ -182,34 +209,43 @@ def plot_malawi_adm2_prices_for_year_month(df_final, year, month, commodity=None
     legend_prices = ax.legend(*sc.legend_elements("sizes", num=6), loc="lower left", bbox_to_anchor=(-1.3, 0.35),
                               title=f"Price [{scale_factor_percent}% {currency}]")
 
-    # legend_prices = ax.legend(scatterpoints=5)
 
     print("Adj prices scaled\n", adj_prices_scaled.unique())
     print(f"Adj prices scaled min: {np.min(adj_prices_scaled)}, max: {np.max(adj_prices_scaled)}")
 
+    # ------------------------------------------------------------------------------------------------------------------
+    # MAP Malawi
+    # ------------------------------------------------------------------------------------------------------------------
+
+
+
+    # to plot the lines between the districts: edgecolor="darkgreen"
     # 1) Plot Malawi
-    malawi_adm2.plot(column="District", ax=ax, legend=True, legend_kwds={"loc": "lower left",
+    # malawi_adm2.plot(column="District", ax=ax, legend=True, legend_kwds={"loc": "lower left",
+    #                                                                      "bbox_to_anchor": (1.1, -0.105),
+    #                                                                      "fontsize": "x-small",
+    #                                                                      "title": "District"},
+    #                  cmap=cmap, edgecolor="darkgreen")
+
+    gdf_merged.plot(column="District", ax=ax, legend=True, legend_kwds={"loc": "lower left",
                                                                          "bbox_to_anchor": (1.1, -0.105),
                                                                          "fontsize": "x-small",
                                                                          "title": "District"},
-                     cmap=cmap)
-    # TODO: check dtype gdf_merged and malawi_adm2
-    # gdf_merged.plot(column="Spei", ax=ax, legend=True,
-    #                  cmap=cmap)
+                     cmap=cmap, edgecolor="darkgreen")
 
     # manually add legend for prices back
     ax.add_artist(legend_prices)
 
     plt.xlabel("Longitude")
     plt.ylabel("Latitude")
+    plt.title(f"{year}, {month}")
 
     if commodity is not None:
         plt.suptitle(f"Malawi - {commodity}")
+        plt.savefig(f"{output_path_maps}/{country}-Districts-Adm2-Prices-{year}-{month}-{commodity}.png")
     else:
         plt.suptitle("Malawi - Markets")
-    plt.title(f"{year}, {month}")
-
-    plt.savefig(f"{output_path_maps}/{country}-Districts-Adm2-Prices-{year}-{month}.png")
+        plt.savefig(f"{output_path_maps}/{country}-Districts-Adm2-Prices-{year}-{month}.png")
 
     plt.show()
 

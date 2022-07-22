@@ -8,8 +8,9 @@
 ### Visualization geospatial data
 - [Geoplot, Geopandas](https://towardsdatascience.com/visualizing-geospatial-data-in-python-e070374fe621)
 - [Folium](https://medium.datadriveninvestor.com/visualising-geospatial-data-with-python-d3b1c519f31)
-- [Basemap Stackoverflow](https://stackoverflow.com/questions/61325849/how-can-i-visualize-data-on-map-using-just-country-and-region-in-python
-)
+- [Basemap Stackoverflow](https://stackoverflow.com/questions/61325849/how-can-i-visualize-data-on-map-using-just-country-and-region-in-python)
+- [Choropleth geopandas & Classification](https://geopandas.org/en/stable/gallery/choropleths.html)
+
 - [Visualization Overview WFP](https://docs.wfp.org/api/documents/WFP-0000108047/download/)
 - [Geopandas plot](https://geopandas.org/en/stable/docs/user_guide/mapping.html)
 
