@@ -143,10 +143,22 @@ def histogram(df, column, commodity, year, month, bins=20, save_fig=False):
         plt.savefig(output_path_maps + f"/{commodity}-{year}-{month}-hist.png")
 
 
-def plot_malawi_adm2_prices_for_year_month(df_final, year, month, commodity=None):
+def plot_country_adm2_prices_for_year_month(df_final, year, month, commodity=None,
+                                            path_shape_file="../input/Malawi/maps/WFPGeoNode/mwi_bnd_admin2/mwi_bnd_admin2.shp"):
     """
+    Plots
+    :param df_final:
+    :param year:
+    :param month:
+    :param commodity:
+    :return:
     """
-    # TODO: don't plot prices for all years, but just subset for ONE year, month
+    # Make sure that output dir exists
+    country = df_final.Country.unique()[0]
+    output_path_maps = f"../output/{country}/plots/maps"
+    if os.path.exists(output_path_maps) is False:
+        os.makedirs(output_path_maps)
+
     # just extract subset, year
     df_final = df_final[df_final.Year == year]
 
@@ -161,21 +173,31 @@ def plot_malawi_adm2_prices_for_year_month(df_final, year, month, commodity=None
             raise ValueError(f"Commodity {commodity} not valid. Please choose "
                              f"one of the following commodities: {df_final.Commodity.unique()}")
 
-    country = df_final.Country.unique()[0]
-    output_path_maps = f"../output/{country}/plots/maps"
-    if os.path.exists(output_path_maps) is False:
-        os.makedirs(output_path_maps)
-
-    malawi_adm2 = gpd.read_file("../input/Malawi/maps/WFPGeoNode/mwi_bnd_admin2/mwi_bnd_admin2.shp")
+    # Read shape file
+    malawi_adm2 = gpd.read_file(path_shape_file)
     malawi_adm2.rename(columns={"NAME_2": "District"}, inplace=True)
     fig, ax = plt.subplots(1, 1)
 
+    # rename geometry column
+    malawi_adm2 = malawi_adm2.rename_geometry("geometry_adm2")
+
+    # Set current coordinate reference system
     crs_adm2 = malawi_adm2.crs
 
     # convert regular dataframe to geopandas df
     gdf_final_markets = gpd.GeoDataFrame(
         df_final, geometry=gpd.points_from_xy(df_final.MarketLongitude, df_final.MarketLatitude)
     )
+    # rename the geometry column
+    gdf_final_markets = gdf_final_markets.rename_geometry("geometry_markets")
+    print(gdf_final_markets.columns)
+
+
+
+    # set geometry columns explicitly
+    # gdf_final_markets = gdf_final_markets.set_geometry("geometry_markets")
+    # copy the column to a new one
+    # gdf_final_markets["geometry_markets"] = gdf_final_markets.geometry
 
     gdf_final_markets.crs = crs_adm2
 
@@ -186,8 +208,12 @@ def plot_malawi_adm2_prices_for_year_month(df_final, year, month, commodity=None
     # spatial join: find the fitting admin 2 for each market
     # as the geometries of the right df should be sustained (District Polygons not Market Points)
     join_method = "right"
-    gdf_markets_with_admin2 = gpd.sjoin(gdf_final_markets.to_crs(crs=crs_adm2), malawi_adm2, how="right",
+    # gdf_markets_with_admin2 = gpd.sjoin(gdf_final_markets.to_crs(crs=crs_adm2), malawi_adm2, how="inner",
+    #                                     predicate="intersects")
+    gdf_markets_with_admin2 = gpd.sjoin(malawi_adm2, gdf_final_markets.to_crs(crs=crs_adm2),  how="inner",
                                         predicate="intersects")
+
+    print(gdf_markets_with_admin2.columns)
 
     # TODO: not necessary (created mean column is not used)
     # gdf_merged = stats.mean_column_per_group(gdf_markets_with_admin2, group="District", column="AdjPrice")
