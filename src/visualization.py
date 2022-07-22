@@ -253,11 +253,19 @@ def plot_country_adm2_prices_for_year_month(df_final, year, month, commodity=Non
     #                                                                      "title": "District"},
     #                  cmap=cmap, edgecolor="darkgreen")
 
+    # PLOT BASED ON DISTRICT
     gdf_merged.plot(column="District", ax=ax, legend=True, legend_kwds={"loc": "lower left",
                                                                          "bbox_to_anchor": (1.1, -0.105),
                                                                          "fontsize": "x-small",
                                                                          "title": "District"},
-                     cmap=cmap, edgecolor="darkgreen")
+                     cmap=cmap, edgecolor="darkgreen",
+                    missing_kwds={
+                        "color" : "lightgrey",
+                        "edgecolor" : "red",
+                        "hatch" : "///",
+                        "label" : "Missing values"
+                    })
+
 
     # manually add legend for prices back
     ax.add_artist(legend_prices)
@@ -276,73 +284,137 @@ def plot_country_adm2_prices_for_year_month(df_final, year, month, commodity=Non
     plt.show()
 
 
-def plot_prices_and_spei_adm2(df_final):
+def plot_country_adm2_price_spei(df_final, year, month, commodity=None,
+                                 path_shape_file="../input/Malawi/maps/WFPGeoNode/mwi_bnd_admin2/mwi_bnd_admin2.shp"):
     """
-    Plot relative prices and color districts based on their mean spei value
-    :param df_final:
-    :return:
-    """
+        Plots
+        :param df_final:
+        :param year:
+        :param month:
+        :param commodity:
+        :return:
+        """
+    # Make sure that output dir exists
     country = df_final.Country.unique()[0]
     output_path_maps = f"../output/{country}/plots/maps"
     if os.path.exists(output_path_maps) is False:
         os.makedirs(output_path_maps)
 
-    malawi_adm2 = gpd.read_file("../input/Malawi/maps/WFPGeoNode/mwi_bnd_admin2/mwi_bnd_admin2.shp")
+    # just extract subset, year
+    df_final = df_final[df_final.Year == year]
+
+    # just extract subset, month
+    df_final = df_final[df_final.Month == month]
+
+    # plot only subset of commodity
+    if commodity is not None:
+        if commodity in df_final.Commodity.unique():
+            df_final = df_final[df_final.Commodity == commodity]
+        else:
+            raise ValueError(f"Commodity {commodity} not valid. Please choose "
+                             f"one of the following commodities: {df_final.Commodity.unique()}")
+
+    # Read shape file
+    malawi_adm2 = gpd.read_file(path_shape_file)
     malawi_adm2.rename(columns={"NAME_2": "District"}, inplace=True)
     fig, ax = plt.subplots(1, 1)
 
+    # rename geometry column
+    malawi_adm2 = malawi_adm2.rename_geometry("geometry_adm2")
+
+    # Set current coordinate reference system
     crs_adm2 = malawi_adm2.crs
 
     # convert regular dataframe to geopandas df
     gdf_final_markets = gpd.GeoDataFrame(
         df_final, geometry=gpd.points_from_xy(df_final.MarketLongitude, df_final.MarketLatitude)
     )
+    # rename the geometry column
+    gdf_final_markets = gdf_final_markets.rename_geometry("geometry_markets")
+    print(gdf_final_markets.columns)
+
+    # set geometry columns explicitly
+    # gdf_final_markets = gdf_final_markets.set_geometry("geometry_markets")
+    # copy the column to a new one
+    # gdf_final_markets["geometry_markets"] = gdf_final_markets.geometry
 
     gdf_final_markets.crs = crs_adm2
 
-    print(gdf_final_markets.columns)
-    print(malawi_adm2.columns)
     cmap = "summer"
 
+    # TODO: keep both geometry columns
+
     # spatial join: find the fitting admin 2 for each market
-    gdf_markets_with_admin2 = gpd.sjoin(gdf_final_markets.to_crs(crs=crs_adm2), malawi_adm2, how="inner",
+    # as the geometries of the right df should be sustained (District Polygons not Market Points)
+    join_method = "right"
+    # gdf_markets_with_admin2 = gpd.sjoin(gdf_final_markets.to_crs(crs=crs_adm2), malawi_adm2, how="inner",
+    #                                     predicate="intersects")
+    gdf_markets_with_admin2 = gpd.sjoin(malawi_adm2, gdf_final_markets.to_crs(crs=crs_adm2), how="inner",
                                         predicate="intersects")
 
-    gdf_merged = stats.mean_column_per_group(gdf_markets_with_admin2, group="District", column="AdjPrice")
+    print(gdf_markets_with_admin2.columns)
 
-    # add spei mean
-    gdf_merged = stats.mean_column_per_group(gdf_merged, group="District", column="Spei")
+    # TODO: not necessary (created mean column is not used)
+    # gdf_merged = stats.mean_column_per_group(gdf_markets_with_admin2, group="District", column="AdjPrice")
 
-    print("Shape: ", gdf_merged.shape)
-    print(len(gdf_merged.MeanAdjPricePerDistrict.unique()))
-    print(len(gdf_merged.District.unique()))
+    gdf_merged = gdf_markets_with_admin2
 
-    adj_prices_scaled = gdf_merged.AdjPrice * 0.02
-    sc = plt.scatter(gdf_merged.MarketLongitude, gdf_merged.MarketLatitude, c="darkblue", edgecolor="orange",
+    # ------------------------------------------------------------------------------------------------------------------
+    # Scatterplot - Prices
+    # ------------------------------------------------------------------------------------------------------------------
+    color_array = ["darkred" if row.Drought else "darkblue" for idx, row in gdf_merged.iterrows()]
+
+    # TODO maybe change that to a pointplot
+    scale_factor_percent = 25
+    adj_prices_scaled = gdf_merged.AdjPrice * (scale_factor_percent / 100)
+    sc = plt.scatter(gdf_merged.MarketLongitude, gdf_merged.MarketLatitude, c=color_array, edgecolor="orange",
                      s=adj_prices_scaled, alpha=0.7, zorder=2, label=adj_prices_scaled)
 
-    legend_prices = ax.legend(*sc.legend_elements("sizes", num=6), loc="lower left", bbox_to_anchor=(-1.1, 0.35),
-                              title="Prices")
+    currency = df_final.Currency.unique()[0]
+    legend_prices = ax.legend(*sc.legend_elements("sizes", num=6), loc="lower left", bbox_to_anchor=(-1.3, 0.35),
+                              title=f"Price [{scale_factor_percent}% {currency}]")
 
-    # legend_prices = ax.legend(scatterpoints=5)
+    print("Adj prices scaled\n", adj_prices_scaled.unique())
+    print(f"Adj prices scaled min: {np.min(adj_prices_scaled)}, max: {np.max(adj_prices_scaled)}")
 
+    # ------------------------------------------------------------------------------------------------------------------
+    # MAP Malawi
+    # ------------------------------------------------------------------------------------------------------------------
+
+    # to plot the lines between the districts: edgecolor="darkgreen"
     # 1) Plot Malawi
-    malawi_adm2.plot(column="MeanSpeiPerDistrict", ax=ax, legend=True, legend_kwds={"loc": "lower left",
-                                                                                    "bbox_to_anchor": (1.1, -0.1),
-                                                                                    "fontsize": "x-small",
-                                                                                    "title": "Districts"},
-                     cmap=cmap)
+
+    # PLOT BASED ON SPEI
+    # cmap = "Spectral"
+    cmap = "coolwarm_r"
+    # cmap = "bwr_r"
+    cmap = "seismic_r"
+    gdf_merged.plot(column="Spei", ax=ax, legend=True,
+                    cmap=cmap, edgecolor="darkgreen",
+                    missing_kwds={
+                        "color": "lightgrey",
+                        "edgecolor": "red",
+                        "hatch": "///",
+                        "label": "Missing values"
+                    })
 
     # manually add legend for prices back
     ax.add_artist(legend_prices)
 
     plt.xlabel("Longitude")
     plt.ylabel("Latitude")
+    plt.title(f"{year}, {month}")
 
-    plt.suptitle("Malawi - Markets")
-    plt.title("AdjPrices")
+    # TODO: check
+    # set range of colorbar
+    plt.clim((-3, 3))
 
-    plt.savefig(f"{output_path_maps}/{country}-Districts-Adm2-Prices.png")
+    if commodity is not None:
+        plt.suptitle(f"Malawi - {commodity}")
+        plt.savefig(f"{output_path_maps}/{country}-Districts-Adm2-Prices-{year}-{month}-{commodity}.png")
+    else:
+        plt.suptitle("Malawi - Markets")
+        plt.savefig(f"{output_path_maps}/{country}-Districts-Adm2-Prices-{year}-{month}-SPEI.png")
 
     plt.show()
 

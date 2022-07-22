@@ -55,7 +55,7 @@ if __name__ == "__main__":
     # visualization.plot_malawi_districts_adm2(df_final)
 
     visualization.plot_country_adm2_prices_for_year_month(df_final, 2018, 8, "Maize")
-    # visualization.plot_prices_and_spei_adm2(df_final)
+    visualization.plot_country_adm2_price_spei(df_final, 2018, 8, "Maize")
 
     # visualization.plot_missings(df_final, "Price")
 
