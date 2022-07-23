@@ -54,15 +54,12 @@ if __name__ == "__main__":
     # plot districts
     # visualization.plot_malawi_districts_adm2(df_final)
 
-    visualization.plot_country_adm2_prices_for_year_month(df_final, 2018, 8, "Maize")
-    visualization.plot_country_adm2_price_spei(df_final, 2018, 8, "Maize")
-
+    # visualization.plot_country_adm2_prices_for_year_month(df_final, 2018, 8, "Maize")
+    # visualization.plot_country_adm2_price_spei(df_final, 2018, 8, "Maize")
     # visualization.plot_missings(df_final, "Price")
-
-
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# DYNAMIC MODE DECOMPOSITION (DMD)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-    #dmd.dmd_per_commodity(df_final)
+    dmd.dmd_per_commodity(df_final)

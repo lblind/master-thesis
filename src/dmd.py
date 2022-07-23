@@ -5,6 +5,7 @@ Functions that are used to perform the Dynamic Mode Decomposition (DMD).
 """
 
 import pydmd
+from matplotlib import pyplot as plt
 from pydmd import DMD
 
 import pandas as pd
@@ -79,6 +80,56 @@ def get_snapshot_matrix_x_for_commodity(df_commodity, time_span_min, time_span_m
     return snapshot_matrix_x_for_commodity
 
 
+def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True):
+    """
+
+    :param commodity:
+    :param df_snapshots:
+    :param svd_rank:
+        if set to 0, it will be automatically detected
+    :param exact:
+    :param opt:
+    :return:
+    """
+
+    output_dir = f"../output/{country}/dmd"
+    if os.path.exists(output_dir) is False:
+        os.makedirs(output_dir)
+
+    # define the operator/ parameters you want to use for the algorithm
+    dmd = DMD(svd_rank=svd_rank, exact=exact)
+
+    # convert df to numpy
+    np_snapshots = df_snapshots.to_numpy()
+
+    # train the data
+    dmd.fit(np_snapshots)
+
+    # extract results (modes + frequency)
+    modes = dmd.modes
+    frequency = dmd.frequency
+    reconstructed_data = dmd.reconstructed_data
+    eigs = dmd.eigs
+
+    print(f"Frequency ({frequency.shape})\n", frequency)
+    print(f"Eigs ({eigs.shape})\n", eigs)
+    print(f"Modes ({modes.shape})\n", modes)
+
+    print(f"Original data ({df_snapshots.shape})")
+    print(f"Reconstructed data ({reconstructed_data.shape})\n", reconstructed_data)
+
+    # dmd.save(f"../output/{country}/dmd/{country}-dmd-output-{commodity}.xlsx")
+
+    # plot the results
+    # dmd.plot_modes_2D(figsize=(12, 5))
+
+    # show the results
+    # plt.show()
+
+    # return the trained dmd object
+    return dmd
+
+
 def dmd_per_commodity(df_final, write_excels=True):
     """
 
@@ -96,6 +147,11 @@ def dmd_per_commodity(df_final, write_excels=True):
     df_time_spans = utils.convert_excel_to_df(f"../output/{country}/summary-statistics/time-spans-per-commodity.xlsx")
 
     for commodity in df_final.Commodity.unique():
+
+        # --------------------------------------------------------------------------------------------------------------
+        # STEP 1: Arrange data in a way needed (as snapshot matrices)
+        # --------------------------------------------------------------------------------------------------------------
+
         # Extract the part of the dataframe that belongs to that commodity
         # df_final_per_commodity = df_final[df_final.Commodity == commodity]
 
@@ -109,10 +165,16 @@ def dmd_per_commodity(df_final, write_excels=True):
         time_span_max = (int(df_time_span_commodity["TimeSpanMaxY"]), int(df_time_span_commodity["TimeSpanMaxM"]))
 
         # construct the snapshot matrix per commodity
-        x = get_snapshot_matrix_x_for_commodity(df_final_per_commodity, time_span_min=time_span_min,
+        x_snapshot_matrix = get_snapshot_matrix_x_for_commodity(df_final_per_commodity, time_span_min=time_span_min,
                                                 time_span_max=time_span_max, write_excel=write_excels)
         # append snapshot matrix to dict
-        dict_xs_per_commodity[commodity] = x
+        dict_xs_per_commodity[commodity] = x_snapshot_matrix
+
+        # --------------------------------------------------------------------------------------------------------------
+        # STEP 2: Do the actual DMD
+        # --------------------------------------------------------------------------------------------------------------
+
+        dmd_algorithm(x_snapshot_matrix, country=country, commodity=commodity)
 
     if write_excels:
         # Write all dfs into one excel

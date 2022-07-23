@@ -14,12 +14,18 @@
 - [Visualization Overview WFP](https://docs.wfp.org/api/documents/WFP-0000108047/download/)
 - [Geopandas plot](https://geopandas.org/en/stable/docs/user_guide/mapping.html)
 
+### DMD and PyDMD
+- [PyDMD Tutorials](https://github.com/mathLab/PyDMD/blob/master/tutorials/README.md)
+
 ## Data Sources
 - [Python Graph Gallery](https://www.python-graph-gallery.com/315-a-world-map-of-surf-tweets)
 
 ## GIS Data
 - [Diva GIS](https://www.diva-gis.org/datadown)
 - [Merging Geopandas](https://geopandas.org/en/v0.8.2/mergingdata.html#:~:text=There%20are%20two%20ways%20to%20combine%20datasets%20in,analogous%20to%20normal%20merging%20or%20joining%20in%20pandas.)
+
+
+
 
 
 

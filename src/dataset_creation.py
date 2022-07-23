@@ -6,6 +6,7 @@ CREATION OF DATASET
 import pandas as pd
 
 import preprocessing as preproc
+import statistics_snippets as stats
 
 
 def create_dataset(country, dropped_commodities):
@@ -111,7 +112,7 @@ def create_dataset(country, dropped_commodities):
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
     # Check missings
-    preproc.summary_stats_prices_droughts(df_final=df_final)
+    stats.summary_stats_prices_droughts(df_final=df_final)
     # preproc.summary_stats_missings(df_final=df_wfp)
 
     # ------------------------------------------------------------------------------------------------------------------
@@ -133,7 +134,7 @@ def create_dataset(country, dropped_commodities):
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: Write summary statistics 2 (General)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
-    df_sum_stats_commodities = preproc.summary_stats_prices_droughts(df_final=df_final,
+    df_sum_stats_commodities = stats.summary_stats_prices_droughts(df_final=df_final,
                                                                      excel_output_extension="-preproc-2",
                                                                      return_df_by_group_sheet="Commodity")
     print("Sum stats commodity\n", df_sum_stats_commodities)
@@ -185,7 +186,7 @@ def create_dataset(country, dropped_commodities):
             "\n# ----------------------------------------------------------------------------------------------------\n"
             f"# [{commodity}] PREPROC: Write summary statistics 2 (Per Commodity)"
             "\n# ---------------------------------------------------------------------------------------------------\n")
-        preproc.summary_stats_prices_droughts(df_final=df_final_commodity,
+        stats.summary_stats_prices_droughts(df_final=df_final_commodity,
                                               excel_output_extension=f"-preproc-2-{commodity}",
                                               commodity=commodity)
 
@@ -207,7 +208,7 @@ def create_dataset(country, dropped_commodities):
             "\n# ---------------------------------------------------------------------------------------------------\n")
 
         # Write sum stats
-        preproc.summary_stats_prices_droughts(df_final=df_final_commodity, excel_output_extension=
+        stats.summary_stats_prices_droughts(df_final=df_final_commodity, excel_output_extension=
         f"-preproc-3-{cut_off_percentile}p-{commodity}", commodity=commodity)
 
         print(
@@ -240,7 +241,7 @@ def create_dataset(country, dropped_commodities):
             "\n# ----------------------------------------------------------------------------------------------------\n")
 
         # Write sum stats
-        df_sum_stats_market = preproc.summary_stats_prices_droughts(df_final=df_final_commodity,
+        df_sum_stats_market = stats.summary_stats_prices_droughts(df_final=df_final_commodity,
                                                                     excel_output_extension=f"-preproc-4"
                                                                                            f"-{cut_off_percentile}p"
                                                                                            f"-{commodity}"
@@ -281,7 +282,7 @@ def create_dataset(country, dropped_commodities):
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
     # Write sum stats for general thing
-    preproc.summary_stats_prices_droughts(df_final=df_final_all,
+    stats.summary_stats_prices_droughts(df_final=df_final_all,
                                           excel_output_extension=f"-preproc-4"
                                                                  f"-{cut_off_percentile}p"
                                                                  f"-eps-{epsilon_entries_interpolation}")

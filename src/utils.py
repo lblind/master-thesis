@@ -74,3 +74,5 @@ def merge_dfs_left(df_left, df_right, on):
                          f"same. (Before merge: {no_rows_before_merge}, After merge: {df_merged.shape[0]})")
 
     return df_merged
+
+
