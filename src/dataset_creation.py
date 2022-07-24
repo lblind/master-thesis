@@ -7,6 +7,7 @@ import pandas as pd
 
 import preprocessing as preproc
 import statistics_snippets as stats
+import visualization
 
 
 def create_dataset(country, dropped_commodities):
@@ -68,6 +69,7 @@ def create_dataset(country, dropped_commodities):
           "# PREPROC: Read climate data (SPEI)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
+    # STEP 4) read and merge climate data & only keep non-nan values / omit those where no measurement has been possible
     df_spei = preproc.read_climate_data(time_slice=slice_time, long_slice=slice_lon, lat_slice=slice_lat,
                                         country=country)
 
@@ -86,10 +88,24 @@ def create_dataset(country, dropped_commodities):
                          f" be the same as for the one of wfp {df_wfp.shape[0]}")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
-          "# PREPROC: Classify droughts"
+          "# PREPROC: Drop years where no SPEI data is available (2021, 2022) -> even though WFP data is"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+    # TODO maybe do this smarter and check already in merge function above if max SPEI date < max WFP date -> omit
+    # everything above that (or: maybe do an inner join instead of a left outer join instead?)
+    # drop 2021, 2022 as no data for droughts (/SPEI) is available for those (even though WFP data is)
+    years_to_drop = [2021, 2022]
+    print(f"# Dropping years (as no SPEI data available): {years_to_drop}")
+    df_final = preproc.drop_years(df_final=df_final, years_list=years_to_drop)
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC: Classify droughts & SPEI categories"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
+    # add SPEI categories
     df_final = preproc.classify_droughts(df_final)
+
+    # Plot Histogram for SPEI categories
+    visualization.plot_hist(df_final, "SpeiCat", orientation="horizontal", bins=7, png_appendix="-preproc-STEP7")
 
     # Summary statistics categorical
     counts = df_final["SpeiCat"].value_counts()
@@ -98,14 +114,6 @@ def create_dataset(country, dropped_commodities):
     counts_drought = df_final["Drought"].value_counts()
     print(f"Counts Drought:\n{counts_drought}")
     print(f"Share of droughts: {counts_drought[True]}/ {(counts_drought[True] + counts_drought[False])}")
-
-    # TODO: move part below (separation of datasets below + write one sheet per commodity)
-    print("\n# ------------------------------------------------------------------------------------------------------\n"
-          "# PREPROC: Separate datasets droughts/ no droughts"
-          "\n# ------------------------------------------------------------------------------------------------------\n")
-
-    # Get the distinguished datasets
-    df_drought, df_no_drought = preproc.separate_df_drought_non_drought(df_final)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: Write Summary Statistics 1 (for missings in prices & drought indicators/ SPEI)"
@@ -123,20 +131,14 @@ def create_dataset(country, dropped_commodities):
           "# PREPROC: PHASE 2 (MISSING DATA: SUBSET CREATION)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-    print("\n# ------------------------------------------------------------------------------------------------------\n"
-          "# PREPROC: PHASE 2.1 (DROUGHTS)"
-          "\n# ------------------------------------------------------------------------------------------------------\n")
-    # drop 2021, 2022 as no data for droughts (/SPEI) is available for those (even though WFP data is)
-    years_to_drop = [2021, 2022]
-    print(f"Dropping years: {years_to_drop}")
-    df_final = preproc.drop_years(df_final=df_final, years_list=years_to_drop)
+
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: Write summary statistics 2 (General)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
     df_sum_stats_commodities = stats.summary_stats_prices_droughts(df_final=df_final,
-                                                                     excel_output_extension="-preproc-2",
-                                                                     return_df_by_group_sheet="Commodity")
+                                                                   excel_output_extension="-preproc-2",
+                                                                   return_df_by_group_sheet="Commodity")
     print("Sum stats commodity\n", df_sum_stats_commodities)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
@@ -187,8 +189,8 @@ def create_dataset(country, dropped_commodities):
             f"# [{commodity}] PREPROC: Write summary statistics 2 (Per Commodity)"
             "\n# ---------------------------------------------------------------------------------------------------\n")
         stats.summary_stats_prices_droughts(df_final=df_final_commodity,
-                                              excel_output_extension=f"-preproc-2-{commodity}",
-                                              commodity=commodity)
+                                            excel_output_extension=f"-preproc-2-{commodity}",
+                                            commodity=commodity)
 
         print(
             "\n# ---------------------------------------------------------------------------------------------------\n"
@@ -225,7 +227,7 @@ def create_dataset(country, dropped_commodities):
         # order = 2
         order = 1
         # extrapolate?
-        extrapolate=True
+        extrapolate = True
 
         # EXTRAPOLATE REGIONAL PATTERNS
         # doesn't extrapolate tails for interpolation method: cubic
@@ -242,18 +244,19 @@ def create_dataset(country, dropped_commodities):
 
         # Write sum stats
         df_sum_stats_market = stats.summary_stats_prices_droughts(df_final=df_final_commodity,
-                                                                    excel_output_extension=f"-preproc-4"
-                                                                                           f"-{cut_off_percentile}p"
-                                                                                           f"-{commodity}"
-                                                                                           f"-eps-{epsilon_entries_interpolation}",
-                                                                    commodity=commodity,
-                                                                    return_df_by_group_sheet="Market")
+                                                                  excel_output_extension=f"-preproc-4"
+                                                                                         f"-{cut_off_percentile}p"
+                                                                                         f"-{commodity}"
+                                                                                         f"-eps-{epsilon_entries_interpolation}",
+                                                                  commodity=commodity,
+                                                                  return_df_by_group_sheet="Market")
 
         print(
             "\n# ----------------------------------------------------------------------------------------------------\n"
             f"# [{commodity}] PREPROC: Drop markets with missings beyond interpolation range"
             "\n# ----------------------------------------------------------------------------------------------------\n")
 
+        # TODO: check!
         # DROP ALL MARKETS THAT STILL HAVE MISSING VALUES / missing values beyond interpolation range.
         df_final_commodity = preproc.drop_markets_missing_beyond_interp_range(df_final_commodity=df_final_commodity,
                                                                               df_sum_stats_market=df_sum_stats_market,
@@ -266,6 +269,16 @@ def create_dataset(country, dropped_commodities):
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: Combining all results as excel"
           "\n# ------------------------------------------------------------------------------------------------------\n")
+
+    # TODO: move part below (separation of datasets below + write one sheet per commodity)
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC: Separate datasets droughts/ no droughts"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+
+    # TODO separate drought and no-drought after df_final_all is computed (or separate them
+    # within function: write_preprocessing results to excel
+    # Get the distinguished datasets
+    df_drought, df_no_drought = preproc.separate_df_drought_non_drought(df_final)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: Writing Results as Excel"
@@ -283,9 +296,9 @@ def create_dataset(country, dropped_commodities):
 
     # Write sum stats for general thing
     stats.summary_stats_prices_droughts(df_final=df_final_all,
-                                          excel_output_extension=f"-preproc-4"
-                                                                 f"-{cut_off_percentile}p"
-                                                                 f"-eps-{epsilon_entries_interpolation}")
+                                        excel_output_extension=f"-preproc-4"
+                                                               f"-{cut_off_percentile}p"
+                                                               f"-eps-{epsilon_entries_interpolation}")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: Writing Time Spans as Excel"

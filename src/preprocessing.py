@@ -153,7 +153,6 @@ def get_df_wfp_preprocessed_excel_region_method(country, dropped_commodities=Non
     # df_merged_all_regions["TimeWFP"] = datetime.date(
     #     year=df_merged_all_regions["Year"], month=df_merged_all_regions["Month"], day=[1] * len(df_merged_all_regions.Year))
 
-
     print(f"Overall number of markets entire country ({country})", len(df_merged_all_regions["Market"].unique()))
     return df_merged_all_regions
 
@@ -303,7 +302,6 @@ def adjust_food_prices(country, df_wfp, data_source="WFP"):
         # merge df wfp to inflation data
         df_wfp = utils.merge_dfs_left(df_left=df_wfp, df_right=food_inflation_df, on=["Year", "Month"])
 
-
         # merge inflation data to it
         df_wfp = utils.merge_dfs_left(df_left=df_wfp, df_right=only_inflation_df, on=["Year", "Month"])
 
@@ -356,6 +354,7 @@ def extract_time_lon_lat_slice(df_wfp_coords):
     :param df_wfp_coords:
     :return:
     """
+    # TODO: use TimeWFP (or search min/ max month PER min/max year) -> otherwise false results
     # EXTRACT SLICES/ RANGES OF VARIABLES
 
     # TIME
@@ -384,6 +383,18 @@ def extract_time_lon_lat_slice(df_wfp_coords):
     min_lat_market = df_wfp_coords.loc[df_wfp_coords["MarketLatitude"].idxmin(), "MarketLatitude"]
 
     range_lat_market = slice(min_lat_market, max_lat_market)
+
+    # WRITE RESULTS INTO EXCEL SHEET
+    stats_df = pd.DataFrame({
+        "MinDate (Y,M)": [(min_year, min_month)],
+        "MaxDate (Y,M)": [(max_year, max_month)],
+        "MinLonMarket": [min_long_market],
+        "MaxLonMarket": [max_long_market],
+        "MinLatMarket": [min_lat_market],
+        "MaxLatMarket": [max_lat_market]
+    })
+    country = df_wfp_coords.Country.unique()[0]
+    stats_df.to_excel(f"../output/{country}/summary-statistics/preproc-STEP4-range-subset.xlsx")
 
     return range_time, range_lon_market, range_lat_market
 
@@ -494,6 +505,15 @@ def read_climate_data(time_slice, long_slice, lat_slice, country,
     df_excel["Day"] = df_excel["time"]
     df_excel["Day"] = df_excel["Day"].apply(lambda x: x.day)
 
+    # drop entries where SPEI is nan (only keep those entries where SPEI is not nan)
+    no_entries_with_nan = df_excel.shape[0]
+
+    df_excel = df_excel[~df_excel.spei.isna()]
+    no_entries_without_nan = df_excel.shape[0]
+
+    print(f"Dropped {no_entries_with_nan - no_entries_without_nan} entries where SPEI is nan.\n"
+          f"(# before: {no_entries_with_nan}, # after: {no_entries_without_nan}")
+
     # store results as excel
     # df_excel.to_excel(f"{output_path}/{country}-spei-sliced-preprocessed.xlsx")
 
@@ -555,7 +575,7 @@ def determine_closest_points_for_markets(df_spei, df_wfp_with_coords):
                                 market_lat) & (df_wfp_with_coords["MarketLongitude"] == market_lon), ["lon_spei_nn"]] \
             = min_spei_coords[1]
 
-    # return df with information on min distance
+    # return df with information on min distance / nearest neighbour
     return df_wfp_with_coords
 
 
@@ -573,8 +593,9 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
     :return: df_final: pd.DataFrame
         Final Dataset containing both wfp prices, market coordinates and spei indicators
     """
-    # print("Columns WFP:\n",df_wfp_with_coords.columns)
-    # print("Columns SPEI:\n", df_spei.columns)
+    # ------------------------------------------------------------------------------------------------------------------
+    # DETERMINE NEAREST NEIGHBOR PER MARKET
+    # ------------------------------------------------------------------------------------------------------------------
 
     # Rename columns for merge
     df_spei.rename(columns={'lat': 'lat_spei'}, inplace=True)
@@ -583,6 +604,11 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
     # add information on closest spei measure points for markets
     df_wfp_with_coords = determine_closest_points_for_markets(df_spei=df_spei, df_wfp_with_coords=df_wfp_with_coords)
 
+    # ------------------------------------------------------------------------------------------------------------------
+    # MERGE THE TWO DATASETS
+    # ------------------------------------------------------------------------------------------------------------------
+
+    # Rename columns in spei so that they can be used for the match
     df_spei.rename(columns={'lat_spei': 'lat_spei_nn'}, inplace=True)
     df_spei.rename(columns={'lon_spei': 'lon_spei_nn'}, inplace=True)
 
@@ -590,10 +616,10 @@ def merge_food_price_and_climate_dfs(df_wfp_with_coords, df_spei):
     # JOIN SPEI: (lat_spei, lon_spei) ON WFP nearest neighbour (lat_spei, lon_spei)
     df_final = utils.merge_dfs_left(df_left=df_wfp_with_coords, df_right=df_spei,
                                     on=["Year", "Month", "lat_spei_nn", "lon_spei_nn"])
-    # df_final = pd.merge(df_wfp_with_coords, df_spei, on=["Year", "Month", "lat_spei_nn", "lon_spei_nn"],
-    #                     how="left")
 
-    # BEAUTIFY DF
+    # ------------------------------------------------------------------------------------------------------------------
+    # BEAUTIFY DF / Standardize naming to CamelCase (as given in WFP) + reorder
+    # ------------------------------------------------------------------------------------------------------------------
 
     # Some renaming
     # Mark new columns with * prefix, camel case
@@ -674,19 +700,31 @@ def classify_droughts(df_final):
     References
     ----------
     https://www.researchgate.net/figure/SPEI-drought-index-categories_tbl1_283244485
+    https://climatedataguide.ucar.edu/climate-data/standardized-precipitation-evapotranspiration-index-spei
+    https://climsystemsinsights.blob.core.windows.net/website-static-content/Climate_Insights_2020_Drought.pdf#:~:text=The%20SPEI%20classification%20scheme%20used%20in%20Climate%20Insights,parameters%20that%20are%20then%20applied%20to%20other%20periods.
     """
-    # bins = [-np.inf, -2, -1.5, -1, -0.99, 0.99, 1.49, 1.99]
+
+    # TODO: revise this
+    # TODO: drop all Speis that are nan (already beforehand) -> not considered in nn calcualtion
     bins = [-np.inf, -2, -1.5, -1, 0.99, 1.49, 1.99, np.inf]
+    # bins = [pd.Interval(-np.inf, )]
     category_names = ["Extremely dry (ED)", "Severely dry (SD)", "Moderately dry (MD)",
                       "Near normal (NN)",
-                      "Moderately wet (MW)", "Very wet (VW)", "Extremely wet (EW)"]
+                      "Moderately wet (MW)", "Severely wet (SW)", "Extremely wet (EW)"]
 
-    # Spei categories
-    df_final["SpeiCat"] = pd.cut(x=df_final["Spei"], bins=bins, labels=category_names, right=True)
+    # Spei categories (intervals both left and right inlusive)
+    df_final["SpeiCat"] = pd.cut(x=df_final["Spei"], bins=bins, labels=category_names, right=True, include_lowest=True,
+                                 ordered=True, duplicates="raise")
+
+    # Make sure that the order is correct
+    df_final["SpeiCat"] = df_final["SpeiCat"].cat.reorder_categories(category_names, ordered=True)
 
     # Simple boolean flag
     # df_final["Drought"] = df_final["Spei"] <= -1
     df_final["Drought"] = df_final["SpeiCat"].isin(["Extremely dry (ED)", "Severely dry (SD)", "Moderately dry (MD)"])
+
+    # TODO: check if valid (just approximation!)
+    df_final["Flood"] = df_final["SpeiCat"].isin(["Moderately wet (MW)", "Severely wet (VW)", "Extremely wet (EW)"])
 
     # Replace values with nan if Spei/ SpeiCat is nan
     df_final.loc[df_final["SpeiCat"].isna(), "Drought"] = np.nan
@@ -792,7 +830,6 @@ def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, di
         df_final_all.to_excel(writer, sheet_name="All Commodities", na_rep="-")
 
         for commodity in dict_df_final_per_commodity.keys():
-
             dict_df_final_per_commodity[commodity].to_excel(writer, sheet_name=f"{commodity}", na_rep="-")
 
     print(f"Df drought shape: {df_drought.shape}\ndf_no_drought: {df_no_drought.shape}")
@@ -820,6 +857,16 @@ def drop_years(df_final, years_list):
     :param years_list:
     :return:
     """
+    # Extract number of entries that would belong to that year
+    no_of_entries_per_year = [df_final[df_final.Year == year].shape[0] for year in years_list]
+    stats_df = pd.DataFrame({
+        "No. of entries": no_of_entries_per_year,
+        "Overall datasize (before drop)" : [df_final.shape[0]] * len(no_of_entries_per_year)
+    }, index=years_list
+    )
+    country = df_final.Country.unique()[0]
+    stats_df.to_excel(f"../output/{country}/summary-statistics/dropped-years-no-entries.xlsx")
+
     # Just keep years for
     return df_final[~df_final["Year"].isin(years_list)]
 
@@ -942,9 +989,9 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
     df_final = df_final.sample(frac=1, random_state=seed)
 
     if extrapolate:
-        interpolation_direction="both"
+        interpolation_direction = "both"
     else:
-        interpolation_direction="forward"
+        interpolation_direction = "forward"
 
     # Make sure that prices are sorted chronologically
     print("Sorting dataframe chronologically")
@@ -1084,7 +1131,7 @@ def drop_markets_missing_beyond_interp_range(df_final_commodity, df_sum_stats_ma
         df_sum_stats_dropped_markets = pd.DataFrame(
             {
                 "Dropped Markets": markets_to_drop,
-                "Max. entries to interp." : [interpolation_limit] * len(markets_to_drop)
+                "Max. entries to interp.": [interpolation_limit] * len(markets_to_drop)
             }
         )
         df_sum_stats_dropped_markets.to_excel(writer, sheet_name=f"{commodity}")

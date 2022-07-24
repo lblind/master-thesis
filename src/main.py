@@ -34,7 +34,7 @@ if __name__ == "__main__":
     # dropped_commodities = None
 
     # TODO: Outcomment this line if dataset hat not yet been created
-    # df_final = dataset_creation.create_dataset(country=country, dropped_commodities=dropped_commodities)
+    df_final = dataset_creation.create_dataset(country=country, dropped_commodities=dropped_commodities)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# ANALYSIS"
@@ -42,7 +42,8 @@ if __name__ == "__main__":
 
     path_to_final_df = f"../output/{country}/{country}-final-dta.xlsx"
     # TODO outcomment this line if dataset has already been created
-    df_final = utils.convert_excel_to_df(path_to_final_df)
+    # df_final = utils.convert_excel_to_df(path_to_final_df)
+    # visualization.plot_hist(df_final, "SpeiCat", orientation="horizontal", bins=7, png_appendix="-preproc-STEP6")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# VISUALIZATION"
@@ -62,4 +63,4 @@ if __name__ == "__main__":
           "# DYNAMIC MODE DECOMPOSITION (DMD)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-    dmd.dmd_per_commodity(df_final)
+    # dmd.dmd_per_commodity(df_final)

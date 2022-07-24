@@ -27,6 +27,95 @@ import plotly.express as px
 import missingno as msgo
 import statistics_snippets as stats
 
+# ----------------------------------------------------------------------------------------------------------------------
+# BAR CHARTS
+# ----------------------------------------------------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------------------------------------------------
+# HISTOGRAMS
+# ----------------------------------------------------------------------------------------------------------------------
+
+def plot_hist(df, column_x, rotation=45, bins=7, orientation="vertical", rwidth=0.75, png_appendix=""):
+    """
+
+    :param df:
+    :param column_x:
+    :param column_y:
+    :return:
+    """
+
+    if column_x not in df:
+        raise ValueError(f"Can't plot histogram, as column {column_x} not existent. \n"
+                         f"Please revise your definition and use one of the following columns instead:\n{df.columns}")
+
+    print(f"Uniques:\n {df[column_x].unique()}")
+    print(df[df[column_x].isna()]["Spei"])
+    # "royalblue" with 0.5 gives light blue
+    # blue, alpha=0.5 -> purple
+    n, bins, patches = plt.hist(df[column_x], bins=bins, rwidth=rwidth, align="mid", orientation=orientation,
+                                color="lightseagreen", alpha=1)
+    plt.xticks(rotation=rotation)
+
+    if orientation == "vertical":
+        plt.ylabel("Frequency", fontweight="normal", style="italic")
+        plt.xlabel(column_x, fontweight="normal", style="italic")
+    else:
+        plt.xlabel("Frequency", fontweight="normal", style="italic")
+        plt.ylabel(column_x, fontweight="normal", style="italic")
+    plt.title(f"Histogram {column_x}", fontweight="normal", style="italic")
+
+
+    axs = plt.gca()
+    # Remove axes splines
+    for s in ['top', 'bottom', 'left', 'right']:
+        axs.spines[s].set_visible(False)
+
+    # Add padding between axes and labels
+    axs.xaxis.set_tick_params(pad=5)
+    axs.yaxis.set_tick_params(pad=10)
+
+    # show number
+    # size = 10
+    axs.bar_label(axs.containers[0], size=8)
+
+    # Add x, y gridlines
+    axs.grid(b=True, color='grey',
+             linestyle='-.', linewidth=0.5,
+             alpha=0.6)
+
+    # TODO: maybe color bars differently, for now: leave it like that (just one color)
+    # Color according to colormap
+    # cm = plt.cm.get_cmap('RdYlBu_r')
+    # # summer
+    # # tab20c
+    # # cm = plt.cm.get_cmap('Set1')
+    #
+    # # To normalize your values
+    # col = (n - n.min()) / (n.max() - n.min())
+    # for c, p in zip(col, patches):
+    #     plt.setp(p, 'facecolor', cm(c))
+
+    country = df.Country.unique()[0]
+
+    output_path = f"../output/{country}/plots/histograms"
+    if os.path.exists(output_path) is False:
+        os.makedirs(output_path)
+
+    title = f"{output_path}/{column_x}-hist{png_appendix}.png"
+
+    # make sure that everything is visible in layout
+    plt.tight_layout()
+    # alternatively:
+    # plt.subplots_adjust(left=0.5, right=0.5)
+
+    plt.savefig(title)
+    plt.show()
+
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# MAPS
+# ----------------------------------------------------------------------------------------------------------------------
 
 def plot_missings(df_final, column):
     """
@@ -43,6 +132,10 @@ def plot_missings(df_final, column):
     plt.ylabel("Percent")
     plt.show()
 
+
+# ----------------------------------------------------------------------------------------------------------------------
+# MAPS
+# ----------------------------------------------------------------------------------------------------------------------
 
 def plot_malawi_regions_adm1(df_final):
     """
