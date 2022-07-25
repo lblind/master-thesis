@@ -225,7 +225,7 @@ def check_markets_per_commodity_time(df_wfp):
     return df_wfp
 
 
-def adjust_food_prices(country, df_wfp, data_source="WFP"):
+def adjust_food_prices(country, df_wfp, data_source_inflation="WFP"):
     """
     Adjust food prices to one common price level (most recent one)
     If WFP: Food inflation
@@ -246,12 +246,12 @@ def adjust_food_prices(country, df_wfp, data_source="WFP"):
 
     """
 
-    path_to_inflation_dir = f"../input/{country}/inflation-dta/{data_source}"
+    path_to_inflation_dir = f"../input/{country}/inflation-dta/{data_source_inflation}"
 
     if os.path.exists(path_to_inflation_dir) is False:
         raise ValueError(f"Deflation data not defined. Please put the downloaded inflation csv of the chosen source"
                          f" into the following"
-                         f"folder: {path_to_inflation_dir}.\n(Source: {data_source})")
+                         f"folder: {path_to_inflation_dir}.\n(Source: {data_source_inflation})")
 
     for i, filename in enumerate(glob.glob(path_to_inflation_dir + "/*.csv")):
         # don't read last row into excel
@@ -435,6 +435,55 @@ def extract_df_subset_time_prices(df_commodity, epsilon_month=3):
     df_commodity = df_commodity[df_commodity.TimeWFP >= min_time]
 
     return df_commodity, min_time, max_time
+
+
+def extract_df_subset_time_prices_all_commodities(df, epsilon_month_extrapolation=3):
+    """
+    Extract subset of df based on the first and last price entry (+ epsilon)
+    that occurs over all regions (time-wise).
+
+    :param df_commodity: pd.DataFrame
+    :param epsilon_month_extrapolation: int
+        Additional time span that is added/ subtracted to the max/min time
+        found in the dataset.
+        (e.g.: epsilon_month = 3: limit the dataset to the time range
+        of the first and last dataset -/+ 3 additional months)
+
+    :return:
+    """
+    country = df.Country.unique()[0]
+
+    df_commodities_dict = {}
+    min_max_times_dict = {}
+
+    for commodity in df.Commodity.unique():
+        # Limit the dfs to specific subset
+        df_commodity = df[df.Commodity == commodity]
+
+        # call subset extraction function
+        df_commodity, min_time, max_time = extract_df_subset_time_prices(df_commodity=df_commodity,
+                                                                         epsilon_month=epsilon_month_extrapolation)
+
+        # store min and max time for further use/ documentation
+        min_max_times_dict[commodity] = (min_time, max_time)
+
+        # add result to dictionary
+        df_commodities_dict[commodity] = df_commodity
+
+    # Combine all dataframes to one large one (again)
+    df = pd.concat(df_commodities_dict.values(), ignore_index=True)
+
+    # Summary stats: write the subsets of time
+    pd.DataFrame({
+            "Commodity": min_max_times_dict.keys(),
+            "TimeSpanMinY": [time_min.strftime("%Y") for time_min, time_max in min_max_times_dict.values()],
+            "TimeSpanMinM": [time_min.strftime("%m") for time_min, time_max in min_max_times_dict.values()],
+            "TimeSpanMaxY": [time_max.strftime("%Y") for time_min, time_max in min_max_times_dict.values()],
+            "TimeSpanMaxM": [time_max.strftime("%m") for time_min, time_max in min_max_times_dict.values()],
+            "Epsilon (Month)": [epsilon_month_extrapolation] * len(min_max_times_dict.keys())
+    }).to_excel(f"../output/{country}/summary-statistics/preproc-STEP-2-time-spans-per-commodity.xlsx")
+
+    return df
 
 
 def read_climate_data(time_slice, long_slice, lat_slice, country,
@@ -753,13 +802,15 @@ def separate_df_drought_non_drought(df_final_classified):
 
 
 def drop_commodities_too_sparse(df, df_sum_stats_commodities, cut_off_percent,
-                                excel_to_write_dropped_commodities):
+                                excel_to_append_dropped_commodities, preproc_step_no=4):
     """
     Drop commodities with a too large share of missing data in prices.
 
-    :param df_final:
+    :param df:
     :param df_sum_stats_commodities:
     :param cut_off_percent:
+    :param excel_to_append_dropped_commodities: str
+        A new sheet will be created in that excel workbook that summarizes the dropped commodities
     :return:
     """
     commodities_to_drop = df_sum_stats_commodities[df_sum_stats_commodities["Price: % nan"] >= (cut_off_percent / 100)][
@@ -771,7 +822,7 @@ def drop_commodities_too_sparse(df, df_sum_stats_commodities, cut_off_percent,
 
     # write dropped commodities to (existing) excel as new sheet
     with pd.ExcelWriter(
-            excel_to_write_dropped_commodities, mode="a") as writer:
+            excel_to_append_dropped_commodities, mode="a") as writer:
         df_sum_stats_dropped_commodities = pd.DataFrame(
             {
                 "Dropped Commodity": commodities_to_drop,
@@ -783,11 +834,12 @@ def drop_commodities_too_sparse(df, df_sum_stats_commodities, cut_off_percent,
         df_sum_stats_dropped_commodities.to_excel(writer, sheet_name="Commodities dropped afterwards")
 
     country = df.Country.unique()[0]
-    output_dir = f"../output/{country}/summary-statistics/preproc-2-dropped-commodities"
+    output_dir = f"../output/{country}/summary-statistics/preproc-STEP{preproc_step_no}-dropped-commodities"
     if os.path.exists(output_dir) is False:
         os.makedirs(output_dir)
     df_sum_stats_dropped_commodities.to_excel(output_dir + f"/{country}-additionally-dropped-"
-                                                           f"commodities-{cut_off_percent}%.xlsx")
+                                                           f"commodities-{cut_off_percent}%-preproc-"
+                                                           f"STEP{preproc_step_no}.xlsx")
 
     return df
 

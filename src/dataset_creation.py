@@ -10,6 +10,96 @@ import statistics_snippets as stats
 import visualization
 
 
+def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
+                                   extrapolated_months=0,
+                                   cut_off_commodities=0.9,
+                                   cut_off_markets=0.9
+                                   ):
+    """
+    Read raw WFP database and do the following steps:
+
+    - STEP 1: Download raw WFP data (per region & merge into one df)
+    - STEP 2: Merge Inflation data + Adjust food prices to one common inflation level (most recent)
+    - STEP 3: Reduce % missings -> Subset Time: Extract relevant time slice per commodity
+                                                (first non-nan entry -> last non-nan entry)
+    - STEP 4: Reduce % missings -> Subset Commodity: Cut off commodities with certain share of missings
+    - STEP 5: Reduce % missings -> Subset Market:
+    - STEP 6: Inter-/Extrapolate missing data
+
+    :param country:
+    :param dropped_commodities:
+    :param extrapolated_months:
+    :param cut_off_commodities:
+    :param cut_off_markets:
+    :return:
+    """
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC - PHASE A: STEP 1 (Read WFP dataset (merged per region)"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+    df_wfp = preproc.get_df_wfp_preprocessed_excel_region_method(country=country,
+                                                                 dropped_commodities=dropped_commodities)
+    # write the raw output to an Excel workbook
+    df_wfp.to_excel(f"../output/{country}/intermediate-results/df_wfp.xlsx")
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC - PHASE A: STEP 2 (Adjust prices to common food inflation level -> most recent)"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+
+    # Adjust food prices to one common price level
+    df_wfp = preproc.adjust_food_prices(country=country, df_wfp=df_wfp, data_source_inflation="WFP")
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC - PHASE A: STEP 3 (Missings -> Subset of Time: Extract relevant slice per commodity)"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+
+    # extract only the relevant subsets of time
+    eps_extrapolate_months = 0
+    df_wfp = preproc.extract_df_subset_time_prices_all_commodities(df=df_wfp,
+                                                                   epsilon_month_extrapolation=eps_extrapolate_months)
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC - PHASE A: STEP 4 (Missings -> Subset of Commodity: Drop too sparse commodities)"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+    # write summary statistics (share of missing values within commodity dataset)
+    # Check missings
+    df_commodity_stats = stats.sum_stats_prices(df=df_wfp, return_df_by_group_sheet="Commodity",
+                                                excel_output_extension="-preproc-STEP4")
+
+    # drop commodities that are too sparse
+    cut_off_percent_commodity = 90
+    excel_path_stats = f"../output/{country}/summary-statistics/{country}-sum-stats-preproc-STEP4.xlsx"
+    df_wfp = preproc.drop_commodities_too_sparse(df=df_wfp,
+                                                 df_sum_stats_commodities=df_commodity_stats,
+                                                 cut_off_percent=cut_off_percent_commodity,
+                                                 excel_to_append_dropped_commodities=excel_path_stats,
+                                                 preproc_step_no=4
+                                                 )
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC - PHASE A: STEP 5 (Missings -> Subset of Market: Drop too sparse markets)"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+    # write summary statistics (share of missing values within market dataset)
+    # check missings
+    df_market_stats = stats.sum_stats_prices(df=df_wfp, return_df_by_group_sheet="Market",
+                                             excel_output_extension="-preproc-STEP5")
+
+    # Drop all markets that have missing data > certain cut-off
+    cut_off_percent_market = 90
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC - PHASE A: STEP 6 (Interpolation of missing data)"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+
+
+def phase_b_merge_wfp_with_spei_dataset(df_wfp):
+    """
+
+    :param df_wfp:
+    :return:
+    """
+    pass
+
+
 def create_dataset(country, dropped_commodities):
     """
 
@@ -49,7 +139,7 @@ def create_dataset(country, dropped_commodities):
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
     # Adjust food prices to one common price level
-    df_wfp = preproc.adjust_food_prices(country=country, df_wfp=df_wfp, data_source="WFP")
+    df_wfp = preproc.adjust_food_prices(country=country, df_wfp=df_wfp, data_source_inflation="WFP")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: Add market lon, lats to dataset"
@@ -120,7 +210,7 @@ def create_dataset(country, dropped_commodities):
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
     # Check missings
-    stats.summary_stats_prices_droughts(df_final=df_final)
+    stats.sum_stats_prices_and_droughts(df=df_final)
     # preproc.summary_stats_missings(df_final=df_wfp)
 
     # ------------------------------------------------------------------------------------------------------------------
@@ -131,12 +221,10 @@ def create_dataset(country, dropped_commodities):
           "# PREPROC: PHASE 2 (MISSING DATA: SUBSET CREATION)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-
-
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: Write summary statistics 2 (General)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
-    df_sum_stats_commodities = stats.summary_stats_prices_droughts(df_final=df_final,
+    df_sum_stats_commodities = stats.sum_stats_prices_and_droughts(df=df_final,
                                                                    excel_output_extension="-preproc-2",
                                                                    return_df_by_group_sheet="Commodity")
     print("Sum stats commodity\n", df_sum_stats_commodities)
@@ -148,7 +236,7 @@ def create_dataset(country, dropped_commodities):
     cut_off_percent_commodities = 90
     df_final = preproc.drop_commodities_too_sparse(df=df_final, df_sum_stats_commodities=df_sum_stats_commodities,
                                                    cut_off_percent=cut_off_percent_commodities,
-                                                   excel_to_write_dropped_commodities=
+                                                   excel_to_append_dropped_commodities=
                                                    f"../output/{country}/summary-statistics/"
                                                    f"{country}-sum-stats-preproc-2.xlsx")
 
@@ -188,13 +276,13 @@ def create_dataset(country, dropped_commodities):
             "\n# ----------------------------------------------------------------------------------------------------\n"
             f"# [{commodity}] PREPROC: Write summary statistics 2 (Per Commodity)"
             "\n# ---------------------------------------------------------------------------------------------------\n")
-        stats.summary_stats_prices_droughts(df_final=df_final_commodity,
+        stats.sum_stats_prices_and_droughts(df=df_final_commodity,
                                             excel_output_extension=f"-preproc-2-{commodity}",
                                             commodity=commodity)
 
         print(
             "\n# ---------------------------------------------------------------------------------------------------\n"
-            f"# [{commodity}] PREPROC: Cut off missing values after certain percentile"
+            f"# [{commodity}] Subset Markets/ region -> PREPROC: Cut off missing values after certain percentile"
             "\n# ---------------------------------------------------------------------------------------------------\n")
 
         # Cut all regions with missing >= cut_off_percentile of missing values
@@ -210,7 +298,7 @@ def create_dataset(country, dropped_commodities):
             "\n# ---------------------------------------------------------------------------------------------------\n")
 
         # Write sum stats
-        stats.summary_stats_prices_droughts(df_final=df_final_commodity, excel_output_extension=
+        stats.sum_stats_prices_and_droughts(df=df_final_commodity, excel_output_extension=
         f"-preproc-3-{cut_off_percentile}p-{commodity}", commodity=commodity)
 
         print(
@@ -243,7 +331,7 @@ def create_dataset(country, dropped_commodities):
             "\n# ----------------------------------------------------------------------------------------------------\n")
 
         # Write sum stats
-        df_sum_stats_market = stats.summary_stats_prices_droughts(df_final=df_final_commodity,
+        df_sum_stats_market = stats.sum_stats_prices_and_droughts(df=df_final_commodity,
                                                                   excel_output_extension=f"-preproc-4"
                                                                                          f"-{cut_off_percentile}p"
                                                                                          f"-{commodity}"
@@ -295,7 +383,7 @@ def create_dataset(country, dropped_commodities):
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
     # Write sum stats for general thing
-    stats.summary_stats_prices_droughts(df_final=df_final_all,
+    stats.sum_stats_prices_and_droughts(df=df_final_all,
                                         excel_output_extension=f"-preproc-4"
                                                                f"-{cut_off_percentile}p"
                                                                f"-eps-{epsilon_entries_interpolation}")

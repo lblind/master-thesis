@@ -33,11 +33,12 @@ def mean_column_per_group(gdf_final, column="AdjPrice", group="District"):
 
     return gdf_merged
 
-def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_output_extension="-preproc-1",
-                                  commodity=None, return_df_by_group_sheet="General"):
+
+def sum_stats_prices(df, var_list_groups_by=None, excel_output_extension="-preproc-1",
+                     commodity=None, return_df_by_group_sheet="General"):
     """
-    Summary statistics for missing values per market and
-    commodity
+    Summary statistics for missing values in Prices AND droughts
+    per: Commodity, Market, Region, Year
 
     :param return_df_by_group_sheet: str
         if the dataframe should be returned directly (in order to save reading it afterwards from the excel)
@@ -46,7 +47,7 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_outpu
         if df_final is only a subset for a specific commoditiy, denote that such that
         it will be stored in the correct folder
     :param var_list_groups_by: list
-    :param df_final: pd.DataFrame
+    :param df: pd.DataFrame
     :param excel_output_extension: str
     :return:
     """
@@ -56,13 +57,134 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_outpu
         var_list_groups_by = ["Market", "Region", "Commodity", "Year"]
 
     # read number of overall entries/ rows
-    no_overall_entries = df_final.shape[0]
+    no_overall_entries = df.shape[0]
 
     # Make sure that output directory exists
     if commodity is not None:
-        output_path_stats = f"../output/{df_final.Country.unique()[0]}/summary-statistics/{commodity}"
+        output_path_stats = f"../output/{df.Country.unique()[0]}/summary-statistics/{commodity}"
     else:
-        output_path_stats = f"../output/{df_final.Country.unique()[0]}/summary-statistics"
+        output_path_stats = f"../output/{df.Country.unique()[0]}/summary-statistics"
+    if os.path.exists(output_path_stats) is False:
+        os.makedirs(output_path_stats)
+
+    # list_dfs_sum_stats = []
+    dict_dfs_sum_stats = {}
+
+    for group in var_list_groups_by:
+
+        print(
+            f"\n----------------------------------------------------------------------------------------------------\n"
+            f"Missings per variable: <{group}>"
+            f"\n----------------------------------------------------------------------------------------------------\n"
+        )
+
+        # List countaining the number of nan values per unique value in that variable
+        na_values_list_price = []
+        # List containing the share of nan values per unique value in that variable
+        share_of_na_list_price = []
+        # List containing the number of entries belonging to that unique value in the variable
+        unique_value_size_list = []
+        # List containing the share of that unique value in the overall number of possible values for that variable
+        share_unique_value_country_list = []
+
+
+        format_number = "#"
+        format_share = "%"
+        format_missings = "nan"
+
+
+        # Missings per unique value in that group
+        for value in df[group].unique():
+            df_group_value = df[df[group] == value]
+            no_entries_group_value = df_group_value.shape[0]
+
+            na_values_price = df_group_value.Price.isna().sum()
+            share_of_na_price = na_values_price / no_entries_group_value
+            print(
+                f"\n[Var: {group}] Value <{value}>\n# missings (Price): {na_values_price}\nShare: {share_of_na_price}")
+
+            # Overall statistics value per group
+            unique_value_size_list.append(no_entries_group_value)
+            share_unique_value_country_list.append(unique_value_size_list[-1] / no_overall_entries)
+
+            # Statistics price
+            na_values_list_price.append(na_values_price)
+            share_of_na_list_price.append(share_of_na_price)
+
+        df_sum_stats_group = pd.DataFrame({group: df[group].unique(),
+                                           f"{format_number} overall entries": unique_value_size_list,
+                                           f"{format_share} {group} / Country": share_unique_value_country_list,
+                                           f"Price: {format_number} {format_missings}": na_values_list_price,
+                                           f"Price: {format_share} {format_missings}": share_of_na_list_price,
+                                           }
+                                          )
+        # sort values
+        df_sum_stats_group.sort_values(by=group)
+        # append summary statistics for that group to overall list
+        # list_dfs_sum_stats.append(df_sum_stats_group)
+
+        # append summary statistics for that group to overall dictionary
+        dict_dfs_sum_stats[group] = df_sum_stats_group
+
+    # General data
+    df_sum_stats_general = pd.DataFrame({
+        f"{format_number} {format_missings}": [df.Price.isna().sum()],
+        f"{format_number} overall entries": [df.shape[0]],
+        f"{format_share} {format_missings}": [df.Price.isna().sum() / df.shape[0]]
+    }, ["Price"])
+
+    # Write all dfs into one excel
+    with pd.ExcelWriter(
+            f"{output_path_stats}/{df.Country.unique()[0]}-sum-stats{excel_output_extension}.xlsx") as writer:
+        df_sum_stats_general.to_excel(writer, sheet_name="General")
+
+        for group in dict_dfs_sum_stats.keys():
+            # take it and sort it by the group
+            df_sum_stat = dict_dfs_sum_stats[group].sort_values(by=[group], ignore_index=True)
+            df_sum_stat.to_excel(writer, sheet_name=group)
+
+    # return a specific dataframe
+    if return_df_by_group_sheet == "General":
+        return df_sum_stats_general
+    elif return_df_by_group_sheet in dict_dfs_sum_stats.keys():
+        return dict_dfs_sum_stats[return_df_by_group_sheet].sort_values(by=[return_df_by_group_sheet], ignore_index=True)
+    else:
+        raise ValueError(f"Nothing will be returned, as "
+                         f"{return_df_by_group_sheet} is neither "
+                         f"General, nor part of the valid groups:"
+                         f"{dict_dfs_sum_stats.keys()}.\n"
+                         f"Plesae revise your definition.")
+
+def sum_stats_prices_and_droughts(df, var_list_groups_by=None, excel_output_extension="-preproc-1",
+                                  commodity=None, return_df_by_group_sheet="General"):
+    """
+    Summary statistics for missing values in Prices AND droughts
+    per: Commodity, Market, Region, Year
+
+    :param return_df_by_group_sheet: str
+        if the dataframe should be returned directly (in order to save reading it afterwards from the excel)
+        define which sheet / df to return afterwards.
+    :param commodity: str
+        if df_final is only a subset for a specific commoditiy, denote that such that
+        it will be stored in the correct folder
+    :param var_list_groups_by: list
+    :param df: pd.DataFrame
+    :param excel_output_extension: str
+    :return:
+    """
+
+    # Set default values for var_list_group_by
+    if var_list_groups_by is None:
+        var_list_groups_by = ["Market", "Region", "Commodity", "Year"]
+
+    # read number of overall entries/ rows
+    no_overall_entries = df.shape[0]
+
+    # Make sure that output directory exists
+    if commodity is not None:
+        output_path_stats = f"../output/{df.Country.unique()[0]}/summary-statistics/{commodity}"
+    else:
+        output_path_stats = f"../output/{df.Country.unique()[0]}/summary-statistics"
     if os.path.exists(output_path_stats) is False:
         os.makedirs(output_path_stats)
 
@@ -114,8 +236,8 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_outpu
         # SPEI DATA: A drought occured or not (not look at spei, but drought yes/ no)
 
         # Missings per unique value in that group
-        for value in df_final[group].unique():
-            df_group_value = df_final[df_final[group] == value]
+        for value in df[group].unique():
+            df_group_value = df[df[group] == value]
             no_entries_group_value = df_group_value.shape[0]
 
             na_values_price = df_group_value.Price.isna().sum()
@@ -170,7 +292,7 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_outpu
             no_of_droughts_list_sd.append(no_of_severe_droughts)
             no_of_droughts_list_md.append(no_of_moderate_droughts)
 
-        df_sum_stats_group = pd.DataFrame({group: df_final[group].unique(),
+        df_sum_stats_group = pd.DataFrame({group: df[group].unique(),
                                            f"{format_number} overall entries": unique_value_size_list,
                                            f"{format_share} {group} / Country": share_unique_value_country_list,
                                            f"Price: {format_number} {format_missings}": na_values_list_price,
@@ -198,19 +320,19 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_outpu
         dict_dfs_sum_stats[group] = df_sum_stats_group
 
     # Create summary statistics for general statistics
-    df_droughts = df_final[df_final["Drought"] == True]
+    df_droughts = df[df["Drought"] == True]
     df_ed = df_droughts[df_droughts["SpeiCat"] == "Extremely dry (ED)"]
     df_sd = df_droughts[df_droughts["SpeiCat"] == "Severely dry (SD)"]
     df_md = df_droughts[df_droughts["SpeiCat"] == "Moderately dry (MD)"]
 
     # General data
     df_sum_stats_general = pd.DataFrame({
-        f"{format_number} {format_missings}": [df_final.Price.isna().sum(), df_final.Spei.isna().sum()],
-        f"{format_number} overall entries": [df_final.shape[0], df_final.shape[0]],
-        f"{format_share} {format_missings}": [df_final.Price.isna().sum() / df_final.shape[0],
-                                              df_final.Drought.isna().sum() / df_final.shape[0]],
-        f"{format_number} Droughts": [np.nan, df_final[df_final["Drought"] == True].shape[0]],
-        f"{format_share} Droughts": [np.nan, df_droughts.shape[0] / df_final.shape[0]],
+        f"{format_number} {format_missings}": [df.Price.isna().sum(), df.Spei.isna().sum()],
+        f"{format_number} overall entries": [df.shape[0], df.shape[0]],
+        f"{format_share} {format_missings}": [df.Price.isna().sum() / df.shape[0],
+                                              df.Drought.isna().sum() / df.shape[0]],
+        f"{format_number} Droughts": [np.nan, df[df["Drought"] == True].shape[0]],
+        f"{format_share} Droughts": [np.nan, df_droughts.shape[0] / df.shape[0]],
         f"{format_share} Extreme (of Droughts)": [np.nan, df_ed.shape[0] / df_droughts.shape[0]],
         f"{format_share} Severe (of Droughts)": [np.nan, df_sd.shape[0] / df_droughts.shape[0]],
         f"{format_share} Moderate (of Droughts)": [np.nan, df_md.shape[0] / df_droughts.shape[0]],
@@ -222,7 +344,7 @@ def summary_stats_prices_droughts(df_final, var_list_groups_by=None, excel_outpu
 
     # Write all dfs into one excel
     with pd.ExcelWriter(
-            f"{output_path_stats}/{df_final.Country.unique()[0]}-sum-stats{excel_output_extension}.xlsx") as writer:
+            f"{output_path_stats}/{df.Country.unique()[0]}-sum-stats{excel_output_extension}.xlsx") as writer:
         df_sum_stats_general.to_excel(writer, sheet_name="General")
 
         for group in dict_dfs_sum_stats.keys():
