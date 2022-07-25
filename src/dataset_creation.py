@@ -11,9 +11,10 @@ import visualization
 
 
 def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
-                                   extrapolated_months=0,
+                                   add_pad_months_time_span=0,
                                    cut_off_commodities=0.9,
-                                   cut_off_markets=0.9
+                                   cut_off_markets=0.9,
+                                   limit_consec_interpol=25
                                    ):
     """
     Read raw WFP database and do the following steps:
@@ -28,9 +29,10 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
 
     :param country:
     :param dropped_commodities:
-    :param extrapolated_months:
+    :param add_pad_months_time_span:
     :param cut_off_commodities:
     :param cut_off_markets:
+    :param limit_consec_interpol:
     :return:
     """
     print("\n# ------------------------------------------------------------------------------------------------------\n"
@@ -53,48 +55,54 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
     # extract only the relevant subsets of time
-    eps_extrapolate_months = 0
     df_wfp = preproc.extract_df_subset_time_prices_all_commodities(df=df_wfp,
-                                                                   epsilon_month_extrapolation=eps_extrapolate_months)
+                                                                   add_pad_months_time_span=add_pad_months_time_span)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC - PHASE A: STEP 4 (Missings -> Subset of Commodity: Drop too sparse commodities)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
     # write summary statistics (share of missing values within commodity dataset)
-    # Check missings
+    # Check missings (result of step 3)
     df_commodity_stats = stats.sum_stats_prices(df=df_wfp, return_df_by_group_sheet="Commodity",
-                                                excel_output_extension="-preproc-STEP4")
+                                                excel_output_extension="-preproc-STEP3")
 
-    # drop commodities that are too sparse
+    # Drop all commodities that have missing data > certain cut-off (too sparse)
     cut_off_percent_commodity = 90
-    excel_path_stats = f"../output/{country}/summary-statistics/{country}-sum-stats-preproc-STEP4.xlsx"
-    df_wfp = preproc.drop_commodities_too_sparse(df=df_wfp,
-                                                 df_sum_stats_commodities=df_commodity_stats,
-                                                 cut_off_percent=cut_off_percent_commodity,
-                                                 excel_to_append_dropped_commodities=excel_path_stats,
-                                                 preproc_step_no=4
-                                                 )
+    excel_path_stats = f"../output/{country}/summary-statistics/{country}-sum-stats-preproc-STEP3.xlsx"
+    df_wfp = preproc.cut_too_sparse_values_in_column(df=df_wfp,
+                                                     column="Commodity",
+                                                     df_sum_stats_column=df_commodity_stats,
+                                                     preproc_step_no=4,
+                                                     cut_off=cut_off_commodities,
+                                                     excel_to_append_dropped_values=excel_path_stats)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC - PHASE A: STEP 5 (Missings -> Subset of Market: Drop too sparse markets)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
     # write summary statistics (share of missing values within market dataset)
-    # check missings
+    # check missings (result of step 4)
     df_market_stats = stats.sum_stats_prices(df=df_wfp, return_df_by_group_sheet="Market",
-                                             excel_output_extension="-preproc-STEP5")
+                                             excel_output_extension="-preproc-STEP4")
 
-    # Drop all markets that have missing data > certain cut-off
+    # Drop all markets that have missing data > certain cut-off (too sparse)
     cut_off_percent_market = 90
+    excel_path_stats = f"../output/{country}/summary-statistics/{country}-sum-stats-preproc-STEP4.xlsx"
+    df_wfp = preproc.cut_too_sparse_values_in_column(df=df_wfp,
+                                                     column="Market",
+                                                     df_sum_stats_column=df_market_stats,
+                                                     preproc_step_no=5,
+                                                     cut_off=cut_off_markets,
+                                                     excel_to_append_dropped_values=excel_path_stats)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC - PHASE A: STEP 6 (Interpolation of missing data)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
 
-def phase_b_merge_wfp_with_spei_dataset(df_wfp):
+def phase_b_merge_wfp_with_spei_dataset(df_wfp_preproc):
     """
 
-    :param df_wfp:
+    :param df_wfp_preproc:
     :return:
     """
     pass
@@ -234,9 +242,9 @@ def create_dataset(country, dropped_commodities):
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
     cut_off_percent_commodities = 90
-    df_final = preproc.drop_commodities_too_sparse(df=df_final, df_sum_stats_commodities=df_sum_stats_commodities,
-                                                   cut_off_percent=cut_off_percent_commodities,
-                                                   excel_to_append_dropped_commodities=
+    df_final = preproc.cut_too_sparse_values_in_column(df=df_final, df_sum_stats_markets=df_sum_stats_commodities,
+                                                       cut_off=cut_off_percent_commodities,
+                                                       excel_to_append_dropped_commodities=
                                                    f"../output/{country}/summary-statistics/"
                                                    f"{country}-sum-stats-preproc-2.xlsx")
 

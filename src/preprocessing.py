@@ -84,6 +84,30 @@ def drop_commodities(df, dropped_commodities):
     return df
 
 
+def drop_values_in_column(df, column, dropped_values):
+    """
+    Drop all values in a column
+
+    :param df: dataframe to drop the values
+    :param column: column to drop the values out
+    :param dropped_values: values to drop
+    :return:
+    """
+    if dropped_values is not None:
+        print(f"Unique values in column {column} before omission:\n", df[column].unique())
+        print("Dropping: ")
+        # drop values in column
+        df = df[~df[column].isin(dropped_values)]
+        print("Unique Commodities after omission:\n", df[column].unique())
+    else:
+        warnings.warn(f"No values in column {column} to drop defined. Nothing will be dropped.\n"
+                      "If something else is desired, please set the parameter"
+                      "`dropped_values` to something != None ("
+                      "the list of values to be dropped) in `column`.")
+
+    return df
+
+
 def get_df_wfp_preprocessed_excel_region_method(country, dropped_commodities=None):
     """
     Reads the different csvs per region
@@ -437,13 +461,13 @@ def extract_df_subset_time_prices(df_commodity, epsilon_month=3):
     return df_commodity, min_time, max_time
 
 
-def extract_df_subset_time_prices_all_commodities(df, epsilon_month_extrapolation=3):
+def extract_df_subset_time_prices_all_commodities(df, add_pad_months_time_span=0):
     """
     Extract subset of df based on the first and last price entry (+ epsilon)
     that occurs over all regions (time-wise).
 
     :param df_commodity: pd.DataFrame
-    :param epsilon_month_extrapolation: int
+    :param add_pad_months_time_span: int
         Additional time span that is added/ subtracted to the max/min time
         found in the dataset.
         (e.g.: epsilon_month = 3: limit the dataset to the time range
@@ -462,7 +486,7 @@ def extract_df_subset_time_prices_all_commodities(df, epsilon_month_extrapolatio
 
         # call subset extraction function
         df_commodity, min_time, max_time = extract_df_subset_time_prices(df_commodity=df_commodity,
-                                                                         epsilon_month=epsilon_month_extrapolation)
+                                                                         epsilon_month=add_pad_months_time_span)
 
         # store min and max time for further use/ documentation
         min_max_times_dict[commodity] = (min_time, max_time)
@@ -475,12 +499,12 @@ def extract_df_subset_time_prices_all_commodities(df, epsilon_month_extrapolatio
 
     # Summary stats: write the subsets of time
     pd.DataFrame({
-            "Commodity": min_max_times_dict.keys(),
-            "TimeSpanMinY": [time_min.strftime("%Y") for time_min, time_max in min_max_times_dict.values()],
-            "TimeSpanMinM": [time_min.strftime("%m") for time_min, time_max in min_max_times_dict.values()],
-            "TimeSpanMaxY": [time_max.strftime("%Y") for time_min, time_max in min_max_times_dict.values()],
-            "TimeSpanMaxM": [time_max.strftime("%m") for time_min, time_max in min_max_times_dict.values()],
-            "Epsilon (Month)": [epsilon_month_extrapolation] * len(min_max_times_dict.keys())
+        "Commodity": min_max_times_dict.keys(),
+        "TimeSpanMinY": [time_min.strftime("%Y") for time_min, time_max in min_max_times_dict.values()],
+        "TimeSpanMinM": [time_min.strftime("%m") for time_min, time_max in min_max_times_dict.values()],
+        "TimeSpanMaxY": [time_max.strftime("%Y") for time_min, time_max in min_max_times_dict.values()],
+        "TimeSpanMaxM": [time_max.strftime("%m") for time_min, time_max in min_max_times_dict.values()],
+        "Epsilon (Month)": [add_pad_months_time_span] * len(min_max_times_dict.keys())
     }).to_excel(f"../output/{country}/summary-statistics/preproc-STEP-2-time-spans-per-commodity.xlsx")
 
     return df
@@ -801,45 +825,48 @@ def separate_df_drought_non_drought(df_final_classified):
     return df_drought, df_no_drought
 
 
-def drop_commodities_too_sparse(df, df_sum_stats_commodities, cut_off_percent,
-                                excel_to_append_dropped_commodities, preproc_step_no=4):
+def cut_too_sparse_values_in_column(df, column, df_sum_stats_column, cut_off,
+                                    excel_to_append_dropped_values, preproc_step_no=1):
     """
-    Drop commodities with a too large share of missing data in prices.
+    Drop values with a too large share of missing data in prices in the column.
 
-    :param df:
-    :param df_sum_stats_commodities:
-    :param cut_off_percent:
-    :param excel_to_append_dropped_commodities: str
+    :param df: pd.DataFrame
+    :param df_sum_stats_column: pd.DataFrame
+    :param cut_off: float
+        Value between 0 and 1.0
+    :param excel_to_append_dropped_values: str
         A new sheet will be created in that excel workbook that summarizes the dropped commodities
-    :return:
+    :return: pd.DataFrame
+        df without the values above the threshold in column
     """
-    commodities_to_drop = df_sum_stats_commodities[df_sum_stats_commodities["Price: % nan"] >= (cut_off_percent / 100)][
-        "Commodity"]
+    values_to_drop = df_sum_stats_column[df_sum_stats_column["Price: % nan"] >= cut_off][
+        column]
 
-    print(f"Dropping commodities: {commodities_to_drop}\n"
-          f"because they have too sparse (share of missings >= {cut_off_percent}%)  price data.")
-    df = drop_commodities(df=df, dropped_commodities=commodities_to_drop)
+    print(f"Dropping values in column {column}: {values_to_drop}\n"
+          f"because they have too sparse (share of missings >= {cut_off})  price data.")
 
-    # write dropped commodities to (existing) excel as new sheet
+    df = drop_values_in_column(df=df, column=column, dropped_values=values_to_drop)
+
+    # write dropped values to (existing) excel as new sheet
     with pd.ExcelWriter(
-            excel_to_append_dropped_commodities, mode="a") as writer:
-        df_sum_stats_dropped_commodities = pd.DataFrame(
+            excel_to_append_dropped_values, mode="a") as writer:
+        df_sum_stats_dropped_values = pd.DataFrame(
             {
-                "Dropped Commodity": commodities_to_drop,
-                "Price: % nan": df_sum_stats_commodities[df_sum_stats_commodities.Commodity.isin(commodities_to_drop)][
+                f"Dropped in {column}": values_to_drop,
+                "Price: % nan": df_sum_stats_column[df_sum_stats_column[column].isin(values_to_drop)][
                     "Price: % nan"],
-                "Cut off (share of missings >=) [%]": [cut_off_percent] * len(commodities_to_drop)
+                "Cut off (share of missings >=)": [cut_off] * len(values_to_drop)
             }
         )
-        df_sum_stats_dropped_commodities.to_excel(writer, sheet_name="Commodities dropped afterwards")
+        df_sum_stats_dropped_values.to_excel(writer, sheet_name=f"Values in {column} dropped afterwards")
 
     country = df.Country.unique()[0]
-    output_dir = f"../output/{country}/summary-statistics/preproc-STEP{preproc_step_no}-dropped-commodities"
+    output_dir = f"../output/{country}/summary-statistics/preproc-STEP{preproc_step_no}-dropped-values-{column}"
     if os.path.exists(output_dir) is False:
         os.makedirs(output_dir)
-    df_sum_stats_dropped_commodities.to_excel(output_dir + f"/{country}-additionally-dropped-"
-                                                           f"commodities-{cut_off_percent}%-preproc-"
-                                                           f"STEP{preproc_step_no}.xlsx")
+    df_sum_stats_dropped_values.to_excel(output_dir + f"/{country}-additionally-dropped-in-{column}"
+                                                      f"-{cut_off}%-preproc-"
+                                                      f"STEP{preproc_step_no}.xlsx")
 
     return df
 
@@ -913,7 +940,7 @@ def drop_years(df_final, years_list):
     no_of_entries_per_year = [df_final[df_final.Year == year].shape[0] for year in years_list]
     stats_df = pd.DataFrame({
         "No. of entries": no_of_entries_per_year,
-        "Overall datasize (before drop)" : [df_final.shape[0]] * len(no_of_entries_per_year)
+        "Overall datasize (before drop)": [df_final.shape[0]] * len(no_of_entries_per_year)
     }, index=years_list
     )
     country = df_final.Country.unique()[0]
