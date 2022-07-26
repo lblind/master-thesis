@@ -556,7 +556,7 @@ def extract_df_subset_time_prices_all_commodities(df, add_pad_months_time_span=0
             "TimeSpanMaxY": [time_max.strftime("%Y") for time_min, time_max in min_max_times_dict.values()],
             "TimeSpanMaxM": [time_max.strftime("%m") for time_min, time_max in min_max_times_dict.values()],
             "Epsilon (Month)": [add_pad_months_time_span] * len(min_max_times_dict.keys())
-        }).to_excel(f"../output/{country}/summary-statistics/time-spans-per-commodity.xlsx")
+        }).sort_values(by="Commodity").to_excel(f"../output/{country}/summary-statistics/preproc-STEP-3-time-spans-per-commodity.xlsx")
 
     if return_time_spans:
         return df, min_max_times_dict
@@ -1000,7 +1000,7 @@ def drop_years(df, years_list):
     }, index=years_list
     )
     country = df.Country.unique()[0]
-    stats_df.to_excel(f"../output/{country}/summary-statistics/dropped-years-no-entries.xlsx")
+    stats_df.to_excel(f"../output/{country}/summary-statistics/preproc-STEP-10-dropped-years-no-entries.xlsx")
 
     # Just keep years for
     return df[~df["Year"].isin(years_list)]
