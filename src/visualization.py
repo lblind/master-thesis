@@ -62,7 +62,7 @@ def line_plot_spei(df_spei, country, show=True, alpha=0.5):
         plt.show()
 
 
-def line_plot_mean_spei_per_time(df_spei, country, time="Year", show=True, alpha=0.5):
+def line_plot_mean_min_max_spei_per_time(df_spei, country, time="Year", show=True, alpha=0.5):
     """
 
     :param df_wfp_and_spei:
@@ -75,27 +75,67 @@ def line_plot_mean_spei_per_time(df_spei, country, time="Year", show=True, alpha
     if os.path.exists(output_dir) is False:
         os.makedirs(output_dir)
 
-    # compute means per
+    # compute means per time
     means_per_time = df_spei.groupby(time).mean()
+
+    # compute mins, maxs per time
+    mins_per_time = df_spei.groupby(time).min()
+    maxs_per_time = df_spei.groupby(time).max()
 
     if "spei" in means_per_time:
         mean_spei_per_time = means_per_time["spei"]
+        min_spei_per_time = mins_per_time["spei"]
+        max_spei_per_time = maxs_per_time["spei"]
     elif "Spei" in means_per_time:
         mean_spei_per_time = means_per_time["Spei"]
+        min_spei_per_time = mins_per_time["Spei"]
+        max_spei_per_time = maxs_per_time["Spei"]
+
     else:
         raise KeyError("Identifier for SPEI in passed df not recognized. "
                        "Only valid column names are: spei, Spei.\n"
                        f"Not found inL {df_spei.columns}")
 
-    plt.plot(df_spei[time].unique(), mean_spei_per_time, alpha=alpha)
+    plt.plot(df_spei[time].unique(), mean_spei_per_time, alpha=alpha, label="Mean")
+    plt.plot(df_spei[time].unique(), min_spei_per_time, alpha=alpha, label="Min")
+    plt.plot(df_spei[time].unique(), max_spei_per_time, alpha=alpha, label="Max")
 
-    plt.hlines(-1, df_spei[time].unique().min(), df_spei[time].unique().max(), colors="red", label="Drought")
-    plt.hlines(1, df_spei[time].unique().min(), df_spei[time].unique().max(), colors="blue", label="Flood")
+    # plt.scatter(df_spei[time].unique(), mean_spei_per_time, alpha=alpha, label="Mean")
+    # plt.scatter(df_spei[time].unique(), min_spei_per_time, alpha=alpha, label="Min")
+    # plt.scatter(df_spei[time].unique(), max_spei_per_time, alpha=alpha, label="Max")
 
-    plt.title(f"Mean SPEI per {time}")
-    plt.xlabel(f"Time")
-    plt.ylabel(f"Mean SPEI")
-    plt.legend()
+    plt.hlines(-1, df_spei[time].unique().min(), df_spei[time].unique().max(),
+               colors="red",
+               label="Drought",
+               linestyles="dashed")
+    plt.hlines(1, df_spei[time].unique().min(), df_spei[time].unique().max(),
+               colors="blue",
+               label="Flood",
+               linestyles="dashed")
+
+    axs = plt.gca()
+    # Remove axes splines
+    # removed_axes_splines = ['top', 'bottom', 'left', 'right']
+    removed_axes_splines = ['top', 'right']
+    for s in removed_axes_splines:
+        axs.spines[s].set_visible(False)
+
+    # Add padding between axes and labels
+    axs.xaxis.set_tick_params(pad=5)
+    axs.yaxis.set_tick_params(pad=5)
+
+    # Add x, y gridlines
+    axs.grid(b=True, color='grey',
+             linestyle='-.', linewidth=0.5,
+             alpha=0.6)
+
+    plt.suptitle(f"SPEI per {time}")
+    plt.title("Mean, Min, Max", style="italic")
+    plt.xlabel(f"Time", style="italic")
+    plt.ylabel(f"SPEI", style="italic")
+
+    # shift more to right: increase x-value in tuple
+    plt.legend(loc="lower left", bbox_to_anchor = (0.9, 0.8))
 
     plt.savefig(f"{output_dir}/scatter-mean-spei-per-{time}.png")
 
@@ -121,8 +161,14 @@ def line_plot_spei_per_region(df_wfp_and_spei, show=True, alpha=0.5):
         plt.plot(df_wfp_and_spei.TimeWFP, df_wfp_and_spei["Spei"], label="Original points",
                     alpha=alpha)
 
-        plt.hlines(-1, df_wfp_and_spei["TimeWFP"].unique().min(), df_wfp_and_spei["TimeWFP"].unique().max(), colors="red", label="Drought")
-        plt.hlines(1, df_wfp_and_spei["TimeWFP"].unique().min(), df_wfp_and_spei["TimeWFP"].unique().max(), colors="blue", label="Flood")
+        plt.hlines(-1, df_wfp_and_spei["TimeWFP"].unique().min(), df_wfp_and_spei["TimeWFP"].unique().max(),
+                   colors="red",
+                   label="Drought",
+                   linestyles="dashed")
+        plt.hlines(1, df_wfp_and_spei["TimeWFP"].unique().min(), df_wfp_and_spei["TimeWFP"].unique().max(),
+                   colors="blue",
+                   label="Flood",
+                   linestyles="dashed")
 
         plt.title(f"SPEI - Region: {region},")
         plt.xlabel("Time")

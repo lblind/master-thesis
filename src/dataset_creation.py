@@ -17,11 +17,12 @@ import visualization
 
 # overall missings below 30%: cut_off_markets = 0.4, cut_off_commodities = 0.75
 # a bit better: cut_off_marekts = 0.35, cut_off_commodities = 0.75 (17 Markets)
+# solves the issue: 0.75 (commodities), 0.3 (markets) (10 Markets)
 
 def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
                                    add_pad_months_time_span=0,
                                    cut_off_commodities=0.75,
-                                   cut_off_markets=0.35,
+                                   cut_off_markets=0.3,
                                    limit_consec_interpol=42
                                    ):
     """
@@ -211,7 +212,7 @@ def phase_b_merge_wfp_with_spei_dataset(country, df_wfp_preproc, write_results_t
                                         country=country)
 
     visualization.line_plot_spei(df_spei=df_spei, country=country, show=True)
-    visualization.line_plot_mean_spei_per_time(df_spei=df_spei, country=country, show=True)
+    visualization.line_plot_mean_min_max_spei_per_time(df_spei=df_spei, country=country, show=True)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC - PHASE B: STEP 9/10 - Merge climate data (SPEI) with market coordinates"
@@ -242,7 +243,7 @@ def phase_b_merge_wfp_with_spei_dataset(country, df_wfp_preproc, write_results_t
 
     visualization.line_plot_spei_per_region(df_wfp_and_spei=df_wfp_and_spei, show=True)
 
-    visualization.line_plot_mean_spei_per_time(df_spei=df_wfp_and_spei, time="TimeWFP", country=country, show=True)
+    visualization.line_plot_mean_min_max_spei_per_time(df_spei=df_wfp_and_spei, time="TimeWFP", country=country, show=True)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC - PHASE B: STEP 12 - Classification of droughts and into SPEI categories"
