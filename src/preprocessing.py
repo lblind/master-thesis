@@ -452,6 +452,59 @@ def extract_df_subset_time_prices(df_commodity, epsilon_month=0):
     return df_commodity, min_time, max_time
 
 
+def extract_intersec_subset_time_per_region_for_commodity(df_commodity):
+    """
+    For one specific commodity, check the missing values per region
+    (as regional patterns are interpolated) and extract the
+    time slice per region (first non-nan to last non-nan value)
+
+    Then, extract the intersection of these time slices and return the
+    subset that refers to that intersection.
+
+    :param df_commodity: pd.DataFrame
+        Dataframe containing only data for one commodity
+    :return:
+    """
+    country = df_commodity.Country.unique()[0]
+    commodity = df_commodity.Commodity.unique()[0]
+    output_dir = f"../output/{country}/summary-statistics/preproc-STEP3-time-slice-per-region"
+    if os.path.exists(output_dir) is False:
+        os.makedirs(output_dir)
+
+    # Group by region
+    df_commodity_by_region = df_commodity.groupby("Region")
+
+    # Extract min and max date per region
+    min_date_per_region = df_commodity_by_region.TimeWFP.min()
+    max_date_per_region = df_commodity_by_region.TimeWFP.max()
+
+    # write results to excel
+    output_excel = f"{output_dir}/{country}-{commodity}-time-slice-per-region.xlsx"
+
+    # mode = "a" if os.path.exists(output_excel) else "w"
+    # write excel new everytime you execute it
+    mode = "w"
+
+    # write dropped commodities to (existing) excel as new sheet
+    with pd.ExcelWriter(
+            output_excel, mode=mode) as writer:
+
+        min_date_per_region.to_excel(writer, sheet_name=f"Min Dates")
+        max_date_per_region.to_excel(writer, sheet_name="Max Dates")
+
+    # Find intersection of the dates (smallest overlapping time slice)
+    min_date = min_date_per_region.max()
+    max_date = max_date_per_region.min()
+
+    # Extract only the subset of data (intersection of time)
+    # everything <= maxdate
+    df_commodity = df_commodity[df_commodity.TimeWFP <= max_date]
+    # everything >= mindate
+    df_commodity = df_commodity[df_commodity.TimeWFP >= min_date]
+
+    return df_commodity, min_date, max_date
+
+
 def extract_df_subset_time_prices_all_commodities(df, add_pad_months_time_span=0, write_excel=True,
                                                   return_time_spans=False):
     """
@@ -476,9 +529,14 @@ def extract_df_subset_time_prices_all_commodities(df, add_pad_months_time_span=0
         # Limit the dfs to specific subset
         df_commodity = df[df.Commodity == commodity]
 
-        # call subset extraction function
+        # call subset extraction function -> find union of time
         df_commodity, min_time, max_time = extract_df_subset_time_prices(df_commodity=df_commodity,
                                                                          epsilon_month=add_pad_months_time_span)
+
+        # call subset extraction function -> find intersection of time
+        # (per region as interpolated by region afterwards)
+        df_commodity, min_time, max_time = extract_intersec_subset_time_per_region_for_commodity(df_commodity=
+                                                                                                 df_commodity)
 
         # store min and max time for further use/ documentation
         min_max_times_dict[commodity] = (min_time, max_time)
@@ -506,41 +564,12 @@ def extract_df_subset_time_prices_all_commodities(df, add_pad_months_time_span=0
         return df
 
 
-def extract_df_subset_time_region_all_commodities(df_wfp, add_pad_months_time_span=0, write_excel=True):
-    """
-    For all commodities, do not extract subset of time in general,
-    but intersection of time slices per region.
-
-    :return:
-    """
-    dict_times_region_commodity = {}
-    dict_dfs_per_region = {}
-    # compute time spans per region
-    for region in df_wfp.Region.unique():
-        df_wfp_region = df_wfp[df_wfp.Region == region]
-        df_region_reduced, min_max_times_dict = extract_df_subset_time_prices_all_commodities(df=df_wfp_region, add_pad_months_time_span=add_pad_months_time_span,
-                                                      write_excel=False, return_time_spans=True)
-        dict_times_region_commodity[region] = min_max_times_dict
-
-    # per commodity find min time:
-    for commodity in df_wfp.Commodity.unique():
-        pass
-
-
-
-    # TODO continue this later, OR:
-    # TODO...actually I should check missings not per commodity, but per region (later on) - if I do not take this step
-    # ...but: overengineering? Too complicated to follow even though more accurate?
-
-
-
-
-
-
 def read_climate_data(time_slice, long_slice, lat_slice, country,
                       path_to_netcdf="../input/Global/climate-dta/spei01.nc"):
     """
     Reads the netcdf and converts it into a pandas df
+    Only extract the relevant subset of this (based on the ranges of time, lon, lat which
+    are passed via the slice argument)
 
     :param path_to_netcdf:
     :return:

@@ -34,8 +34,10 @@ if __name__ == "__main__":
     # dropped_commodities = None
 
     # TODO: Outcomment this line if dataset hat not yet been created
-    df_final = dataset_creation.create_dataset(country=country, dropped_commodities=dropped_commodities,
-                                               write_results_to_excel=False)
+    # df_final = dataset_creation.create_dataset(country=country, dropped_commodities=dropped_commodities,
+    #     #                                            write_results_to_excel=True)
+
+    dataset_creation.phase_a_preprocess_wfp_dataset(country=country, dropped_commodities=dropped_commodities)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# ANALYSIS"

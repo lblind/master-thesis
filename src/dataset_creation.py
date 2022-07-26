@@ -15,22 +15,25 @@ import visualization
 # cut off markets: 0.5, cut off commodities: 0.8
 # Focus commodities: cut off: 0.4, 0.8 -> still to high
 
+# overall missings below 30%: cut_off_markets = 0.4, cut_off_commodities = 0.75
+# a bit better: cut_off_marekts = 0.35, cut_off_commodities = 0.75 (17 Markets)
+
 def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
                                    add_pad_months_time_span=0,
                                    cut_off_commodities=0.75,
-                                   cut_off_markets=0.4,
+                                   cut_off_markets=0.35,
                                    limit_consec_interpol=42
                                    ):
     """
     Read raw WFP database and do the following steps:
 
-    - STEP 1: Download raw WFP data (per region & merge into one df)
-    - STEP 2: Merge Inflation data + Adjust food prices to one common inflation level (most recent)
-    - STEP 3: Reduce % missings -> Subset Time: Extract relevant time slice per commodity
+    - STEP 1 -> Download raw WFP data (per region & merge into one df)
+    - STEP 2 -> Merge Inflation data + Adjust food prices to one common inflation level (most recent)
+    - STEP 3 -> Reduce % missings -> Subset Time: Extract relevant time slice per commodity
                                                 (first non-nan entry -> last non-nan entry)
-    - STEP 4: Reduce % missings -> Subset Commodity: Cut off commodities with certain share of missings
-    - STEP 5: Reduce % missings -> Subset Market:
-    - STEP 6: Inter-/Extrapolate missing data
+    - STEP 4 -> Reduce % missings -> Subset Commodity: Cut off commodities with certain share of missings
+    - STEP 5 -> Reduce % missings -> Subset Market:
+    - STEP 6 -> Inter-/Extrapolate missing data
 
     :param country:
     :param dropped_commodities:
@@ -271,7 +274,7 @@ def phase_b_merge_wfp_with_spei_dataset(country, df_wfp_preproc, write_results_t
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC - WRITING RESULTS INTO EXCELS."
           "\n# ------------------------------------------------------------------------------------------------------\n")
-   if write_results_to_excel:
+    if write_results_to_excel:
         dict_df_final_per_commodity = {}
         for commodity in df_final.Commodity.unique():
             df_final_commodity = df_final[df_final.Commodity == commodity]
@@ -284,7 +287,7 @@ def phase_b_merge_wfp_with_spei_dataset(country, df_wfp_preproc, write_results_t
                                                      df_drought=df_drought,
                                                      df_no_drought=df_no_drought)
 
-   return df_final
+    return df_final
 
 
 def create_dataset(country, dropped_commodities, write_results_to_excel=True):
