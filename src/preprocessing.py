@@ -16,6 +16,7 @@ import datetime
 from geopy.distance import great_circle
 
 import utils
+import visualization
 
 import scipy
 import math
@@ -423,7 +424,7 @@ def extract_time_lon_lat_slice(df_wfp_coords):
     return range_time, range_lon_market, range_lat_market
 
 
-def extract_df_subset_time_prices(df_commodity, epsilon_month=3):
+def extract_df_subset_time_prices(df_commodity, epsilon_month=0):
     """
     Extract subset of df based on the first and last price entry (+ epsilon)
     that occurs over all regions (time-wise).
@@ -461,10 +462,11 @@ def extract_df_subset_time_prices(df_commodity, epsilon_month=3):
     return df_commodity, min_time, max_time
 
 
-def extract_df_subset_time_prices_all_commodities(df, add_pad_months_time_span=0):
+def extract_df_subset_time_prices_all_commodities(df, add_pad_months_time_span=0, write_excel=True,
+                                                  return_time_spans=False):
     """
     Extract subset of df based on the first and last price entry (+ epsilon)
-    that occurs over all regions (time-wise).
+    that occurs regardless of the region (time-wise).
 
     :param df_commodity: pd.DataFrame
     :param add_pad_months_time_span: int
@@ -497,17 +499,66 @@ def extract_df_subset_time_prices_all_commodities(df, add_pad_months_time_span=0
     # Combine all dataframes to one large one (again)
     df = pd.concat(df_commodities_dict.values(), ignore_index=True)
 
-    # Summary stats: write the subsets of time
-    pd.DataFrame({
-        "Commodity": min_max_times_dict.keys(),
-        "TimeSpanMinY": [time_min.strftime("%Y") for time_min, time_max in min_max_times_dict.values()],
-        "TimeSpanMinM": [time_min.strftime("%m") for time_min, time_max in min_max_times_dict.values()],
-        "TimeSpanMaxY": [time_max.strftime("%Y") for time_min, time_max in min_max_times_dict.values()],
-        "TimeSpanMaxM": [time_max.strftime("%m") for time_min, time_max in min_max_times_dict.values()],
-        "Epsilon (Month)": [add_pad_months_time_span] * len(min_max_times_dict.keys())
-    }).to_excel(f"../output/{country}/summary-statistics/preproc-STEP-2-time-spans-per-commodity.xlsx")
+    if write_excel:
+        # Summary stats: write the subsets of time
+        pd.DataFrame({
+            "Commodity": min_max_times_dict.keys(),
+            "TimeSpanMinY": [time_min.strftime("%Y") for time_min, time_max in min_max_times_dict.values()],
+            "TimeSpanMinM": [time_min.strftime("%m") for time_min, time_max in min_max_times_dict.values()],
+            "TimeSpanMaxY": [time_max.strftime("%Y") for time_min, time_max in min_max_times_dict.values()],
+            "TimeSpanMaxM": [time_max.strftime("%m") for time_min, time_max in min_max_times_dict.values()],
+            "Epsilon (Month)": [add_pad_months_time_span] * len(min_max_times_dict.keys())
+        }).to_excel(f"../output/{country}/summary-statistics/preproc-STEP-2-time-spans-per-commodity.xlsx")
 
-    return df
+    if return_time_spans:
+        return df, min_max_times_dict
+    else:
+        return df
+
+
+def extract_df_subset_time_region_all_commodities(df_wfp, add_pad_months_time_span=0, write_excel=True):
+    """
+    For all commodities, do not extract subset of time in general,
+    but intersection of time slices per region.
+
+    :return:
+    """
+    dict_min_max_time_commodity = {}
+    dict_dfs_commodity = {}
+    for commodity in df_wfp.Commodity.unique():
+        min_time_commodity = 0
+        max_time_commodity = 0
+        dict_dfs_commodity_region = {}
+
+        # extract dataset for commodity
+        df_commodity = df_wfp[df_wfp.Commodity == commodity]
+        for i, region in enumerate(df_wfp.Region.unique()):
+            # extract part per region
+            df_commodity_region = df_commodity[df_commodity.Region == region]
+
+            # select time range for commodity, region dataset
+            df_commodity_region, min_time, max_time = extract_df_subset_time_prices(df_commodity=df_commodity_region,
+                                                                epsilon_month=add_pad_months_time_span)
+
+            # first iteration
+            if i == 0:
+               min_time_commodity = min_time
+               max_time_commodity = max_time
+            # later iterations: check if range is smaller -> use the smallest set/ intersection over all regions
+            else:
+                if min_time > min_time_commodity:
+                    min_time_commodity = min_time
+                if max_time < max_time_commodity:
+                    max_time_commodity = max_time
+
+
+    # TODO continue this later, OR:
+    # TODO...actually I should check missings not per commodity, but per region (later on) - if I do not take this step
+    # ...but: overengineering? Too complicated to follow even though more accurate?
+
+
+
+
 
 
 def read_climate_data(time_slice, long_slice, lat_slice, country,
@@ -865,7 +916,7 @@ def cut_too_sparse_values_in_column(df, column, df_sum_stats_column, cut_off,
     if os.path.exists(output_dir) is False:
         os.makedirs(output_dir)
     df_sum_stats_dropped_values.to_excel(output_dir + f"/{country}-additionally-dropped-in-{column}"
-                                                      f"-{cut_off}%-preproc-"
+                                                      f"-{cut_off}-preproc-"
                                                       f"STEP{preproc_step_no}.xlsx")
 
     return df
@@ -926,28 +977,28 @@ def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, di
     return df_final_all
 
 
-def drop_years(df_final, years_list):
+def drop_years(df, years_list):
     """
     Drops all data for specific years
 
     (e.g. 2021, 2022 as no data for SPEI for these years (even though data on food prices)
 
-    :param df_final:
+    :param df:
     :param years_list:
     :return:
     """
     # Extract number of entries that would belong to that year
-    no_of_entries_per_year = [df_final[df_final.Year == year].shape[0] for year in years_list]
+    no_of_entries_per_year = [df[df.Year == year].shape[0] for year in years_list]
     stats_df = pd.DataFrame({
         "No. of entries": no_of_entries_per_year,
-        "Overall datasize (before drop)": [df_final.shape[0]] * len(no_of_entries_per_year)
+        "Overall datasize (before drop)": [df.shape[0]] * len(no_of_entries_per_year)
     }, index=years_list
     )
-    country = df_final.Country.unique()[0]
+    country = df.Country.unique()[0]
     stats_df.to_excel(f"../output/{country}/summary-statistics/dropped-years-no-entries.xlsx")
 
     # Just keep years for
-    return df_final[~df_final["Year"].isin(years_list)]
+    return df[~df["Year"].isin(years_list)]
 
 
 def drop_missing_percentile_per_region_prices(path_excel_sum_stats, df_final, cut_off_percentile=90,
@@ -1032,14 +1083,14 @@ def drop_missing_percentile_per_region_prices(path_excel_sum_stats, df_final, cu
     return df_reduced
 
 
-def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear", order=None,
-                                         intrapolation_limit=3, extrapolate=False):
+def extrapolate_prices_regional_patterns(df, interpolation_method="linear", order=None,
+                                         intrapolation_limit=25, extrapolate=False):
     """
     Extrapolates missing values in Prices based on regional patterns
 
     :param intrapolation_limit: int
         Max consecutive nans to inter-/extrapolate
-    :param df_final: pd.DataFrame
+    :param df: pd.DataFrame
     :param interpolation_method: str
         Interpolation method used to extrapolate the missings. For more information, cf. References
     :return:
@@ -1065,7 +1116,7 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
 
     # Shuffle dataframe
     seed = 42
-    df_final = df_final.sample(frac=1, random_state=seed)
+    df = df.sample(frac=1, random_state=seed)
 
     if extrapolate:
         interpolation_direction = "both"
@@ -1074,25 +1125,25 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
 
     # Make sure that prices are sorted chronologically
     print("Sorting dataframe chronologically")
-    df_final = df_final.sort_values(by=["TimeWFP"], ignore_index=True)
+    df = df.sort_values(by=["TimeWFP"], ignore_index=True)
 
     # # Make sure that prices are sorted chronologically
     # print("Sorting dataframe chronologically")
     # df_final = df_final.sort_values(by=["TimeWFP", "Market"], ignore_index=True)
 
-    country = df_final.Country.unique()[0]
+    country = df.Country.unique()[0]
 
-    commodity = df_final.Commodity.unique()[0]
-    if len(df_final.Commodity.unique()) > 1:
-        warnings.warn(f"Expected to extrapolate dataset only for one commodity, not {len(df_final.Commodity.unique())} "
-                      f"({df_final.Commodity.unique()})")
+    commodity = df.Commodity.unique()[0]
+    if len(df.Commodity.unique()) > 1:
+        warnings.warn(f"Expected to extrapolate dataset only for one commodity, not {len(df.Commodity.unique())} "
+                      f"({df.Commodity.unique()})")
         commodity += "+"
 
-    if len(df_final.Currency.unique()) != 1:
-        raise ValueError(f"More than one currency found in df: {df_final.Currency.unique()}.\n"
+    if len(df.Currency.unique()) != 1:
+        raise ValueError(f"More than one currency found in df: {df.Currency.unique()}.\n"
                          f"Cannot visualize prices without one common currency.\n"
                          f"Please standardize your prices to one currency.")
-    currency = df_final.Currency.unique()[0]
+    currency = df.Currency.unique()[0]
 
     dfs_extrapolated_per_region = {}
 
@@ -1102,31 +1153,15 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
     if os.path.exists(output_dir_extrapolation) is False:
         os.makedirs(output_dir_extrapolation)
 
-    alpha = 0.5
-    for region in df_final.Region.unique():
+    for region in df.Region.unique():
         print(f"Extrapolating Prices for region: <{region}> (Method: {interpolation_method})")
 
         # extract dataframe for that region
-        df_region = df_final[df_final.Region == region]
+        df_region = df[df.Region == region]
 
         # make a scatter plot (only for the inflation-adjusted prices)
-        # plt.scatter(df_region.TimeSpei, df_region.Price, label="Original points",
-        #             alpha=alpha)
-        plt.scatter(df_region.TimeSpei, df_region["AdjPrice"], label="Original points",
-                    alpha=alpha)
-
-        # Plot and color markets separately
-        # for market in df_region.Market.unique():
-        #     df_region_market = df_region[df_region.Market == market]
-        #     plt.scatter(df_region_market.TimeSpei, df_region_market.Price, label=market)
-
-        plt.suptitle("(Inflation-Adjusted) Price Distribution")
-        plt.title(f"Region: '{region}', Commodity: {commodity}")
-        plt.xlabel("Time")
-        plt.ylabel(f"Price [{currency}]")
-
-        plt.savefig(f"{output_dir}/{region}-{commodity}-scatter-adj-prices.png")
-        # plt.show()
+        visualization.scatter_adj_prices_per_region(df_region=df_region, currency=currency,
+                                                    commodity=commodity, show=True)
 
         # Extrapolate (limit_direction = to allow for extrapolation)
         if interpolation_method == "spline":
@@ -1150,16 +1185,12 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
                                                                       limit_direction=interpolation_direction,
                                                                       limit=intrapolation_limit))
 
-        # Plot post interpolation (/ extrapolated points)
-        # plt.scatter(df_region_new.TimeSpei[df_region.Price.isna()], df_region_new.Price[df_region.Price.isna()],
-        #             color="green", label="Extrapolated points", marker="*", alpha=alpha)
-
-        plt.scatter(df_region_new.TimeSpei[df_region.Price.isna()], df_region_new.AdjPrice[df_region.Price.isna()],
-                    color="green", label="Extra-/Interpolated points", marker="*", alpha=alpha)
-        plt.legend()
-        plt.savefig(f"{output_dir_extrapolation}/{region}-{commodity}-scatter-prices-extrapolated-"
-                    f"{interpolation_method}-{order}.png")
-        plt.show()
+        # Scatter plot: Plot post interpolation (/ extrapolated points)
+        visualization.scatter_extrapolated_adj_prices_per_region(df_region=df_region,
+                                                                 df_region_extrapolated=df_region_new,
+                                                                 commodity=commodity, show=True, currency=currency,
+                                                                 interpolation_method=interpolation_method,
+                                                                 order=order)
 
         print("Sorting dataframe chronologically AND by market again")
         df_region_new = df_region_new.sort_values(by=["TimeWFP", "Market"], ignore_index=True)
@@ -1171,6 +1202,28 @@ def extrapolate_prices_regional_patterns(df_final, interpolation_method="linear"
     df_merged_all_regions = pd.concat(dfs_extrapolated_per_region.values(), ignore_index=True)
 
     return df_merged_all_regions
+
+
+def extrapolate_prices_per_commodity_regional_patterns(df_wfp, interpolation_method="linear", order=None,
+                                                       intrapolation_limit=25, extrapolate=False):
+    """
+    Iterate over all commodities and extrapolate their missings based on regional patterns
+    :return:
+    """
+    dict_df_commodities = {}
+    for commodity in df_wfp.Commodity.unique():
+        df_commodity = df_wfp[df_wfp.Commodity == commodity]
+        df_commodity_extrapolated = extrapolate_prices_regional_patterns(df=df_commodity,
+                                                                         interpolation_method=interpolation_method,
+                                                                         intrapolation_limit=intrapolation_limit,
+                                                                         order=order,
+                                                                         extrapolate=extrapolate)
+        dict_df_commodities[commodity] = df_commodity_extrapolated
+
+    # merge the datasets back together (all extrapolated commodities)
+    df_wfp_extrapolated = pd.concat(dict_df_commodities.values(), ignore_index=True)
+
+    return df_wfp_extrapolated
 
 
 def drop_markets_missing_beyond_interp_range(df_final_commodity, df_sum_stats_market,

@@ -3,6 +3,8 @@ CREATION OF DATASET
 -------------------
 
 """
+import warnings
+
 import pandas as pd
 
 import preprocessing as preproc
@@ -10,11 +12,14 @@ import statistics_snippets as stats
 import visualization
 
 
+# cut off markets: 0.5, cut off commodities: 0.8
+# Focus commodities: cut off: 0.4, 0.8 -> still to high
+
 def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
                                    add_pad_months_time_span=0,
-                                   cut_off_commodities=0.9,
-                                   cut_off_markets=0.9,
-                                   limit_consec_interpol=25
+                                   cut_off_commodities=0.75,
+                                   cut_off_markets=0.4,
+                                   limit_consec_interpol=42
                                    ):
     """
     Read raw WFP database and do the following steps:
@@ -35,9 +40,11 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
     :param limit_consec_interpol:
     :return:
     """
+    preproc_step = 0
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC - PHASE A: STEP 1 (Read WFP dataset (merged per region)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
+    preproc_step += 1
     df_wfp = preproc.get_df_wfp_preprocessed_excel_region_method(country=country,
                                                                  dropped_commodities=dropped_commodities)
     # write the raw output to an Excel workbook
@@ -46,29 +53,38 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC - PHASE A: STEP 2 (Adjust prices to common food inflation level -> most recent)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
-
+    preproc_step += 1
     # Adjust food prices to one common price level
     df_wfp = preproc.adjust_food_prices(country=country, df_wfp=df_wfp, data_source_inflation="WFP")
+
+    # Write sum stats (result Step 2/1)
+    stats.sum_stats_prices(df=df_wfp, excel_output_extension="-preproc-STEP1-2-df_wfp")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC - PHASE A: STEP 3 (Missings -> Subset of Time: Extract relevant slice per commodity)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
+    preproc_step += 1
 
     # extract only the relevant subsets of time
     df_wfp = preproc.extract_df_subset_time_prices_all_commodities(df=df_wfp,
                                                                    add_pad_months_time_span=add_pad_months_time_span)
 
-    print("\n# ------------------------------------------------------------------------------------------------------\n"
-          "# PREPROC - PHASE A: STEP 4 (Missings -> Subset of Commodity: Drop too sparse commodities)"
-          "\n# ------------------------------------------------------------------------------------------------------\n")
+    # TODO: additional subset time component restricting time to smallest time overlap per region? (as extrapolated in
+    # regional patterns?) -> alternatively: just extrapolate over dataset, regardless of regional patterns
+
     # write summary statistics (share of missing values within commodity dataset)
     # Check missings (result of step 3)
     df_commodity_stats = stats.sum_stats_prices(df=df_wfp, return_df_by_group_sheet="Commodity",
-                                                excel_output_extension="-preproc-STEP3")
+                                                excel_output_extension="-preproc-STEP3-subset-time")
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC - PHASE A: STEP 4 (Missings -> Subset of Commodity: Drop too sparse commodities)"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+    preproc_step += 1
 
     # Drop all commodities that have missing data > certain cut-off (too sparse)
     cut_off_percent_commodity = 90
-    excel_path_stats = f"../output/{country}/summary-statistics/{country}-sum-stats-preproc-STEP3.xlsx"
+    excel_path_stats = f"../output/{country}/summary-statistics/{country}-sum-stats-preproc-STEP{preproc_step - 1}-subset-time.xlsx"
     df_wfp = preproc.cut_too_sparse_values_in_column(df=df_wfp,
                                                      column="Commodity",
                                                      df_sum_stats_column=df_commodity_stats,
@@ -76,17 +92,20 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
                                                      cut_off=cut_off_commodities,
                                                      excel_to_append_dropped_values=excel_path_stats)
 
-    print("\n# ------------------------------------------------------------------------------------------------------\n"
-          "# PREPROC - PHASE A: STEP 5 (Missings -> Subset of Market: Drop too sparse markets)"
-          "\n# ------------------------------------------------------------------------------------------------------\n")
     # write summary statistics (share of missing values within market dataset)
     # check missings (result of step 4)
     df_market_stats = stats.sum_stats_prices(df=df_wfp, return_df_by_group_sheet="Market",
-                                             excel_output_extension="-preproc-STEP4")
+                                             excel_output_extension=f"-preproc-STEP{preproc_step}-subset-commodity")
 
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC - PHASE A: STEP 5 (Missings -> Subset of Market: Drop too sparse markets)"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+
+    excel_path_stats = f"../output/{country}/summary-statistics/{country}-sum-stats-preproc-STEP{preproc_step}-subset-commodity.xlsx"
+    preproc_step += 1
     # Drop all markets that have missing data > certain cut-off (too sparse)
-    cut_off_percent_market = 90
-    excel_path_stats = f"../output/{country}/summary-statistics/{country}-sum-stats-preproc-STEP4.xlsx"
+    # excel_path_stats = f"../output/{country}/summary-statistics/{country}-sum-stats-preproc-STEP{str(preproc_step - 1)}-subset-commodity.xlsx "
+    # print(excel_path_stats)
     df_wfp = preproc.cut_too_sparse_values_in_column(df=df_wfp,
                                                      column="Market",
                                                      df_sum_stats_column=df_market_stats,
@@ -94,18 +113,143 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
                                                      cut_off=cut_off_markets,
                                                      excel_to_append_dropped_values=excel_path_stats)
 
+    # Write sum stats (result Step 5)
+    stats.sum_stats_prices(df=df_wfp, excel_output_extension=f"-preproc-STEP{preproc_step}-subset-market")
+
     print("\n# ------------------------------------------------------------------------------------------------------\n"
-          "# PREPROC - PHASE A: STEP 6 (Interpolation of missing data)"
+          "# PREPROC - PHASE A: STEP 6 - Per commodity: (Interpolation of missing data)"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+    preproc_step += 1
+
+    # Define inter-/ extrapolation method
+    interpolation_method = "linear"
+    # interpolation_method = "cubicspline"
+    # interpolation_method = "quadratic"
+    order = None
+    interpolation_method = "spline"
+    # order = 2
+    order = 1
+    # extrapolate?
+    extrapolate = True
+
+    # Per Commodity: EXTRAPOLATE REGIONAL PATTERNS
+    # doesn't extrapolate tails for interpolation method: cubic
+    df_wfp = preproc.extrapolate_prices_per_commodity_regional_patterns(df_wfp=df_wfp,
+                                                                        interpolation_method=interpolation_method,
+                                                                        intrapolation_limit=limit_consec_interpol,
+                                                                        order=order,
+                                                                        extrapolate=extrapolate)
+
+    # TODO: final step. check if there are still markets that exceeded the interpolation limit
+    if df_wfp.Price.isna().sum() != 0:
+        warnings.warn(f"Number of prices should be 0 after extrapolation, but is: {df_wfp.Price.isna().sum()}")
+
+    # write final sum stats
+    stats.sum_stats_prices(df=df_wfp, excel_output_extension=f"-preproc-PHASE-A-STEP{preproc_step}-interpolation")
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC - PHASE A: COMPLETED (WFP dataset preprocessed -> no missings anymore)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
+    return df_wfp
 
-def phase_b_merge_wfp_with_spei_dataset(df_wfp_preproc):
+
+def phase_b_merge_wfp_with_spei_dataset(country, df_wfp_preproc):
     """
+    Merge the reduced WFP Price dataset with
+    - the dataset containing the market coordinates
+    - the SPEI dataset (based on nearest neighbor for each market)
 
+    And classify the different SPEI categories
+
+    Concrete procedure:
+    STEP 8  -> Merge WFP Prices with WFP Market coordinates
+    STEP 9  -> Extract relevant subset of SPEI dataset (range time, lon, lat)
+    STEP 10 -> Merge climate data SPEI with market coordinates (nearest neighbour)
+    STEP 11 -> Subset of time: drop years for which there is no SPEI data (2021, 2022)
+    STEP 12 -> Classification of droughts and derivation of SPEI categories
+
+
+    :param country:
     :param df_wfp_preproc:
     :return:
     """
-    pass
+    preproc_step = 6
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC - PHASE B: STEP 7/ 8 - Merge df_wfp with market coordinates dataset"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+    preproc_step += 1
+    # 2. Read CSV containing market coordinates and merge to price data
+    df_wfp_with_coords = preproc.read_and_merge_wfp_market_coords(df_wfp=df_wfp_preproc, country=country)
+    # 3. Preparation for merge with Part B): Extract range of 3 main variables: time, longitude, latitude
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC - PHASE B: STEP 8/9 - Extraction of range of variables for: time, lon, lat & read relevant slice"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+    preproc_step += 1
+
+    slice_time, slice_lon, slice_lat = preproc.extract_time_lon_lat_slice(df_wfp_with_coords)
+
+    # read relevant subset of entire (global) SPEI database
+    df_spei = preproc.read_climate_data(time_slice=slice_time, long_slice=slice_lon, lat_slice=slice_lat,
+                                        country=country)
+
+    visualization.line_plot_spei(df_spei=df_spei, country=country, show=True)
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC - PHASE B: STEP 9/10 - Merge climate data (SPEI) with market coordinates"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+
+    preproc_step += 1
+
+    df_wfp_and_spei = preproc.merge_food_price_and_climate_dfs(df_wfp_with_coords=df_wfp_with_coords, df_spei=df_spei)
+
+    stats.sum_stats_prices(df=df_wfp_and_spei,
+                           excel_output_extension=f"-preproc-STEP{preproc_step}-Merged-SPEI")
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC - PHASE B: STEP 10/11 - Subset Time: Drop years for which there is no SPEI data (2021, 2022)"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+
+    preproc_step += 1
+
+    # TODO maybe do this smarter and check already in merge function above if max SPEI date < max WFP date -> omit
+    # everything above that (or: maybe do an inner join instead of a left outer join instead?)
+    # drop 2021, 2022 as no data for droughts (/SPEI) is available for those (even though WFP data is)
+    years_to_drop = [2021, 2022]
+    print(f"# Dropping years (as no SPEI data available): {years_to_drop}")
+    df_wfp_and_spei = preproc.drop_years(df=df_wfp_and_spei, years_list=years_to_drop)
+
+    stats.sum_stats_prices(df=df_wfp_and_spei,
+                           excel_output_extension=f"-preproc-STEP{preproc_step}-Merged-no-2021-22")
+
+    visualization.line_plot_spei_per_region(df_wfp_and_spei=df_wfp_and_spei, show=True)
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# PREPROC - PHASE B: STEP 12 - Classification of droughts and into SPEI categories"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+    preproc_step += 1
+
+    # add SPEI categories
+    df_final = preproc.classify_droughts(df_wfp_and_spei)
+
+    # Plot Histogram for SPEI categories
+    visualization.plot_hist(df_final, "SpeiCat", orientation="horizontal", bins=7,
+                            png_appendix=f"-preproc-STEP{preproc_step}")
+
+    # Summary statistics categorical
+    counts = df_final["SpeiCat"].value_counts()
+    print(f"Counts:\n{counts}")
+
+    counts_drought = df_final["Drought"].value_counts()
+    print(f"Counts Drought:\n{counts_drought}")
+    print(f"Share of droughts: {counts_drought[True]}/ {(counts_drought[True] + counts_drought[False])}")
+
+    stats.sum_stats_prices_and_droughts(df=df_wfp_and_spei,
+                                        excel_output_extension=f"-preproc-STEP{preproc_step}-FINAL-DATASET")
+
+    return df_final
 
 
 def create_dataset(country, dropped_commodities):
@@ -193,7 +337,7 @@ def create_dataset(country, dropped_commodities):
     # drop 2021, 2022 as no data for droughts (/SPEI) is available for those (even though WFP data is)
     years_to_drop = [2021, 2022]
     print(f"# Dropping years (as no SPEI data available): {years_to_drop}")
-    df_final = preproc.drop_years(df_final=df_final, years_list=years_to_drop)
+    df_final = preproc.drop_years(df=df_final, years_list=years_to_drop)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: Classify droughts & SPEI categories"
@@ -245,8 +389,8 @@ def create_dataset(country, dropped_commodities):
     df_final = preproc.cut_too_sparse_values_in_column(df=df_final, df_sum_stats_markets=df_sum_stats_commodities,
                                                        cut_off=cut_off_percent_commodities,
                                                        excel_to_append_dropped_commodities=
-                                                   f"../output/{country}/summary-statistics/"
-                                                   f"{country}-sum-stats-preproc-2.xlsx")
+                                                       f"../output/{country}/summary-statistics/"
+                                                       f"{country}-sum-stats-preproc-2.xlsx")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC: PHASE 2.2 (PRICES)"
@@ -327,7 +471,7 @@ def create_dataset(country, dropped_commodities):
 
         # EXTRAPOLATE REGIONAL PATTERNS
         # doesn't extrapolate tails for interpolation method: cubic
-        df_final_commodity = preproc.extrapolate_prices_regional_patterns(df_final=df_final_commodity,
+        df_final_commodity = preproc.extrapolate_prices_regional_patterns(df=df_final_commodity,
                                                                           interpolation_method=interpolation_method,
                                                                           intrapolation_limit=epsilon_entries_interpolation,
                                                                           order=order,
