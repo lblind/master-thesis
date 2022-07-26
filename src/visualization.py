@@ -51,8 +51,7 @@ def line_plot_spei(df_spei, country, show=True, alpha=0.5):
     plt.plot(df_spei.time, df_spei["spei"], label="Original points",
                 alpha=alpha)
 
-    plt.suptitle("(Inflation-Adjusted) Price Distribution")
-    plt.title(f"Spei)")
+    plt.title(f"Spei")
     plt.xlabel("Time")
     plt.ylabel(f"Spei")
     plt.legend()
@@ -63,7 +62,7 @@ def line_plot_spei(df_spei, country, show=True, alpha=0.5):
         plt.show()
 
 
-def line_plot_mean_spei_per_year(df_wfp_and_spei, show=True, alpha=0.5):
+def line_plot_mean_spei_per_time(df_spei, country, time="Year", show=True, alpha=0.5):
     """
 
     :param df_wfp_and_spei:
@@ -71,11 +70,37 @@ def line_plot_mean_spei_per_year(df_wfp_and_spei, show=True, alpha=0.5):
     :param alpha:
     :return:
     """
-    country = df_wfp_and_spei.Country.unique()[0]
+
     output_dir = f"../output/{country}/plots/line-plots/spei"
     if os.path.exists(output_dir) is False:
         os.makedirs(output_dir)
 
+    # compute means per
+    means_per_time = df_spei.groupby(time).mean()
+
+    if "spei" in means_per_time:
+        mean_spei_per_time = means_per_time["spei"]
+    elif "Spei" in means_per_time:
+        mean_spei_per_time = means_per_time["Spei"]
+    else:
+        raise KeyError("Identifier for SPEI in passed df not recognized. "
+                       "Only valid column names are: spei, Spei.\n"
+                       f"Not found inL {df_spei.columns}")
+
+    plt.plot(df_spei[time].unique(), mean_spei_per_time, alpha=alpha)
+
+    plt.hlines(-1, df_spei[time].unique().min(), df_spei[time].unique().max(), colors="red", label="Drought")
+    plt.hlines(1, df_spei[time].unique().min(), df_spei[time].unique().max(), colors="blue", label="Flood")
+
+    plt.title(f"Mean SPEI per {time}")
+    plt.xlabel(f"Time")
+    plt.ylabel(f"Mean SPEI")
+    plt.legend()
+
+    plt.savefig(f"{output_dir}/scatter-mean-spei-per-{time}.png")
+
+    if show:
+        plt.show()
 
 def line_plot_spei_per_region(df_wfp_and_spei, show=True, alpha=0.5):
     """
@@ -96,7 +121,9 @@ def line_plot_spei_per_region(df_wfp_and_spei, show=True, alpha=0.5):
         plt.plot(df_wfp_and_spei.TimeWFP, df_wfp_and_spei["Spei"], label="Original points",
                     alpha=alpha)
 
-        plt.suptitle("(Inflation-Adjusted) Price Distribution")
+        plt.hlines(-1, df_wfp_and_spei["TimeWFP"].unique().min(), df_wfp_and_spei["TimeWFP"].unique().max(), colors="red", label="Drought")
+        plt.hlines(1, df_wfp_and_spei["TimeWFP"].unique().min(), df_wfp_and_spei["TimeWFP"].unique().max(), colors="blue", label="Flood")
+
         plt.title(f"SPEI - Region: {region},")
         plt.xlabel("Time")
         plt.ylabel(f"SPEI")

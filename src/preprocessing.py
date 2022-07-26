@@ -379,31 +379,21 @@ def extract_time_lon_lat_slice(df_wfp_coords):
     :param df_wfp_coords:
     :return:
     """
-    # TODO: use TimeWFP (or search min/ max month PER min/max year) -> otherwise false results
     # EXTRACT SLICES/ RANGES OF VARIABLES
 
     # TIME
-    max_year = df_wfp_coords.loc[df_wfp_coords["Year"].idxmax(), "Year"]
-    max_month = df_wfp_coords.loc[df_wfp_coords["Month"].idxmax(), "Month"]
-    max_day = 31  # set manually, as unit of WFP data = MONTH
-
-    max_date = datetime.datetime(max_year, max_month, max_day)
-    print("\nMax date\n", max_date)
-
-    min_year = df_wfp_coords.loc[df_wfp_coords["Year"].idxmin(), "Year"]
-    min_month = df_wfp_coords.loc[df_wfp_coords["Month"].idxmin(), "Month"]
-    min_day = 1  # set manually, as unit of WFP data = MONTH
-
-    min_date = datetime.datetime(min_year, min_month, min_day)
-    print("\nMin date\n", min_date)
+    max_date = df_wfp_coords["TimeWFP"].max()
+    min_date = df_wfp_coords["TimeWFP"].min()
 
     range_time = slice(min_date, max_date)
 
+    # LON
     max_long_market = df_wfp_coords.loc[df_wfp_coords["MarketLongitude"].idxmax(), "MarketLongitude"]
     min_long_market = df_wfp_coords.loc[df_wfp_coords["MarketLongitude"].idxmin(), "MarketLongitude"]
 
     range_lon_market = slice(min_long_market, max_long_market)
 
+    # LAT
     max_lat_market = df_wfp_coords.loc[df_wfp_coords["MarketLatitude"].idxmax(), "MarketLatitude"]
     min_lat_market = df_wfp_coords.loc[df_wfp_coords["MarketLatitude"].idxmin(), "MarketLatitude"]
 
@@ -411,15 +401,15 @@ def extract_time_lon_lat_slice(df_wfp_coords):
 
     # WRITE RESULTS INTO EXCEL SHEET
     stats_df = pd.DataFrame({
-        "MinDate (Y,M)": [(min_year, min_month)],
-        "MaxDate (Y,M)": [(max_year, max_month)],
+        "MinDate (Y,M)": [(min_date.strftime("%Y"), min_date.strftime("%m"))],
+        "MaxDate (Y,M)": [(max_date.strftime("%Y"), max_date.strftime("%m"))],
         "MinLonMarket": [min_long_market],
         "MaxLonMarket": [max_long_market],
         "MinLatMarket": [min_lat_market],
         "MaxLatMarket": [max_lat_market]
     })
     country = df_wfp_coords.Country.unique()[0]
-    stats_df.to_excel(f"../output/{country}/summary-statistics/preproc-STEP4-range-subset.xlsx")
+    stats_df.to_excel(f"../output/{country}/summary-statistics/preproc-STEP9-range-subset-time-lon-lat.xlsx")
 
     return range_time, range_lon_market, range_lat_market
 
@@ -508,7 +498,7 @@ def extract_df_subset_time_prices_all_commodities(df, add_pad_months_time_span=0
             "TimeSpanMaxY": [time_max.strftime("%Y") for time_min, time_max in min_max_times_dict.values()],
             "TimeSpanMaxM": [time_max.strftime("%m") for time_min, time_max in min_max_times_dict.values()],
             "Epsilon (Month)": [add_pad_months_time_span] * len(min_max_times_dict.keys())
-        }).to_excel(f"../output/{country}/summary-statistics/preproc-STEP-2-time-spans-per-commodity.xlsx")
+        }).to_excel(f"../output/{country}/summary-statistics/time-spans-per-commodity.xlsx")
 
     if return_time_spans:
         return df, min_max_times_dict
@@ -523,33 +513,19 @@ def extract_df_subset_time_region_all_commodities(df_wfp, add_pad_months_time_sp
 
     :return:
     """
-    dict_min_max_time_commodity = {}
-    dict_dfs_commodity = {}
+    dict_times_region_commodity = {}
+    dict_dfs_per_region = {}
+    # compute time spans per region
+    for region in df_wfp.Region.unique():
+        df_wfp_region = df_wfp[df_wfp.Region == region]
+        df_region_reduced, min_max_times_dict = extract_df_subset_time_prices_all_commodities(df=df_wfp_region, add_pad_months_time_span=add_pad_months_time_span,
+                                                      write_excel=False, return_time_spans=True)
+        dict_times_region_commodity[region] = min_max_times_dict
+
+    # per commodity find min time:
     for commodity in df_wfp.Commodity.unique():
-        min_time_commodity = 0
-        max_time_commodity = 0
-        dict_dfs_commodity_region = {}
+        pass
 
-        # extract dataset for commodity
-        df_commodity = df_wfp[df_wfp.Commodity == commodity]
-        for i, region in enumerate(df_wfp.Region.unique()):
-            # extract part per region
-            df_commodity_region = df_commodity[df_commodity.Region == region]
-
-            # select time range for commodity, region dataset
-            df_commodity_region, min_time, max_time = extract_df_subset_time_prices(df_commodity=df_commodity_region,
-                                                                epsilon_month=add_pad_months_time_span)
-
-            # first iteration
-            if i == 0:
-               min_time_commodity = min_time
-               max_time_commodity = max_time
-            # later iterations: check if range is smaller -> use the smallest set/ intersection over all regions
-            else:
-                if min_time > min_time_commodity:
-                    min_time_commodity = min_time
-                if max_time < max_time_commodity:
-                    max_time_commodity = max_time
 
 
     # TODO continue this later, OR:
