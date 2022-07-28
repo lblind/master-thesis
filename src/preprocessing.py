@@ -882,7 +882,7 @@ def separate_df_drought_non_drought(df_final_classified):
 
 
 def cut_too_sparse_values_in_column(df, column, df_sum_stats_column, cut_off,
-                                    excel_to_append_dropped_values, preproc_step_no=1):
+                                    preproc_step_no=1):
     """
     Drop values with a too large share of missing data in prices in the column.
 
@@ -903,18 +903,14 @@ def cut_too_sparse_values_in_column(df, column, df_sum_stats_column, cut_off,
 
     df = drop_values_in_column(df=df, column=column, dropped_values=values_to_drop)
 
-    # write dropped values to (existing) excel as new sheet
-    with pd.ExcelWriter(
-            excel_to_append_dropped_values, mode="a") as writer:
-        df_sum_stats_dropped_values = pd.DataFrame(
-            {
-                f"Dropped in {column}": values_to_drop,
-                "Price: % nan": df_sum_stats_column[df_sum_stats_column[column].isin(values_to_drop)][
-                    "Price: % nan"],
-                "Cut off (share of missings >=)": [cut_off] * len(values_to_drop)
-            }
-        )
-        df_sum_stats_dropped_values.to_excel(writer, sheet_name=f"Values in {column} dropped afterwards")
+    df_sum_stats_dropped_values = pd.DataFrame(
+        {
+            f"Dropped in {column}": values_to_drop,
+            "Price: % nan": df_sum_stats_column[df_sum_stats_column[column].isin(values_to_drop)][
+                "Price: % nan"],
+            "Cut off (share of missings >=)": [cut_off] * len(values_to_drop)
+        }
+    )
 
     country = df.Country.unique()[0]
     output_dir = f"../output/{country}/summary-statistics/preproc-STEP{preproc_step_no}-dropped-values-{column}"
@@ -1089,11 +1085,11 @@ def drop_missing_percentile_per_region_prices(path_excel_sum_stats, df_final, cu
 
 
 def extrapolate_prices_regional_patterns(df, interpolation_method="linear", order=None,
-                                         intrapolation_limit=25, extrapolate=False):
+                                         interpolation_limit=25, extrapolate=False):
     """
     Extrapolates missing values in Prices based on regional patterns
 
-    :param intrapolation_limit: int
+    :param interpolation_limit: int
         Max consecutive nans to inter-/extrapolate
     :param df: pd.DataFrame
     :param interpolation_method: str
@@ -1116,12 +1112,13 @@ def extrapolate_prices_regional_patterns(df, interpolation_method="linear", orde
     https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp1d.html
     (fill_value = extrapolate)
     """
-    # TODO: actually do not sort by market, as missings are often concentrated in one spot/
+    # actually do not sort by market, as missings are often concentrated in one spot/
     # one without random sorting doesn't interpolate by region, but in effect by market again
-
     # Shuffle dataframe
     seed = 42
     df = df.sample(frac=1, random_state=seed)
+
+    # without shuffling: limit = 16
 
     if extrapolate:
         interpolation_direction = "both"
@@ -1173,22 +1170,22 @@ def extrapolate_prices_regional_patterns(df, interpolation_method="linear", orde
             # Extrapolate (nominal) Prices
             df_region_new = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method="spline", order=order,
                                                                                          limit_direction=interpolation_direction,
-                                                                                         limit=intrapolation_limit))
+                                                                                         limit=interpolation_limit))
             # Extrapolate inflation-adjusted prices
             df_region_new = df_region_new.assign(AdjPrice=df_region_new.loc[:, "AdjPrice"].interpolate(method="spline",
                                                                                                        order=order,
                                                                                                        limit_direction=interpolation_direction,
-                                                                                                       limit=intrapolation_limit))
+                                                                                                       limit=interpolation_limit))
         else:
             # Extrapolate (nominal) prices
             df_region_new = df_region.assign(Price=df_region.loc[:, "Price"].interpolate(method=interpolation_method,
                                                                                          limit_direction=interpolation_direction,
-                                                                                         limit=intrapolation_limit))
+                                                                                         limit=interpolation_limit))
             # Extrapolate inflation-adjusted prices
             df_region_new = df_region_new.assign(
                 AdjPrice=df_region_new.loc[:, "AdjPrice"].interpolate(method=interpolation_method,
                                                                       limit_direction=interpolation_direction,
-                                                                      limit=intrapolation_limit))
+                                                                      limit=interpolation_limit))
 
         # Scatter plot: Plot post interpolation (/ extrapolated points)
         visualization.scatter_extrapolated_adj_prices_per_region(df_region=df_region,
@@ -1206,6 +1203,11 @@ def extrapolate_prices_regional_patterns(df, interpolation_method="linear", orde
     # Merge extrapolated dataframes per region
     df_merged_all_regions = pd.concat(dfs_extrapolated_per_region.values(), ignore_index=True)
 
+    if df_merged_all_regions.AdjPrice.isna().sum() != 0 or df_merged_all_regions.Price.isna().sum() != 0:
+        raise ValueError(f"Still nan values in AdjPrice or Price column despite interpolation.\n"
+                         f"({df_merged_all_regions.AdjPrice.isna().sum()}). Please check "
+                         f"if maybe the interpolation limit ({interpolation_limit}) has been exceeded")
+
     return df_merged_all_regions
 
 
@@ -1220,7 +1222,7 @@ def extrapolate_prices_per_commodity_regional_patterns(df_wfp, interpolation_met
         df_commodity = df_wfp[df_wfp.Commodity == commodity]
         df_commodity_extrapolated = extrapolate_prices_regional_patterns(df=df_commodity,
                                                                          interpolation_method=interpolation_method,
-                                                                         intrapolation_limit=intrapolation_limit,
+                                                                         interpolation_limit=intrapolation_limit,
                                                                          order=order,
                                                                          extrapolate=extrapolate)
         dict_df_commodities[commodity] = df_commodity_extrapolated

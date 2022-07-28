@@ -19,11 +19,13 @@ import visualization
 # a bit better: cut_off_marekts = 0.35, cut_off_commodities = 0.75 (17 Markets)
 # solves the issue: 0.75 (commodities), 0.3 (markets) (10 Markets)
 
+# TODO: different cut offs per commodity for markets (and compute share of missings PER COMMODITY)
+# TODO: Maybe loop over create dataset function and extract only subset per commodity
 def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
                                    add_pad_months_time_span=0,
-                                   cut_off_commodities=0.75,
-                                   cut_off_markets=0.3,
-                                   limit_consec_interpol=42
+                                   cut_off_commodities=0.6,
+                                   cut_off_markets=0.5,
+                                   limit_consec_interpol=14
                                    ):
     """
     Read raw WFP database and do the following steps:
@@ -87,14 +89,13 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
     preproc_step += 1
 
     # Drop all commodities that have missing data > certain cut-off (too sparse)
-    cut_off_percent_commodity = 90
-    excel_path_stats = f"../output/{country}/summary-statistics/{country}-sum-stats-preproc-STEP{preproc_step - 1}-subset-time.xlsx"
+
     df_wfp = preproc.cut_too_sparse_values_in_column(df=df_wfp,
                                                      column="Commodity",
                                                      df_sum_stats_column=df_commodity_stats,
                                                      preproc_step_no=4,
-                                                     cut_off=cut_off_commodities,
-                                                     excel_to_append_dropped_values=excel_path_stats)
+                                                     cut_off=cut_off_commodities
+                                                     )
 
     # write summary statistics (share of missing values within market dataset)
     # check missings (result of step 4)
@@ -105,17 +106,16 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
           "# PREPROC - PHASE A: STEP 5 (Missings -> Subset of Market: Drop too sparse markets)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-    excel_path_stats = f"../output/{country}/summary-statistics/{country}-sum-stats-preproc-STEP{preproc_step}-subset-commodity.xlsx"
     preproc_step += 1
     # Drop all markets that have missing data > certain cut-off (too sparse)
-    # excel_path_stats = f"../output/{country}/summary-statistics/{country}-sum-stats-preproc-STEP{str(preproc_step - 1)}-subset-commodity.xlsx "
+
     # print(excel_path_stats)
     df_wfp = preproc.cut_too_sparse_values_in_column(df=df_wfp,
                                                      column="Market",
                                                      df_sum_stats_column=df_market_stats,
                                                      preproc_step_no=5,
                                                      cut_off=cut_off_markets,
-                                                     excel_to_append_dropped_values=excel_path_stats)
+                                                     )
 
     # Write sum stats (result Step 5)
     stats.sum_stats_prices(df=df_wfp, excel_output_extension=f"-preproc-STEP{preproc_step}-subset-market")
@@ -273,7 +273,7 @@ def phase_b_merge_wfp_with_spei_dataset(country, df_wfp_preproc, write_results_t
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
-          "# PREPROC - WRITING RESULTS INTO EXCELS."
+          "# PREPROC - WRITING RESULTS TO EXCEL."
           "\n# ------------------------------------------------------------------------------------------------------\n")
     if write_results_to_excel:
         dict_df_final_per_commodity = {}
