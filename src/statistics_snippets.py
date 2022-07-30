@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 
 import utils
+import preprocessing as preproc
 
 
 def mean_column_per_group(gdf_final, column="AdjPrice", group="District"):
@@ -32,6 +33,49 @@ def mean_column_per_group(gdf_final, column="AdjPrice", group="District"):
     gdf_merged = utils.merge_dfs_left(df_left=gdf_final, df_right=df_means, on=group)
 
     return gdf_merged
+
+def sum_stats_range_of_variables(df, add_pad_months_time_span=0, preproc_step=1):
+    """
+
+    :param df:
+    :return:
+    """
+
+
+    country = df.Country.unique()[0]
+
+    df_commodities_dict = {}
+    min_max_times_dict = {}
+
+    for commodity in df.Commodity.unique():
+        # Limit the dfs to specific subset
+        df_commodity = df[df.Commodity == commodity]
+
+        # call subset extraction function -> find union of time
+        df_commodity, min_time, max_time = preproc.extract_df_subset_time_prices(df_commodity=df_commodity,
+                                                                         epsilon_month=add_pad_months_time_span)
+
+        # call subset extraction function -> find intersection of time
+        # (per region as interpolated by region afterwards)
+        df_commodity, min_time, max_time = preproc.extract_intersec_subset_time_per_region_for_commodity(df_commodity=
+                                                                                                 df_commodity)
+
+        # store min and max time for further use/ documentation
+        min_max_times_dict[commodity] = (min_time, max_time)
+
+        # add result to dictionary
+        df_commodities_dict[commodity] = df_commodity
+
+    # Summary stats: write the subsets of time
+    pd.DataFrame({
+        "Commodity": min_max_times_dict.keys(),
+        "TimeSpanMinY": [time_min.strftime("%Y") for time_min, time_max in min_max_times_dict.values()],
+        "TimeSpanMinM": [time_min.strftime("%m") for time_min, time_max in min_max_times_dict.values()],
+        "TimeSpanMaxY": [time_max.strftime("%Y") for time_min, time_max in min_max_times_dict.values()],
+        "TimeSpanMaxM": [time_max.strftime("%m") for time_min, time_max in min_max_times_dict.values()],
+        "Epsilon (Month)": [add_pad_months_time_span] * len(min_max_times_dict.keys())
+    }).sort_values(by="Commodity").to_excel(
+        f"../output/{country}/summary-statistics/preproc-STEP-{preproc_step}-time-spans-per-commodity.xlsx")
 
 
 def sum_stats_prices(df, var_list_groups_by=None, excel_output_extension="-preproc-1",

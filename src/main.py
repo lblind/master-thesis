@@ -35,7 +35,7 @@ if __name__ == "__main__":
 
     # TODO: Outcomment this line if dataset hat not yet been created
     df_final = dataset_creation.create_dataset(country=country, dropped_commodities=dropped_commodities,
-                                                write_results_to_excel=False)
+                                                 write_results_to_excel=True)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# ANALYSIS"
@@ -64,4 +64,4 @@ if __name__ == "__main__":
           "# DYNAMIC MODE DECOMPOSITION (DMD)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-    # dmd.dmd_per_commodity(df_final)
+    dmd.dmd_per_commodity(df_final)

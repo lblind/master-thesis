@@ -506,7 +506,7 @@ def extract_intersec_subset_time_per_region_for_commodity(df_commodity):
 
 
 def extract_df_subset_time_prices_all_commodities(df, add_pad_months_time_span=0, write_excel=True,
-                                                  return_time_spans=False):
+                                                  return_time_spans=False, preproc_step=1):
     """
     Extract subset of df based on the first and last price entry (+ epsilon)
     that occurs regardless of the region (time-wise).
@@ -549,14 +549,20 @@ def extract_df_subset_time_prices_all_commodities(df, add_pad_months_time_span=0
 
     if write_excel:
         # Summary stats: write the subsets of time
-        pd.DataFrame({
+
+        df_time_spans = pd.DataFrame({
             "Commodity": min_max_times_dict.keys(),
             "TimeSpanMinY": [time_min.strftime("%Y") for time_min, time_max in min_max_times_dict.values()],
             "TimeSpanMinM": [time_min.strftime("%m") for time_min, time_max in min_max_times_dict.values()],
             "TimeSpanMaxY": [time_max.strftime("%Y") for time_min, time_max in min_max_times_dict.values()],
             "TimeSpanMaxM": [time_max.strftime("%m") for time_min, time_max in min_max_times_dict.values()],
             "Epsilon (Month)": [add_pad_months_time_span] * len(min_max_times_dict.keys())
-        }).sort_values(by="Commodity").to_excel(f"../output/{country}/summary-statistics/preproc-STEP-3-time-spans-per-commodity.xlsx")
+        }).sort_values(by="Commodity")
+        # write it as preproc step
+        df_time_spans.to_excel(f"../output/{country}/summary-statistics/preproc-STEP-{preproc_step}-time-spans-per-commodity.xlsx")
+
+        # update it to current time range
+        df_time_spans.to_excel(f"../output/{country}/summary-statistics/time-spans-per-commodity.xlsx")
 
     if return_time_spans:
         return df, min_max_times_dict
@@ -978,7 +984,7 @@ def write_preprocessing_results_to_excel(df_wfp, df_wfp_with_coords, df_spei, di
     return df_final_all
 
 
-def drop_years(df, years_list):
+def drop_years(df, years_list, preproc_step=10):
     """
     Drops all data for specific years
 
@@ -998,8 +1004,13 @@ def drop_years(df, years_list):
     country = df.Country.unique()[0]
     stats_df.to_excel(f"../output/{country}/summary-statistics/preproc-STEP-10-dropped-years-no-entries.xlsx")
 
-    # Just keep years for
-    return df[~df["Year"].isin(years_list)]
+    # Just keep years that are not in years list
+    df = df[~df["Year"].isin(years_list)]
+
+    # Update time range
+    extract_df_subset_time_prices_all_commodities(df=df, write_excel=True, preproc_step=preproc_step)
+
+    return df
 
 
 def drop_missing_percentile_per_region_prices(path_excel_sum_stats, df_final, cut_off_percentile=90,
