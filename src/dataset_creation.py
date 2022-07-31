@@ -54,7 +54,7 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
     df_wfp = preproc.get_df_wfp_preprocessed_excel_region_method(country=country,
                                                                  dropped_commodities=dropped_commodities)
     # write the raw output to an Excel workbook
-    df_wfp.to_excel(f"../output/{country}/intermediate-results/df_wfp.xlsx")
+    df_wfp.to_excel(f"../output/{country}/intermediate-results/df_wfp_STEP{preproc_step}.xlsx")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC - PHASE A: STEP 2 (Adjust prices to common food inflation level -> most recent)"
@@ -62,6 +62,9 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
     preproc_step += 1
     # Adjust food prices to one common price level
     df_wfp = preproc.adjust_food_prices(country=country, df_wfp=df_wfp, data_source_inflation="WFP")
+
+    # write the raw output to an Excel workbook
+    df_wfp.to_excel(f"../output/{country}/intermediate-results/df_wfp_STEP{preproc_step}.xlsx")
 
     # Write sum stats (result Step 2/1)
     stats.sum_stats_prices(df=df_wfp, excel_output_extension="-preproc-STEP1-2-df_wfp")
@@ -74,6 +77,9 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
     # extract only the relevant subsets of time
     df_wfp = preproc.extract_df_subset_time_prices_all_commodities(df=df_wfp,
                                                                    add_pad_months_time_span=add_pad_months_time_span)
+
+    # write the raw output to an Excel workbook
+    df_wfp.to_excel(f"../output/{country}/intermediate-results/df_wfp_STEP{preproc_step}.xlsx")
 
     # TODO: additional subset time component restricting time to smallest time overlap per region? (as extrapolated in
     # regional patterns?) -> alternatively: just extrapolate over dataset, regardless of regional patterns

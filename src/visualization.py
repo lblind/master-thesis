@@ -27,6 +27,7 @@ import plotly.express as px
 import missingno as msgo
 import statistics_snippets as stats
 
+
 # ----------------------------------------------------------------------------------------------------------------------
 # (LINE) PLOTS
 # ----------------------------------------------------------------------------------------------------------------------
@@ -40,7 +41,6 @@ def line_plot_spei(df_spei, country, show=True, alpha=0.5):
     :return:
     """
 
-
     print("Columns df spei:\n", df_spei.columns)
 
     # Make sure Output dir exists
@@ -49,7 +49,7 @@ def line_plot_spei(df_spei, country, show=True, alpha=0.5):
         os.makedirs(output_dir)
 
     plt.plot(df_spei.time, df_spei["spei"], label="Original points",
-                alpha=alpha)
+             alpha=alpha)
 
     plt.title(f"Spei")
     plt.xlabel("Time")
@@ -135,12 +135,13 @@ def line_plot_mean_min_max_spei_per_time(df_spei, country, time="Year", show=Tru
     plt.ylabel(f"SPEI", style="italic")
 
     # shift more to right: increase x-value in tuple
-    plt.legend(loc="lower left", bbox_to_anchor = (0.9, 0.8))
+    plt.legend(loc="lower left", bbox_to_anchor=(0.9, 0.8))
 
     plt.savefig(f"{output_dir}/scatter-mean-spei-per-{time}.png")
 
     if show:
         plt.show()
+
 
 def line_plot_spei_per_region(df_wfp_and_spei, show=True, alpha=0.5):
     """
@@ -159,7 +160,7 @@ def line_plot_spei_per_region(df_wfp_and_spei, show=True, alpha=0.5):
         # plt.scatter(df_wfp_and_spei.TimeWFP, df_wfp_and_spei["Spei"], label="Original points",
         #            alpha=alpha)
         plt.plot(df_wfp_and_spei.TimeWFP, df_wfp_and_spei["Spei"], label="Original points",
-                    alpha=alpha)
+                 alpha=alpha)
 
         plt.hlines(-1, df_wfp_and_spei["TimeWFP"].unique().min(), df_wfp_and_spei["TimeWFP"].unique().max(),
                    colors="red",
@@ -185,6 +186,62 @@ def line_plot_spei_per_region(df_wfp_and_spei, show=True, alpha=0.5):
 # SCATTER PLOTS
 # ----------------------------------------------------------------------------------------------------------------------
 
+def scatter_adj_prices_per_region_one_fig(df_wfp):
+    """
+
+    :return:
+    """
+
+    n_regions = len(df_wfp.Region.unique())
+
+    for commodity in df_wfp.Commodity.unique():
+        df_wfp_commodity = df_wfp[df_wfp.Commodity == commodity]
+        fig, ax = plt.subplots(n_regions, 1, sharex=True)
+
+        for i, region in enumerate(df_wfp_commodity.Region.unique()):
+            df_wfp_commodity_region = df_wfp_commodity[df_wfp_commodity.Region == region]
+            # ax[0, i].scatter(df_wfp.TimeWFP, df_wfp.AdjPrice, c = ["red" if df_wfp.Drought else "blue"], alpha=0.5)
+            ax[i].scatter(df_wfp_commodity_region.TimeWFP, df_wfp_commodity_region.AdjPrice, alpha=0.5)
+            ax[i].set_title(f"{region}")
+
+            # Add padding between axes and labels
+            ax[i].get_xaxis().set_tick_params(pad=5)
+            ax[i].get_yaxis().set_tick_params(pad=5)
+
+            if i != n_regions -1:
+                ax[i].get_xaxis().set_visible(False)
+
+            # Add x, y gridlines
+            ax[i].get_xaxis().grid(b=True, color='grey',
+                     linestyle='-.', linewidth=0.5,
+                     alpha=0.6)
+            ax[i].get_yaxis().grid(b=True, color='grey',
+                                   linestyle='-.', linewidth=0.5,
+                                   alpha=0.6)
+
+        # set the spacing between subplots
+        # option 1)
+        fig.tight_layout()
+
+        # option 2)
+        plt.subplots_adjust(left=0.1,
+                            bottom=0.1,
+                            right=0.9,
+                            top=0.9,
+                            wspace=0.4,
+                            hspace=0.4)
+
+
+        fig.suptitle(f"Commodity: {commodity}")
+
+        # Make sure Output dir exists
+        country = df_wfp.Country.unique()[0]
+        output_dir = f"../output/{country}/plots/scatter-plots/{commodity}"
+        output_dir_extrapolation = output_dir + "/extrapolation"
+        if os.path.exists(output_dir_extrapolation) is False:
+            os.makedirs(output_dir_extrapolation)
+        plt.savefig(f"{output_dir}/{commodity}-scatter-adj-prices-regions-one-fig.png")
+        plt.show()
 
 
 def scatter_adj_prices_per_region(df_region, commodity, currency, show=False, alpha=0.5):

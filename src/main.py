@@ -34,8 +34,8 @@ if __name__ == "__main__":
     # dropped_commodities = None
 
     # TODO: Outcomment this line if dataset hat not yet been created
-    df_final = dataset_creation.create_dataset(country=country, dropped_commodities=dropped_commodities,
-                                                 write_results_to_excel=True)
+    # df_final = dataset_creation.create_dataset(country=country, dropped_commodities=dropped_commodities,
+    #                                             write_results_to_excel=True)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# ANALYSIS"
@@ -44,11 +44,19 @@ if __name__ == "__main__":
     path_to_final_df = f"../output/{country}/{country}-final-dta.xlsx"
     # TODO outcomment this line if dataset has already been created
     # df_final = utils.convert_excel_to_df(path_to_final_df)
-    # visualization.plot_hist(df_final, "SpeiCat", orientation="horizontal", bins=7, png_appendix="-preproc-STEP6")
+
+    path_to_df_wfp = f"../output/{country}/intermediate-results/df_wfp_STEP3.xlsx"
+    df_wfp = utils.convert_excel_to_df(path_to_df_wfp)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# VISUALIZATION"
           "\n# ------------------------------------------------------------------------------------------------------\n")
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# VISUALIZATION - Explorative analysis"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+
+    visualization.scatter_adj_prices_per_region_one_fig(df_wfp=df_wfp)
 
     # visualization.plot_malawi(df_final=df_final)
     # visualization.plot_malawi_regions(df_final)
@@ -64,4 +72,4 @@ if __name__ == "__main__":
           "# DYNAMIC MODE DECOMPOSITION (DMD)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-    dmd.dmd_per_commodity(df_final)
+    # dmd.dmd_per_commodity(df_final)
