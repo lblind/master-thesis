@@ -100,6 +100,9 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
     # replace extreme outliers with nan (only 1 market)
     df_wfp = preproc.replace_extreme_outliers_with_nan(df_wfp)
 
+    # write the raw output to an Excel workbook
+    df_wfp.to_excel(f"../output/{country}/intermediate-results/df_wfp_STEP{preproc_step}.xlsx")
+
     df_commodity_stats = stats.sum_stats_prices(df=df_wfp, return_df_by_group_sheet="Commodity",
                                                 excel_output_extension=f"-preproc-STEP{preproc_step}-cut-extreme-outliers")
 

@@ -25,6 +25,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.dates import DateFormatter
 import matplotlib.dates as mdates
 
+import preprocessing as preproc
+
 
 import plotly.express as px
 
@@ -191,7 +193,7 @@ def line_plot_spei_per_region(df_wfp_and_spei, show=True, alpha=0.5):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def scatter_adj_price_region_all_commodities(df_wfp, alpha=0.5):
+def scatter_adj_price_region_all_commodities(df_wfp, alpha=0.5, preproc_step=4):
     """
 
     :param df_wfp:
@@ -235,7 +237,110 @@ def scatter_adj_price_region_all_commodities(df_wfp, alpha=0.5):
         if os.path.exists(output_dir) is False:
             os.makedirs(output_dir)
 
-        plt.savefig(f"{output_dir}/{commodity}-scatter-adj-prices-STEP3.png")
+        plt.savefig(f"{output_dir}/{commodity}-scatter-adj-prices-STEP{preproc_step}.png")
+        plt.show()
+
+def scatter_adj_price_region_all_commodities_droughts(df_wfp, alpha=0.5, preproc_step=4):
+    """
+
+    :param df_wfp:
+    :return:
+    """
+    country = df_wfp.Country.unique()[0]
+
+    # merge SPEI to price data
+    # merge market coordinates
+    df_wfp = preproc.read_and_merge_wfp_market_coords(df_wfp=df_wfp, country=country)
+
+    # extract relevant time slice
+    slice_time, slice_lon, slice_lat = preproc.extract_time_lon_lat_slice(df_wfp)
+
+    # read relevant subset of entire (global) SPEI database
+    df_spei = preproc.read_climate_data(time_slice=slice_time, long_slice=slice_lon, lat_slice=slice_lat,
+                                        country=country)
+    # merge spei
+    df_wfp = preproc.merge_food_price_and_climate_dfs(df_wfp_with_coords=df_wfp, df_spei=df_spei)
+
+    currency = df_wfp.Currency.unique()[0]
+    for commodity in df_wfp.Commodity.unique():
+        # Three subplots per commodity
+        fig, ax = plt.subplots(3, 1)
+
+        df_wfp_commodity = df_wfp[df_wfp.Commodity == commodity]
+
+        df_wfp_commodity_drought = df_wfp_commodity[df_wfp_commodity.Spei < -1]
+        df_wfp_commodity_no_drought = df_wfp_commodity[df_wfp_commodity.Spei >= -1]
+        ax[1].scatter(df_wfp_commodity_drought.TimeWFP, df_wfp_commodity_drought["AdjPrice"], label="Drought", color="red",
+                    alpha=alpha)
+        ax[1].set_title("Drought")
+
+        # Don't display xlabel for these
+        ax[1].set(xlabel=None)
+        ax[2].set(xlabel=None)
+
+        for i in range(0, 2):
+            ax[i].get_xaxis().set_visible(False)
+            # ax[i].get_xaxis().set_xlabel(None)
+
+        # Set grid
+        for i in range(3):
+            # Add x, y gridlines
+
+            ax[i].get_xaxis().grid(b=True, color='grey',
+                                   linestyle='-.', linewidth=0.5,
+                                   alpha=0.6)
+            ax[i].get_yaxis().grid(b=True, color='grey',
+                                   linestyle='-.', linewidth=0.5,
+                                   alpha=0.6)
+
+        ax[0].scatter(df_wfp_commodity_drought.TimeWFP, df_wfp_commodity_drought["AdjPrice"], label="Drought",
+                      color="red",
+                      alpha=alpha)
+        ax[0].scatter(df_wfp_commodity_no_drought.TimeWFP, df_wfp_commodity_no_drought["AdjPrice"], label="No Drought",
+                      alpha=alpha)
+        ax[0].set_title("Both")
+
+
+
+        # plt.vlines(df_wfp_commodity_drought.TimeWFP, 0, 4000)
+        ax[2].scatter(df_wfp_commodity_no_drought.TimeWFP, df_wfp_commodity_no_drought["AdjPrice"], label="No Drought",
+                    alpha=alpha)
+        ax[2].set_title("No drought")
+
+
+
+        fig.suptitle("(Inflation-Adjusted) Price Distribution")
+
+        # plt.title(f"Commodity: {commodity}")
+        ax[2].set_xlabel("Time")
+        ax[1].set_ylabel(f"Price [{currency}]")
+        # plt.legend()
+
+        # option 1)
+        plt.tight_layout()
+
+        # option 2)
+        plt.subplots_adjust(left=0.1,
+                            bottom=0.15,
+                            right=0.9,
+                            top=0.85,
+                            wspace=0.4,
+                            hspace=0.4)
+
+        # format the axis
+        # just display the year
+        # plt.gca().xaxis.set_major_formatter(DateFormatter("%Y"))
+        # display year and month
+        plt.gca().xaxis.set_major_formatter(DateFormatter("%Y, %m"))
+        plt.xticks(rotation=30)
+
+        # Make sure Output dir exists
+        country = df_wfp.Country.unique()[0]
+        output_dir = f"../output/{country}/plots/scatter-plots/{commodity}"
+        if os.path.exists(output_dir) is False:
+            os.makedirs(output_dir)
+
+        plt.savefig(f"{output_dir}/{commodity}-scatter-adj-prices-STEP{preproc_step}-drought.png")
         plt.show()
 
 
@@ -263,8 +368,10 @@ def scatter_adj_prices_per_region_one_fig(df_wfp):
             ax[i].get_xaxis().set_tick_params(pad=5)
             ax[i].get_yaxis().set_tick_params(pad=5)
 
+            # Don't display xlabel for these
             if i != n_regions -1:
-                ax[i].get_xaxis().set_visible(False)
+                # ax[i].get_xaxis().set_visible(False)
+                ax[i].get_xaxis().set_xlabel(None)
 
             # # Add x, y gridlines
             ax[i].get_xaxis().grid(b=True, color='grey',

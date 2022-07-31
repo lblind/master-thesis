@@ -43,10 +43,10 @@ if __name__ == "__main__":
 
     path_to_final_df = f"../output/{country}/{country}-final-dta.xlsx"
     # TODO outcomment this line if dataset has already been created
-    df_final = utils.convert_excel_to_df(path_to_final_df)
+    # df_final = utils.convert_excel_to_df(path_to_final_df)
 
-    path_to_df_wfp = f"../output/{country}/intermediate-results/df_wfp_STEP3.xlsx"
-    # df_wfp = utils.convert_excel_to_df(path_to_df_wfp)
+    path_to_df_wfp = f"../output/{country}/intermediate-results/df_wfp_STEP4.xlsx"
+    df_wfp = utils.convert_excel_to_df(path_to_df_wfp)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# VISUALIZATION"
@@ -58,6 +58,8 @@ if __name__ == "__main__":
 
     # visualization.scatter_adj_prices_per_region_one_fig(df_wfp=df_wfp)
     # visualization.scatter_adj_price_region_all_commodities(df_wfp=df_wfp)
+
+    visualization.scatter_adj_price_region_all_commodities_droughts(df_wfp=df_wfp)
 
     # visualization.boxplot_adj_prices(df_wfp, png_appendix="-preproc-STEP3")
 
