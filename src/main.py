@@ -57,6 +57,7 @@ if __name__ == "__main__":
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
     visualization.scatter_adj_prices_per_region_one_fig(df_wfp=df_wfp)
+    visualization.scatter_adj_price_region_all_commodities(df_wfp=df_wfp)
 
     # visualization.plot_malawi(df_final=df_final)
     # visualization.plot_malawi_regions(df_final)

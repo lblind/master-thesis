@@ -22,6 +22,10 @@ import numpy as np
 import folium
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+from matplotlib.dates import DateFormatter
+import matplotlib.dates as mdates
+
+
 import plotly.express as px
 
 import missingno as msgo
@@ -186,6 +190,56 @@ def line_plot_spei_per_region(df_wfp_and_spei, show=True, alpha=0.5):
 # SCATTER PLOTS
 # ----------------------------------------------------------------------------------------------------------------------
 
+
+def scatter_adj_price_region_all_commodities(df_wfp, alpha=0.5):
+    """
+
+    :param df_wfp:
+    :return:
+    """
+    currency = df_wfp.Currency.unique()[0]
+    for commodity in df_wfp.Commodity.unique():
+        df_wfp_commodity = df_wfp[df_wfp.Commodity == commodity]
+
+        plt.scatter(df_wfp_commodity.TimeWFP, df_wfp_commodity["AdjPrice"], label="Original points",
+                    alpha=alpha)
+
+        plt.suptitle("(Inflation-Adjusted) Price Distribution")
+        plt.title(f"Commodity: {commodity}")
+        plt.xlabel("Time")
+        plt.ylabel(f"Price [{currency}]")
+        plt.legend()
+
+        # option 1)
+        plt.tight_layout()
+
+        # format the axis
+        # just display the year
+        # plt.gca().xaxis.set_major_formatter(DateFormatter("%Y"))
+        # display year and month
+        plt.gca().xaxis.set_major_formatter(DateFormatter("%Y, %m"))
+        plt.xticks(rotation=30)
+
+
+        # Add x, y gridlines
+        plt.gca().xaxis.grid(b=True, color='grey',
+                               linestyle='-.', linewidth=0.5,
+                               alpha=0.6)
+        plt.gca().yaxis.grid(b=True, color='grey',
+                               linestyle='-.', linewidth=0.5,
+                               alpha=0.6)
+
+        # Make sure Output dir exists
+        country = df_wfp.Country.unique()[0]
+        output_dir = f"../output/{country}/plots/scatter-plots/{commodity}"
+        if os.path.exists(output_dir) is False:
+            os.makedirs(output_dir)
+
+        plt.savefig(f"{output_dir}/{commodity}-scatter-adj-prices-STEP3.png")
+        plt.show()
+
+
+
 def scatter_adj_prices_per_region_one_fig(df_wfp):
     """
 
@@ -196,7 +250,8 @@ def scatter_adj_prices_per_region_one_fig(df_wfp):
 
     for commodity in df_wfp.Commodity.unique():
         df_wfp_commodity = df_wfp[df_wfp.Commodity == commodity]
-        fig, ax = plt.subplots(n_regions, 1, sharex=True)
+
+        fig, ax = plt.subplots(n_regions, 1, sharex=True, sharey=True)
 
         for i, region in enumerate(df_wfp_commodity.Region.unique()):
             df_wfp_commodity_region = df_wfp_commodity[df_wfp_commodity.Region == region]
@@ -211,7 +266,7 @@ def scatter_adj_prices_per_region_one_fig(df_wfp):
             if i != n_regions -1:
                 ax[i].get_xaxis().set_visible(False)
 
-            # Add x, y gridlines
+            # # Add x, y gridlines
             ax[i].get_xaxis().grid(b=True, color='grey',
                      linestyle='-.', linewidth=0.5,
                      alpha=0.6)
@@ -219,17 +274,29 @@ def scatter_adj_prices_per_region_one_fig(df_wfp):
                                    linestyle='-.', linewidth=0.5,
                                    alpha=0.6)
 
+
+
         # set the spacing between subplots
         # option 1)
         fig.tight_layout()
 
+        # format the axis
+        # just display the year
+        # plt.gca().xaxis.set_major_formatter(DateFormatter("%Y"))
+        # display year and month
+        plt.gca().xaxis.set_major_formatter(DateFormatter("%Y, %m"))
+        plt.xticks(rotation=30)
+
         # option 2)
         plt.subplots_adjust(left=0.1,
-                            bottom=0.1,
+                            bottom=0.15,
                             right=0.9,
-                            top=0.9,
+                            top=0.85,
                             wspace=0.4,
                             hspace=0.4)
+
+        # define range of x axis
+        # plt.xticks(ticks=df_wfp_commodity.Year)
 
 
         fig.suptitle(f"Commodity: {commodity}")
