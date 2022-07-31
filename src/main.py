@@ -33,7 +33,7 @@ if __name__ == "__main__":
     # Drop nothing
     # dropped_commodities = None
 
-    # TODO: Outcomment this line if dataset hat not yet been created
+    # # TODO: Outcomment this line if dataset hat not yet been created
     # df_final = dataset_creation.create_dataset(country=country, dropped_commodities=dropped_commodities,
     #                                             write_results_to_excel=True)
 
@@ -43,10 +43,10 @@ if __name__ == "__main__":
 
     path_to_final_df = f"../output/{country}/{country}-final-dta.xlsx"
     # TODO outcomment this line if dataset has already been created
-    # df_final = utils.convert_excel_to_df(path_to_final_df)
+    df_final = utils.convert_excel_to_df(path_to_final_df)
 
     path_to_df_wfp = f"../output/{country}/intermediate-results/df_wfp_STEP3.xlsx"
-    df_wfp = utils.convert_excel_to_df(path_to_df_wfp)
+    # df_wfp = utils.convert_excel_to_df(path_to_df_wfp)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# VISUALIZATION"
@@ -59,11 +59,11 @@ if __name__ == "__main__":
     # visualization.scatter_adj_prices_per_region_one_fig(df_wfp=df_wfp)
     # visualization.scatter_adj_price_region_all_commodities(df_wfp=df_wfp)
 
-    visualization.boxplot_adj_prices(df_wfp, png_appendix="-preproc-STEP3")
+    # visualization.boxplot_adj_prices(df_wfp, png_appendix="-preproc-STEP3")
 
-    df_wfp = preproc.replace_extreme_outliers_with_nan(df_wfp)
+    # df_wfp = preproc.replace_extreme_outliers_with_nan(df_wfp)
 
-    visualization.boxplot_adj_prices(df_wfp, png_appendix="-cut-outlier-rice")
+    # visualization.boxplot_adj_prices(df_wfp, png_appendix="-cut-outlier-rice")
 
     # visualization.plot_malawi(df_final=df_final)
     # visualization.plot_malawi_regions(df_final)

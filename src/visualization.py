@@ -382,11 +382,13 @@ def boxplot_adj_prices(df, png_appendix=""):
     df.boxplot(column="AdjPrice", by="Commodity", grid=True)
 
     country = df.Country.unique()[0]
+    currency = df.Currency.unique()[0]
 
     output_path = f"../output/{country}/plots/boxplots"
     if os.path.exists(output_path) is False:
         os.makedirs(output_path)
 
+    plt.ylabel(f"Price [{currency}]")
     plt.xticks(rotation=30)
     plt.tight_layout()
     plt.savefig(f"{output_path}/All-commodities-hist{png_appendix}.png")
