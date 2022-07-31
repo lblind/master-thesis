@@ -369,6 +369,30 @@ def scatter_extrapolated_adj_prices_per_region(df_region, df_region_extrapolated
     if show:
         plt.show()
 
+# ----------------------------------------------------------------------------------------------------------------------
+# BOXPLOTS
+# ----------------------------------------------------------------------------------------------------------------------
+
+def boxplot_adj_prices(df, png_appendix=""):
+    """
+
+    :return:
+    """
+    # boxplot per commodity
+    df.boxplot(column="AdjPrice", by="Commodity", grid=True)
+
+    country = df.Country.unique()[0]
+
+    output_path = f"../output/{country}/plots/boxplots"
+    if os.path.exists(output_path) is False:
+        os.makedirs(output_path)
+
+    plt.xticks(rotation=30)
+    plt.tight_layout()
+    plt.savefig(f"{output_path}/All-commodities-hist{png_appendix}.png")
+    plt.show()
+
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # BAR CHARTS

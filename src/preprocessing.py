@@ -8,12 +8,12 @@ import glob
 import os
 import warnings
 
-import matplotlib.pyplot as plt
 import pandas as pd
 import xarray as xr
 import numpy as np
 import datetime
 from geopy.distance import great_circle
+from scipy.stats.mstats import winsorize
 
 import utils
 import visualization
@@ -107,6 +107,41 @@ def drop_values_in_column(df, column, dropped_values):
                       "the list of values to be dropped) in `column`.")
 
     return df
+
+
+def replace_extreme_outliers_with_nan(df_wfp, cut_off=20000, preproc_step=4):
+    """
+    As there is a huge outlier for rice, this one will be cut manually
+    based on the first boxplot
+
+    Hint: Of course, there are more sophisticated methods to do this, however,
+    due to the scope of this thesis, this will be a preliminary solution
+    :return:
+    """
+    outlier_df = df_wfp[df_wfp.AdjPrice > cut_off]
+    country = df_wfp.Country.unique()[0]
+
+    outlier_df.to_excel(f"../output/{country}/summary-statistics/preproc-STEP{preproc_step}-outlier-adj_price-{cut_off}.xlsx")
+
+    # where the adjusted price exceeds the cut off -> replace Price & AdjPrice with nan
+    df_wfp.loc[df_wfp["AdjPrice"] > cut_off, ["AdjPrice", "Price"]] = np.nan
+
+    return df_wfp
+
+
+def replace_outliers_with_nan_winsorize(limit_left=0, limit_right=0.01):
+    """
+    Checks for outliers and replaces them with nn
+    :return:
+
+    References
+    ----------
+    - https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.mstats.winsorize.html
+    - https://hersanyagci.medium.com/detecting-and-handling-outliers-with-pandas-7adbfcd5cad8
+
+
+    """
+    pass
 
 
 def get_df_wfp_preprocessed_excel_region_method(country, dropped_commodities=None):

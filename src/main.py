@@ -56,8 +56,14 @@ if __name__ == "__main__":
           "# VISUALIZATION - Explorative analysis"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-    visualization.scatter_adj_prices_per_region_one_fig(df_wfp=df_wfp)
-    visualization.scatter_adj_price_region_all_commodities(df_wfp=df_wfp)
+    # visualization.scatter_adj_prices_per_region_one_fig(df_wfp=df_wfp)
+    # visualization.scatter_adj_price_region_all_commodities(df_wfp=df_wfp)
+
+    visualization.boxplot_adj_prices(df_wfp, png_appendix="-preproc-STEP3")
+
+    df_wfp = preproc.replace_extreme_outliers_with_nan(df_wfp)
+
+    visualization.boxplot_adj_prices(df_wfp, png_appendix="-cut-outlier-rice")
 
     # visualization.plot_malawi(df_final=df_final)
     # visualization.plot_malawi_regions(df_final)
