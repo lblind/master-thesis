@@ -26,6 +26,7 @@ from matplotlib.dates import DateFormatter
 import matplotlib.dates as mdates
 
 import preprocessing as preproc
+import utils
 
 
 import plotly.express as px
@@ -264,7 +265,7 @@ def scatter_adj_price_region_all_commodities_droughts(df_wfp, alpha=0.5, preproc
     currency = df_wfp.Currency.unique()[0]
     for commodity in df_wfp.Commodity.unique():
         # Three subplots per commodity
-        fig, ax = plt.subplots(3, 1)
+        fig, ax = plt.subplots(3, 1, sharex=True, sharey=True)
 
         df_wfp_commodity = df_wfp[df_wfp.Commodity == commodity]
 
@@ -309,7 +310,7 @@ def scatter_adj_price_region_all_commodities_droughts(df_wfp, alpha=0.5, preproc
 
 
 
-        fig.suptitle("(Inflation-Adjusted) Price Distribution")
+        fig.suptitle(f"(Inflation-Adjusted) Price Distribution - {commodity}")
 
         # plt.title(f"Commodity: {commodity}")
         ax[2].set_xlabel("Time")
@@ -370,8 +371,8 @@ def scatter_adj_prices_per_region_one_fig(df_wfp):
 
             # Don't display xlabel for these
             if i != n_regions -1:
-                # ax[i].get_xaxis().set_visible(False)
-                ax[i].get_xaxis().set_xlabel(None)
+                ax[i].get_xaxis().set_visible(False)
+                # ax[i].get_xaxis().set_xlabel(None)
 
             # # Add x, y gridlines
             ax[i].get_xaxis().grid(b=True, color='grey',
@@ -480,13 +481,14 @@ def scatter_extrapolated_adj_prices_per_region(df_region, df_region_extrapolated
 # BOXPLOTS
 # ----------------------------------------------------------------------------------------------------------------------
 
-def boxplot_adj_prices(df, png_appendix=""):
+def boxplot_adj_prices(df, png_appendix="-all-commodities", by="Commodity", title_appendix=""):
     """
 
     :return:
     """
+
     # boxplot per commodity
-    df.boxplot(column="AdjPrice", by="Commodity", grid=True)
+    df.boxplot(column="AdjPrice", by=by, grid=True)
 
     country = df.Country.unique()[0]
     currency = df.Currency.unique()[0]
@@ -495,12 +497,27 @@ def boxplot_adj_prices(df, png_appendix=""):
     if os.path.exists(output_path) is False:
         os.makedirs(output_path)
 
+    # if title_appendix is not "":
+    plt.suptitle(f"Boxplot grouped by {by}{title_appendix}")
     plt.ylabel(f"Price [{currency}]")
     plt.xticks(rotation=30)
     plt.tight_layout()
-    plt.savefig(f"{output_path}/All-commodities-hist{png_appendix}.png")
+    plt.savefig(f"{output_path}/hist{png_appendix}.png")
     plt.show()
 
+def box_plot_for_all_commodities_per_drought(df):
+    """
+
+    :param df:
+    :return:
+    """
+    # merge spei data to df
+    df = utils.merge_spei_to_df_wfp(df)
+    # classify droughts
+    df = preproc.classify_droughts(df)
+    for commodity in df.Commodity.unique():
+        df_commodity = df[df.Commodity == commodity]
+        boxplot_adj_prices(df_commodity, png_appendix=f"-{commodity}-drought", by="Drought", title_appendix=f" - {commodity}")
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -511,7 +528,10 @@ def boxplot_adj_prices(df, png_appendix=""):
 # HISTOGRAMS
 # ----------------------------------------------------------------------------------------------------------------------
 
-def plot_hist(df, column_x, rotation=45, bins=7, orientation="vertical", rwidth=0.75, png_appendix=""):
+
+
+
+def plot_hist(df, column_x, rotation=45, bins=7, orientation="vertical", rwidth=0.75, png_appendix="", title_appendix=""):
     """
 
     :param df:
@@ -524,8 +544,6 @@ def plot_hist(df, column_x, rotation=45, bins=7, orientation="vertical", rwidth=
         raise ValueError(f"Can't plot histogram, as column {column_x} not existent. \n"
                          f"Please revise your definition and use one of the following columns instead:\n{df.columns}")
 
-    print(f"Uniques:\n {df[column_x].unique()}")
-    print(df[df[column_x].isna()]["Spei"])
     # "royalblue" with 0.5 gives light blue
     # blue, alpha=0.5 -> purple
     n, bins, patches = plt.hist(df[column_x], bins=bins, rwidth=rwidth, align="mid", orientation=orientation,
@@ -538,7 +556,7 @@ def plot_hist(df, column_x, rotation=45, bins=7, orientation="vertical", rwidth=
     else:
         plt.xlabel("Frequency", fontweight="normal", style="italic")
         plt.ylabel(column_x, fontweight="normal", style="italic")
-    plt.title(f"Histogram {column_x}", fontweight="normal", style="italic")
+    plt.title(f"Histogram {column_x}{title_appendix}", fontweight="normal", style="italic")
 
     axs = plt.gca()
     # Remove axes splines
@@ -585,6 +603,20 @@ def plot_hist(df, column_x, rotation=45, bins=7, orientation="vertical", rwidth=
 
     plt.savefig(title)
     plt.show()
+
+
+def plot_hist_for_all_commodities(df, bins=20):
+    """
+
+    :return:
+    """
+    for commodity in df.Commodity.unique():
+        df_commodity = df[df.Commodity == commodity]
+        plot_hist(df_commodity, column_x="AdjPrice", png_appendix=f"-{commodity}-{bins}", bins=bins, title_appendix=f" - {commodity}")
+
+
+
+
 
 
 def histogram_pandas(df, column, commodity, year, month, bins=20, save_fig=False):
