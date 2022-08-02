@@ -481,14 +481,17 @@ def scatter_extrapolated_adj_prices_per_region(df_region, df_region_extrapolated
 # BOXPLOTS
 # ----------------------------------------------------------------------------------------------------------------------
 
-def boxplot_adj_prices(df, png_appendix="-all-commodities", by="Commodity", title_appendix=""):
+def boxplot_adj_prices(df, png_appendix="-all-commodities", by="Commodity", suptitle_appendix="", title_appendix=""):
     """
 
     :return:
     """
 
-    # boxplot per commodity
-    df.boxplot(column="AdjPrice", by=by, grid=True)
+    if by is None:
+        df.boxplot(column="AdjPrice", grid=True)
+    else:
+        # boxplot per commodity/ group
+        df.boxplot(column="AdjPrice", by=by, grid=True)
 
     country = df.Country.unique()[0]
     currency = df.Currency.unique()[0]
@@ -498,7 +501,11 @@ def boxplot_adj_prices(df, png_appendix="-all-commodities", by="Commodity", titl
         os.makedirs(output_path)
 
     # if title_appendix is not "":
-    plt.suptitle(f"Boxplot grouped by {by}{title_appendix}")
+    if by is None:
+        plt.suptitle(f"Boxplot")
+    else:
+        plt.suptitle(f"Boxplot grouped by {by}{suptitle_appendix}")
+    plt.title(f"(Inflation-Adjusted) Prices{title_appendix}")
     plt.ylabel(f"Price [{currency}]")
     plt.xticks(rotation=30)
     plt.tight_layout()
@@ -517,7 +524,11 @@ def box_plot_for_all_commodities_per_drought(df):
     df = preproc.classify_droughts(df)
     for commodity in df.Commodity.unique():
         df_commodity = df[df.Commodity == commodity]
-        boxplot_adj_prices(df_commodity, png_appendix=f"-{commodity}-drought", by="Drought", title_appendix=f" - {commodity}")
+        # boxplot_adj_prices(df_commodity, png_appendix=f"-{commodity}-drought", by="Drought", title_appendix=f" - {commodity}")
+        # boxplot_adj_prices(df_commodity, png_appendix=f"-{commodity}-flood", by="Flood",
+        #                    title_appendix=f" - {commodity}")
+        boxplot_adj_prices(df_commodity, png_appendix=f"-{commodity}", by=None,
+                           suptitle_appendix=f" - {commodity}", title_appendix=f" - {commodity}")
 
 
 # ----------------------------------------------------------------------------------------------------------------------
