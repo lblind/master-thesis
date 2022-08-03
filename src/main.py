@@ -50,7 +50,10 @@ if __name__ == "__main__":
     path_to_df_wfp = f"../output/{country}/intermediate-results/df_wfp_STEP4.xlsx"
     df_wfp = utils.convert_excel_to_df(path_to_df_wfp)
 
-    # stats.df_describe_excel(df_wfp, group_by_column="Commodity", excel_extension="-STEP4")
+    # create stats just by commodity
+    # stats.df_describe_excel(df_wfp, group_by_column="Commodity", excel_extension="-STEP4", column="AdjPrice")
+    # ... and by commodity & region
+    # stats.df_describe_excel(df_wfp, group_by_column=["Commodity", "Region"], excel_extension="-STEP4", column="AdjPrice")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# VISUALIZATION"
@@ -60,11 +63,26 @@ if __name__ == "__main__":
           "# VISUALIZATION - Explorative analysis"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# VISUALIZATION - Scatter plots"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+
     # visualization.scatter_adj_prices_per_region_one_fig(df_wfp=df_wfp)
-    # visualization.scatter_adj_price_region_all_commodities_droughts(df_wfp=df_wfp)
+    visualization.scatter_adj_price_region_all_commodities_droughts(df_wfp=df_wfp)
 
     # visualization.plot_hist_for_all_commodities(df_wfp)
-    # visualization.box_plot_for_all_commodities_per_drought(df_wfp)
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# VISUALIZATION - Boxplots"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+    # visualization.box_plot_for_all_commodities_by_group(df_wfp)
+    # visualization.box_plot_for_all_commodities_by_group(df_wfp, by="Drought")
+    # visualization.box_plot_for_all_commodities_by_group(df_wfp, by="Region")
+    # visualization.box_plot_for_all_commodities_by_group(df_wfp, by=["Drought", "Region"])
+
+
+
+
 
 
     # visualization.plot_malawi(df_final=df_final)
@@ -81,4 +99,4 @@ if __name__ == "__main__":
           "# DYNAMIC MODE DECOMPOSITION (DMD)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-    dmd.dmd_per_commodity(df_final)
+    # dmd.dmd_per_commodity(df_final)

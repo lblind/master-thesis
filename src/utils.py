@@ -77,7 +77,7 @@ def merge_dfs_left(df_left, df_right, on):
     return df_merged
 
 
-def merge_spei_to_df_wfp(df_wfp):
+def merge_drought_to_df_wfp(df_wfp):
     """
 
     :param df_wfp:
@@ -96,6 +96,9 @@ def merge_spei_to_df_wfp(df_wfp):
                                         country=country)
     # merge spei
     df_wfp = preproc.merge_food_price_and_climate_dfs(df_wfp_with_coords=df_wfp, df_spei=df_spei)
+
+    # classify drought
+    df_wfp = preproc.classify_droughts(df_wfp)
 
     return df_wfp
 

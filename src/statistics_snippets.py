@@ -409,7 +409,7 @@ def sum_stats_prices_and_droughts(df, var_list_groups_by=None, excel_output_exte
                          f"Plesae revise your definition.")
 
 
-def df_describe_excel(df, group_by_column=None, excel_extension="-final"):
+def df_describe_excel(df, group_by_column=None, excel_extension="-final", column=None):
     """
 
     :param df:
@@ -423,10 +423,18 @@ def df_describe_excel(df, group_by_column=None, excel_extension="-final"):
     if os.path.exists(output_path_stats) is False:
         os.makedirs(output_path_stats)
 
+    # General describe
     sum_stats.to_excel(f"{output_path_stats}/{country}-describe-general{excel_extension}.xlsx")
 
     if group_by_column is not None:
         sum_stats_per_group = df.groupby(group_by_column).describe()
-        sum_stats_per_group.to_excel(f"{output_path_stats}/{country}-describe-group-{group_by_column}{excel_extension}.xlsx")
+
+        if column is not None:
+            sum_stats_per_group[column].to_excel(
+                f"{output_path_stats}/{country}-describe-group-{group_by_column}{excel_extension}.xlsx",
+                sheet_name=column)
+        else:
+            sum_stats_per_group.to_excel(f"{output_path_stats}/{country}-describe-group-{group_by_column}{excel_extension}.xlsx",
+                                         sheet_name="All columns")
 
 

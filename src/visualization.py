@@ -44,7 +44,51 @@ def plot_dmd_results(dmd):
     :param dmd:
     :return:
     """
-    pass
+    dmd.plot_eigs()
+
+    # 51 = number of markets
+    # x = np.linspace(-5, 5, 51)
+    x = np.linspace(1, 51, 51)
+    # 216 = number of time steps
+    # t = np.linspace(0, 4 * np.pi, 216)
+    t = np.linspace(1, 216, 216)
+
+    xgrid, tgrid = np.meshgrid(x, t)
+    for mode in dmd.modes.T:
+        plt.plot(x, mode.real)
+        plt.title("Modes")
+        plt.legend()
+    plt.show()
+
+    plt.imshow(dmd.snapshots)
+    plt.ylabel("Markets $M_i$")
+    plt.xlabel("$t$")
+    plt.title("Original Snapshot Matrix")
+    plt.show()
+
+    plt.imshow(dmd.reconstructed_data.real)
+    plt.ylabel("Markets $M_i$")
+    plt.xlabel("$t$")
+    plt.title("Reconstructed Matrix")
+    plt.show()
+
+    # # error between approximated data and original one
+    # plt.pcolor(xgrid, tgrid, (x_snapshot_matrix - dmd.reconstructed_data.real))
+    # fig = plt.colorbar()
+    # plt.title("Absolute error approximated & reconstructed matrix")
+    # fig.show()
+    # plt.show()
+
+    for dynamic in dmd.dynamics:
+        plt.plot(t, dynamic.real)
+        plt.title("Dynamics")
+    plt.show()
+
+    # dmd.plot_modes_2D(figsize=(12, 5))
+    # dmd.plot_modes_2D(figsize=(12, 5))
+    # dmd.plot_snapshots_2D(figsize=x_snapshot_matrix.shape)
+    # dmd.predict()
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # (LINE) PLOTS
@@ -261,17 +305,8 @@ def scatter_adj_price_region_all_commodities_droughts(df_wfp, alpha=0.5, preproc
     country = df_wfp.Country.unique()[0]
 
     # merge SPEI to price data
-    # merge market coordinates
-    df_wfp = preproc.read_and_merge_wfp_market_coords(df_wfp=df_wfp, country=country)
+    df_wfp = utils.merge_drought_to_df_wfp(df_wfp)
 
-    # extract relevant time slice
-    slice_time, slice_lon, slice_lat = preproc.extract_time_lon_lat_slice(df_wfp)
-
-    # read relevant subset of entire (global) SPEI database
-    df_spei = preproc.read_climate_data(time_slice=slice_time, long_slice=slice_lon, lat_slice=slice_lat,
-                                        country=country)
-    # merge spei
-    df_wfp = preproc.merge_food_price_and_climate_dfs(df_wfp_with_coords=df_wfp, df_spei=df_spei)
 
     currency = df_wfp.Currency.unique()[0]
     for commodity in df_wfp.Commodity.unique():
@@ -280,8 +315,16 @@ def scatter_adj_price_region_all_commodities_droughts(df_wfp, alpha=0.5, preproc
 
         df_wfp_commodity = df_wfp[df_wfp.Commodity == commodity]
 
+        print(df_wfp_commodity.columns)
+        print(df_wfp_commodity.Drought.unique())
+
         df_wfp_commodity_drought = df_wfp_commodity[df_wfp_commodity.Spei < -1]
         df_wfp_commodity_no_drought = df_wfp_commodity[df_wfp_commodity.Spei >= -1]
+
+        # TODO: somehow this indexing didn't work for the non-drought case (assumption: bug, check back later)
+        # df_wfp_commodity_drought = df_wfp_commodity[df_wfp_commodity.Drought]
+        # print(df_wfp_commodity_drought.shape, df_wfp_commodity.shape)
+        # # df_wfp_commodity_no_drought = df_wfp_commodity[~df_wfp_commodity["Drought"]]
         ax[1].scatter(df_wfp_commodity_drought.TimeWFP, df_wfp_commodity_drought["AdjPrice"], label="Drought", color="red",
                     alpha=alpha)
         ax[1].set_title("Drought")
@@ -508,14 +551,18 @@ def boxplot_adj_prices(df, png_appendix="-all-commodities", by="Commodity", supt
     currency = df.Currency.unique()[0]
 
     output_path = f"../output/{country}/plots/boxplots"
-    if os.path.exists(output_path) is False:
-        os.makedirs(output_path)
 
     # if title_appendix is not "":
     if by is None:
         plt.suptitle(f"Boxplot")
     else:
         plt.suptitle(f"Boxplot grouped by {by}{suptitle_appendix}")
+        output_path += f"/{by}"
+
+
+    if os.path.exists(output_path) is False:
+        os.makedirs(output_path)
+
     plt.title(f"(Inflation-Adjusted) Prices{title_appendix}")
     plt.ylabel(f"Price [{currency}]")
     plt.xticks(rotation=30)
@@ -523,25 +570,37 @@ def boxplot_adj_prices(df, png_appendix="-all-commodities", by="Commodity", supt
     plt.savefig(f"{output_path}/hist{png_appendix}.png")
     plt.show()
 
-def box_plot_for_all_commodities_per_drought(df):
+def box_plot_for_all_commodities_by_group(df, by=None):
+    """
+
+    :param df:
+    :param by: str
+        if None, boxplots will be created for all commodities (and no further grouping will occur)
+    :return:
+    """
+    # merge spei data to df
+    df = utils.merge_drought_to_df_wfp(df)
+    # classify droughts
+    df = preproc.classify_droughts(df)
+    for commodity in df.Commodity.unique():
+        df_commodity = df[df.Commodity == commodity]
+
+        if by is not None:
+            png_appendix = f"-{commodity}-{by}"
+        else:
+            png_appendix = f"-{commodity}"
+        boxplot_adj_prices(df_commodity, png_appendix=png_appendix, by=by,
+        title_appendix=f" - {commodity}")
+
+
+
+def boxplot_per_region(df):
     """
 
     :param df:
     :return:
     """
-    # merge spei data to df
-    df = utils.merge_spei_to_df_wfp(df)
-    # classify droughts
-    df = preproc.classify_droughts(df)
-    for commodity in df.Commodity.unique():
-        df_commodity = df[df.Commodity == commodity]
-        # boxplot_adj_prices(df_commodity, png_appendix=f"-{commodity}-drought", by="Drought",
-        # title_appendix=f" - {commodity}")
-        # boxplot_adj_prices(df_commodity, png_appendix=f"-{commodity}-flood", by="Flood",
-        #                    title_appendix=f" - {commodity}")
-        boxplot_adj_prices(df_commodity, png_appendix=f"-{commodity}", by=None,
-                           suptitle_appendix=f" - {commodity}", title_appendix=f" - {commodity}")
-
+    pass
 
 # ----------------------------------------------------------------------------------------------------------------------
 # BAR CHARTS
@@ -636,7 +695,6 @@ def plot_hist_for_all_commodities(df, bins=20):
     for commodity in df.Commodity.unique():
         df_commodity = df[df.Commodity == commodity]
         plot_hist(df_commodity, column_x="AdjPrice", png_appendix=f"-{commodity}-{bins}", bins=bins, title_appendix=f" - {commodity}")
-
 
 
 

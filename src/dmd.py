@@ -3,7 +3,7 @@ Dynamic Mode Decomposition
 --------------------------
 Functions that are used to perform the Dynamic Mode Decomposition (DMD).
 """
-import io
+
 
 import pydmd
 from matplotlib import pyplot as plt
@@ -13,6 +13,7 @@ import pandas as pd
 import os
 import numpy as np
 import utils
+import visualization
 
 
 def get_snapshot_matrix_x_for_commodity(df_commodity, time_span_min, time_span_max, write_excel=True):
@@ -87,7 +88,7 @@ def save_dmd_results(dmd, country, commodity, excel_output_extension=""):
     :param dmd:
     :return:
     """
-
+    print(f"Saving results of DMD...")
     results_dict = {}
     results_dict["eigs"] = pd.DataFrame(dmd.eigs)
     results_dict["reconstructed_data"] = pd.DataFrame(dmd.reconstructed_data)
@@ -120,6 +121,8 @@ def save_dmd_results(dmd, country, commodity, excel_output_extension=""):
             df_sum_stat = results_dict[group]
             df_sum_stat.to_excel(writer, sheet_name=group)
 
+    print(f"Saving results of DMD successful.")
+
 
 def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True):
     """
@@ -145,6 +148,7 @@ def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True):
 
     # train the data
     dmd.fit(np_snapshots)
+
 
     # save the dmd outputs as excels
     save_dmd_results(dmd, country, commodity)
@@ -197,55 +201,10 @@ def dmd_per_commodity(df_final, write_excels=True):
         # STEP 2: Do the actual DMD
         # --------------------------------------------------------------------------------------------------------------
 
-        dmd = dmd_algorithm(x_snapshot_matrix, country=country, commodity=commodity, svd_rank=1)
+        dmd = dmd_algorithm(x_snapshot_matrix, country=country, commodity=commodity, svd_rank=2)
 
-        dmd.plot_eigs()
-
-
-        # 51 = number of markets
-        # x = np.linspace(-5, 5, 51)
-        x = np.linspace(1, 51, 51)
-        # 216 = number of time steps
-        # t = np.linspace(0, 4 * np.pi, 216)
-        t = np.linspace(1, 216, 216)
-
-        xgrid, tgrid = np.meshgrid(x, t)
-        for mode in dmd.modes.T:
-            plt.plot(x, mode.real)
-            plt.title("Modes")
-            plt.legend()
-        plt.show()
-
-        plt.imshow(x_snapshot_matrix)
-        plt.ylabel("Markets $M_i$")
-        plt.xlabel("$t$")
-        plt.title("Original Snapshot Matrix")
-        plt.show()
-
-        plt.imshow(dmd.reconstructed_data.real)
-        plt.ylabel("Markets $M_i$")
-        plt.xlabel("$t$")
-        plt.title("Reconstructed Matrix")
-        plt.show()
-
-
-        # # error between approximated data and original one
-        # plt.pcolor(xgrid, tgrid, (x_snapshot_matrix - dmd.reconstructed_data.real))
-        # fig = plt.colorbar()
-        # plt.title("Absolute error approximated & reconstructed matrix")
-        # fig.show()
-        # plt.show()
-
-        for dynamic in dmd.dynamics:
-            plt.plot(t, dynamic.real)
-            plt.title("Dynamics")
-        plt.show()
-
-        # dmd.plot_modes_2D(figsize=(12, 5))
-        # dmd.plot_modes_2D(figsize=(12, 5))
-        # dmd.plot_snapshots_2D(figsize=x_snapshot_matrix.shape)
-        # dmd.predict()
-
+        # visualize what you have found
+        visualization.plot_dmd_results(dmd)
 
     if write_excels:
         # Write all dfs into one excel
