@@ -34,6 +34,17 @@ import plotly.express as px
 import missingno as msgo
 import statistics_snippets as stats
 
+# ----------------------------------------------------------------------------------------------------------------------
+# DMD results
+# ----------------------------------------------------------------------------------------------------------------------
+
+def plot_dmd_results(dmd):
+    """
+
+    :param dmd:
+    :return:
+    """
+    pass
 
 # ----------------------------------------------------------------------------------------------------------------------
 # (LINE) PLOTS
@@ -524,7 +535,8 @@ def box_plot_for_all_commodities_per_drought(df):
     df = preproc.classify_droughts(df)
     for commodity in df.Commodity.unique():
         df_commodity = df[df.Commodity == commodity]
-        # boxplot_adj_prices(df_commodity, png_appendix=f"-{commodity}-drought", by="Drought", title_appendix=f" - {commodity}")
+        # boxplot_adj_prices(df_commodity, png_appendix=f"-{commodity}-drought", by="Drought",
+        # title_appendix=f" - {commodity}")
         # boxplot_adj_prices(df_commodity, png_appendix=f"-{commodity}-flood", by="Flood",
         #                    title_appendix=f" - {commodity}")
         boxplot_adj_prices(df_commodity, png_appendix=f"-{commodity}", by=None,

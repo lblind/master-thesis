@@ -80,6 +80,35 @@ def get_snapshot_matrix_x_for_commodity(df_commodity, time_span_min, time_span_m
     return snapshot_matrix_x_for_commodity
 
 
+def save_dmd_results(dmd):
+    """
+
+    :param dmd:
+    :return:
+    """
+
+    eigs = dmd.eigs
+    reconstructed_data = dmd.reconstructed_data
+    modes = dmd.modes
+    frequency = dmd.frequency
+    dynamics = dmd.dynamics
+
+    svd_rank = dmd.svd_rank
+    growth_rate = dmd.growth_rate
+    snapshots = dmd.snapshots
+    amplitudes = dmd.amplitudes
+
+
+    print(f"Frequency ({frequency.shape})\n", frequency)
+    print(f"Eigs ({eigs.shape})\n", eigs)
+    print(f"Modes ({modes.shape})\n", modes)
+
+    print(f"Original data ({snapshots.shape})")
+    print(f"Reconstructed data ({snapshots.shape})\n", reconstructed_data)
+
+
+
+
 def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True):
     """
 
@@ -105,18 +134,8 @@ def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True):
     # train the data
     dmd.fit(np_snapshots)
 
-    # extract results (modes + frequency)
-    modes = dmd.modes
-    frequency = dmd.frequency
-    reconstructed_data = dmd.reconstructed_data
-    eigs = dmd.eigs
+    save_dmd_results(dmd)
 
-    print(f"Frequency ({frequency.shape})\n", frequency)
-    print(f"Eigs ({eigs.shape})\n", eigs)
-    print(f"Modes ({modes.shape})\n", modes)
-
-    print(f"Original data ({df_snapshots.shape})")
-    print(f"Reconstructed data ({reconstructed_data.shape})\n", reconstructed_data)
 
     # dmd.save(f"../output/{country}/dmd/{country}-dmd-output-{commodity}.xlsx")
 
@@ -128,6 +147,7 @@ def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True):
 
     # return the trained dmd object
     return dmd
+
 
 
 def dmd_per_commodity(df_final, write_excels=True):
@@ -174,7 +194,55 @@ def dmd_per_commodity(df_final, write_excels=True):
         # STEP 2: Do the actual DMD
         # --------------------------------------------------------------------------------------------------------------
 
-        dmd_algorithm(x_snapshot_matrix, country=country, commodity=commodity)
+        dmd = dmd_algorithm(x_snapshot_matrix, country=country, commodity=commodity, svd_rank=2)
+
+        dmd.plot_eigs()
+
+
+        # 51 = number of markets
+        # x = np.linspace(-5, 5, 51)
+        x = np.linspace(1, 51, 51)
+        # 216 = number of time steps
+        # t = np.linspace(0, 4 * np.pi, 216)
+        t = np.linspace(1, 216, 216)
+
+        xgrid, tgrid = np.meshgrid(x, t)
+        for mode in dmd.modes.T:
+            plt.plot(x, mode.real)
+            plt.title("Modes")
+            plt.legend()
+        plt.show()
+
+        plt.imshow(x_snapshot_matrix)
+        plt.ylabel("Markets $M_i$")
+        plt.xlabel("$t$")
+        plt.title("Original Snapshot Matrix")
+        plt.show()
+
+        plt.imshow(dmd.reconstructed_data.real)
+        plt.ylabel("Markets $M_i$")
+        plt.xlabel("$t$")
+        plt.title("Reconstructed Matrix")
+        plt.show()
+
+
+        # # error between approximated data and original one
+        # plt.pcolor(xgrid, tgrid, (x_snapshot_matrix - dmd.reconstructed_data.real))
+        # fig = plt.colorbar()
+        # plt.title("Absolute error approximated & reconstructed matrix")
+        # fig.show()
+        # plt.show()
+
+        for dynamic in dmd.dynamics:
+            plt.plot(t, dynamic.real)
+            plt.title("Dynamics")
+        plt.show()
+
+        # dmd.plot_modes_2D(figsize=(12, 5))
+        # dmd.plot_modes_2D(figsize=(12, 5))
+        # dmd.plot_snapshots_2D(figsize=x_snapshot_matrix.shape)
+        # dmd.predict()
+
 
     if write_excels:
         # Write all dfs into one excel

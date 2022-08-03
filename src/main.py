@@ -43,10 +43,14 @@ if __name__ == "__main__":
 
     path_to_final_df = f"../output/{country}/{country}-final-dta.xlsx"
     # TODO outcomment this line if dataset has already been created
-    # df_final = utils.convert_excel_to_df(path_to_final_df)
+    df_final = utils.convert_excel_to_df(path_to_final_df)
+
+    # stats.df_describe_excel(df_final, group_by_column="Commodity")
 
     path_to_df_wfp = f"../output/{country}/intermediate-results/df_wfp_STEP4.xlsx"
     df_wfp = utils.convert_excel_to_df(path_to_df_wfp)
+
+    # stats.df_describe_excel(df_wfp, group_by_column="Commodity", excel_extension="-STEP4")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# VISUALIZATION"
@@ -60,7 +64,7 @@ if __name__ == "__main__":
     # visualization.scatter_adj_price_region_all_commodities_droughts(df_wfp=df_wfp)
 
     # visualization.plot_hist_for_all_commodities(df_wfp)
-    visualization.box_plot_for_all_commodities_per_drought(df_wfp)
+    # visualization.box_plot_for_all_commodities_per_drought(df_wfp)
 
 
     # visualization.plot_malawi(df_final=df_final)
@@ -77,4 +81,4 @@ if __name__ == "__main__":
           "# DYNAMIC MODE DECOMPOSITION (DMD)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-    # dmd.dmd_per_commodity(df_final)
+    dmd.dmd_per_commodity(df_final)

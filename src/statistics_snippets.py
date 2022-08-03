@@ -407,3 +407,26 @@ def sum_stats_prices_and_droughts(df, var_list_groups_by=None, excel_output_exte
                          f"General, nor part of the valid groups:"
                          f"{dict_dfs_sum_stats.keys()}.\n"
                          f"Plesae revise your definition.")
+
+
+def df_describe_excel(df, group_by_column=None, excel_extension="-final"):
+    """
+
+    :param df:
+    :return:
+    """
+    country = df.Country.unique()[0]
+    sum_stats = df.describe()
+    # Make sure that output directory exists
+
+    output_path_stats = f"../output/{df.Country.unique()[0]}/summary-statistics/describe"
+    if os.path.exists(output_path_stats) is False:
+        os.makedirs(output_path_stats)
+
+    sum_stats.to_excel(f"{output_path_stats}/{country}-describe-general{excel_extension}.xlsx")
+
+    if group_by_column is not None:
+        sum_stats_per_group = df.groupby(group_by_column).describe()
+        sum_stats_per_group.to_excel(f"{output_path_stats}/{country}-describe-group-{group_by_column}{excel_extension}.xlsx")
+
+
