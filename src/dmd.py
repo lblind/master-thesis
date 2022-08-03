@@ -3,6 +3,7 @@ Dynamic Mode Decomposition
 --------------------------
 Functions that are used to perform the Dynamic Mode Decomposition (DMD).
 """
+import io
 
 import pydmd
 from matplotlib import pyplot as plt
@@ -80,33 +81,44 @@ def get_snapshot_matrix_x_for_commodity(df_commodity, time_span_min, time_span_m
     return snapshot_matrix_x_for_commodity
 
 
-def save_dmd_results(dmd):
+def save_dmd_results(dmd, country, commodity, excel_output_extension=""):
     """
 
     :param dmd:
     :return:
     """
 
-    eigs = dmd.eigs
-    reconstructed_data = dmd.reconstructed_data
-    modes = dmd.modes
-    frequency = dmd.frequency
-    dynamics = dmd.dynamics
+    results_dict = {}
+    results_dict["eigs"] = pd.DataFrame(dmd.eigs)
+    results_dict["reconstructed_data"] = pd.DataFrame(dmd.reconstructed_data)
+    results_dict["modes"] = pd.DataFrame(dmd.modes)
+    results_dict["frequency"] = pd.DataFrame(dmd.frequency)
+    results_dict["dynamics"] = pd.DataFrame(dmd.dynamics)
 
-    svd_rank = dmd.svd_rank
-    growth_rate = dmd.growth_rate
-    snapshots = dmd.snapshots
-    amplitudes = dmd.amplitudes
-
-
-    print(f"Frequency ({frequency.shape})\n", frequency)
-    print(f"Eigs ({eigs.shape})\n", eigs)
-    print(f"Modes ({modes.shape})\n", modes)
-
-    print(f"Original data ({snapshots.shape})")
-    print(f"Reconstructed data ({snapshots.shape})\n", reconstructed_data)
+    results_dict["svd_rank"] = pd.DataFrame([dmd.svd_rank])
+    results_dict["growth_rate"] = pd.DataFrame([dmd.growth_rate])
+    results_dict["snapshots"] = pd.DataFrame(dmd.snapshots)
+    results_dict["amplitudes"] = pd.DataFrame(dmd.amplitudes)
 
 
+    print(f"Frequency ({dmd.frequency.shape})\n", dmd.frequency)
+    print(f"Eigs ({dmd.eigs.shape})\n", dmd.eigs)
+    print(f"Modes ({dmd.modes.shape})\n", dmd.modes)
+
+    print(f"Original data ({dmd.snapshots.shape})")
+    print(f"Reconstructed data ({dmd.snapshots.shape})\n", dmd.reconstructed_data)
+
+    # make sure that directory exists
+    output_path = f"../output/{country}/dmd/{commodity}"
+    if os.path.exists(output_path) is False:
+        os.makedirs(output_path)
+
+    # Write all dfs into one excel
+    with pd.ExcelWriter(f"{output_path}/dmd-results{excel_output_extension}.xlsx") as writer:
+        for group in results_dict.keys():
+            # extract relevant subgroup
+            df_sum_stat = results_dict[group]
+            df_sum_stat.to_excel(writer, sheet_name=group)
 
 
 def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True):
@@ -134,20 +146,11 @@ def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True):
     # train the data
     dmd.fit(np_snapshots)
 
-    save_dmd_results(dmd)
-
-
-    # dmd.save(f"../output/{country}/dmd/{country}-dmd-output-{commodity}.xlsx")
-
-    # plot the results
-    # dmd.plot_modes_2D(figsize=(12, 5))
-
-    # show the results
-    # plt.show()
+    # save the dmd outputs as excels
+    save_dmd_results(dmd, country, commodity)
 
     # return the trained dmd object
     return dmd
-
 
 
 def dmd_per_commodity(df_final, write_excels=True):
@@ -194,7 +197,7 @@ def dmd_per_commodity(df_final, write_excels=True):
         # STEP 2: Do the actual DMD
         # --------------------------------------------------------------------------------------------------------------
 
-        dmd = dmd_algorithm(x_snapshot_matrix, country=country, commodity=commodity, svd_rank=2)
+        dmd = dmd_algorithm(x_snapshot_matrix, country=country, commodity=commodity, svd_rank=1)
 
         dmd.plot_eigs()
 
