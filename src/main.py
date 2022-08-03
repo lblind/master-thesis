@@ -50,10 +50,21 @@ if __name__ == "__main__":
     path_to_df_wfp = f"../output/{country}/intermediate-results/df_wfp_STEP4.xlsx"
     df_wfp = utils.convert_excel_to_df(path_to_df_wfp)
 
-    # create stats just by commodity
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# ANALYSIS - Statistics"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+
+    # # create stats just by commodity
     # stats.df_describe_excel(df_wfp, group_by_column="Commodity", excel_extension="-STEP4", column="AdjPrice")
-    # ... and by commodity & region
+    # # ... and by commodity & region
     # stats.df_describe_excel(df_wfp, group_by_column=["Commodity", "Region"], excel_extension="-STEP4", column="AdjPrice")
+
+    # # add spei dataset & classify droughts
+    # df_wfp_drought = utils.merge_drought_to_df_wfp(df_wfp)
+    # # stats by commodity & drought
+    # stats.df_describe_excel(df_wfp_drought, group_by_column=["Commodity", "Drought"], excel_extension="-STEP4", column="AdjPrice")
+    # # stats by commodity, drought & region
+    # stats.df_describe_excel(df_wfp_drought, group_by_column=["Commodity", "Drought", "Region"], excel_extension="-STEP4", column="AdjPrice")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# VISUALIZATION"
@@ -68,7 +79,8 @@ if __name__ == "__main__":
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
     # visualization.scatter_adj_prices_per_region_one_fig(df_wfp=df_wfp)
-    visualization.scatter_adj_price_region_all_commodities_droughts(df_wfp=df_wfp)
+    # visualization.scatter_adj_price_region_all_commodities_droughts(df_wfp=df_wfp)
+    # visualization.scatter_adj_price_per_region_drought_one_fig(df_wfp=df_wfp)
 
     # visualization.plot_hist_for_all_commodities(df_wfp)
 

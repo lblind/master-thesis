@@ -77,7 +77,7 @@ def merge_dfs_left(df_left, df_right, on):
     return df_merged
 
 
-def merge_drought_to_df_wfp(df_wfp):
+def merge_drought_to_df_wfp(df_wfp, drop_na=True):
     """
 
     :param df_wfp:
@@ -99,6 +99,10 @@ def merge_drought_to_df_wfp(df_wfp):
 
     # classify drought
     df_wfp = preproc.classify_droughts(df_wfp)
+
+    # drop nan values in drought
+    if drop_na:
+        df_wfp = df_wfp[~df_wfp.Drought.isna()]
 
     return df_wfp
 

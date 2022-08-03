@@ -315,16 +315,13 @@ def scatter_adj_price_region_all_commodities_droughts(df_wfp, alpha=0.5, preproc
 
         df_wfp_commodity = df_wfp[df_wfp.Commodity == commodity]
 
-        print(df_wfp_commodity.columns)
-        print(df_wfp_commodity.Drought.unique())
-
         df_wfp_commodity_drought = df_wfp_commodity[df_wfp_commodity.Spei < -1]
         df_wfp_commodity_no_drought = df_wfp_commodity[df_wfp_commodity.Spei >= -1]
 
         # TODO: somehow this indexing didn't work for the non-drought case (assumption: bug, check back later)
         # df_wfp_commodity_drought = df_wfp_commodity[df_wfp_commodity.Drought]
-        # print(df_wfp_commodity_drought.shape, df_wfp_commodity.shape)
-        # # df_wfp_commodity_no_drought = df_wfp_commodity[~df_wfp_commodity["Drought"]]
+        # df_wfp_commodity_no_drought = df_wfp_commodity[~df_wfp_commodity["Drought"]]
+
         ax[1].scatter(df_wfp_commodity_drought.TimeWFP, df_wfp_commodity_drought["AdjPrice"], label="Drought", color="red",
                     alpha=alpha)
         ax[1].set_title("Drought")
@@ -400,7 +397,7 @@ def scatter_adj_price_region_all_commodities_droughts(df_wfp, alpha=0.5, preproc
 
 
 
-def scatter_adj_prices_per_region_one_fig(df_wfp):
+def scatter_adj_prices_per_region_one_fig(df_wfp, title_appendix="", png_appendix="", c=None):
     """
 
     :return:
@@ -416,7 +413,11 @@ def scatter_adj_prices_per_region_one_fig(df_wfp):
         for i, region in enumerate(df_wfp_commodity.Region.unique()):
             df_wfp_commodity_region = df_wfp_commodity[df_wfp_commodity.Region == region]
             # ax[0, i].scatter(df_wfp.TimeWFP, df_wfp.AdjPrice, c = ["red" if df_wfp.Drought else "blue"], alpha=0.5)
-            ax[i].scatter(df_wfp_commodity_region.TimeWFP, df_wfp_commodity_region.AdjPrice, alpha=0.5)
+
+            if c is not None:
+                ax[i].scatter(df_wfp_commodity_region.TimeWFP, df_wfp_commodity_region.AdjPrice, alpha=0.5, c=c)
+            else:
+                ax[i].scatter(df_wfp_commodity_region.TimeWFP, df_wfp_commodity_region.AdjPrice, alpha=0.5)
             ax[i].set_title(f"{region}")
 
             # Add padding between axes and labels
@@ -461,7 +462,7 @@ def scatter_adj_prices_per_region_one_fig(df_wfp):
         # plt.xticks(ticks=df_wfp_commodity.Year)
 
 
-        fig.suptitle(f"Commodity: {commodity}")
+        fig.suptitle(f"Commodity: {commodity}{title_appendix}")
 
         # Make sure Output dir exists
         country = df_wfp.Country.unique()[0]
@@ -469,8 +470,26 @@ def scatter_adj_prices_per_region_one_fig(df_wfp):
         output_dir_extrapolation = output_dir + "/extrapolation"
         if os.path.exists(output_dir_extrapolation) is False:
             os.makedirs(output_dir_extrapolation)
-        plt.savefig(f"{output_dir}/{commodity}-scatter-adj-prices-regions-one-fig.png")
+        plt.savefig(f"{output_dir}/{commodity}-scatter-adj-prices-regions-one-fig{png_appendix}.png")
         plt.show()
+
+
+def scatter_adj_price_per_region_drought_one_fig(df_wfp, c="red"):
+    """
+
+    :param df_wfp:
+    :return:
+    """
+    # merge drought data
+    df_wfp_droughts = utils.merge_drought_to_df_wfp(df_wfp)
+
+
+    # just extract the slice where a drought occured
+    df_wfp_droughts = df_wfp_droughts[df_wfp_droughts.Drought]
+
+    scatter_adj_prices_per_region_one_fig(df_wfp_droughts, title_appendix=" (Drought occured)", png_appendix="-drought",
+                                          c=c)
+
 
 
 def scatter_adj_prices_per_region(df_region, commodity, currency, show=False, alpha=0.5):
