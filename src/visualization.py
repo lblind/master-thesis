@@ -38,7 +38,7 @@ import statistics_snippets as stats
 # DMD results
 # ----------------------------------------------------------------------------------------------------------------------
 
-def plot_dmd_results(dmd, country, algorithm="base"):
+def plot_dmd_results(dmd, country, algorithm="base", transposed=False):
     """
 
     :param dmd:
@@ -51,7 +51,7 @@ def plot_dmd_results(dmd, country, algorithm="base"):
         os.makedirs(output_path)
 
     rank = dmd.eigs.shape[0]
-    dmd.plot_eigs(filename=f"{output_path}/{algorithm}-eigs-{rank}.png")
+    dmd.plot_eigs(filename=f"{output_path}/{algorithm}-eigs-{rank}-T.png")
     plt.show()
 
     # 51 = number of markets
@@ -63,43 +63,59 @@ def plot_dmd_results(dmd, country, algorithm="base"):
 
     for mode in dmd.modes.T:
         plt.plot(x, mode.real)
-        plt.title("Modes")
+    plt.title("Modes")
+    if transposed:
+        plt.ylabel("Markets $M_i$")
+        plt.xlabel("Value")
+    else:
         plt.xlabel("Markets $M_i$")
         plt.ylabel("Value")
         # plt.legend()
-    plt.savefig(f"{output_path}/{algorithm}-modes-{rank}.png")
+    plt.savefig(f"{output_path}/{algorithm}-modes-{rank}-T-{transposed}.png")
     plt.show()
 
     plt.imshow(dmd.snapshots)
-    plt.colorbar(orientation="horizontal")
-    plt.ylabel("Markets $M_i$")
-    plt.xlabel("Time $t_k$")
+    plt.colorbar(orientation="vertical")
+    if transposed:
+        plt.xlabel("Markets $M_i$")
+        plt.ylabel("Time $t_k$")
+    else:
+        plt.ylabel("Markets $M_i$")
+        plt.xlabel("Time $t_k$")
     plt.title("Original Snapshot Matrix")
-    plt.savefig(f"{output_path}/{algorithm}-original-snapshot-matrix-{rank}.png")
+    plt.savefig(f"{output_path}/{algorithm}-original-snapshot-matrix-{rank}-T-{transposed}.png")
     plt.show()
 
     plt.imshow(dmd.reconstructed_data.real)
-    plt.colorbar(orientation="horizontal")
-    plt.ylabel("Markets $M_i$")
-    plt.xlabel("Time $t_k$")
+    plt.colorbar(orientation="vertical")
+    if transposed:
+        plt.xlabel("Markets $M_i$")
+        plt.ylabel("Time $t_k$")
+    else:
+        plt.ylabel("Markets $M_i$")
+        plt.xlabel("Time $t_k$")
     plt.title("Reconstructed Matrix")
-    plt.savefig(f"{output_path}/{algorithm}-reconstructed-matrix-{rank}.png")
+    plt.savefig(f"{output_path}/{algorithm}-reconstructed-matrix-{rank}-T-{transposed}.png")
     plt.show()
 
     # fig, ax = plt.subplots(3, 3)
     for i in range(dmd.modes.shape[1]):
         mode = dmd.modes[:, i]
-        plt.plot(x, mode.real, label=f"Mode #{i+1}")
+        plt.plot(x, mode.real, label=f"#{i+1}")
     plt.title("Modes")
-    plt.xlabel("Markets $M_i$")
+
+
+    if transposed:
+        plt.xlabel("time $t_k$")
+    else:
+        plt.xlabel("Markets $M_i$")
     plt.ylabel("Value")
-        # plt.legend()
-        # plt.imshow(np.expand_dims(mode.real, axis=1))
-        # plt.colorbar(orientation="vertical")
-        #plt.title(f"Mode #{i}")
+
+
     plt.tight_layout()
-    plt.legend(loc="lower left", bbox_to_anchor=(0.7, 0.6))
-    plt.savefig(f"{output_path}/{algorithm}-modes-{rank}-w-legend.png")
+    #plt.legend(loc="lower left", bbox_to_anchor=(0.7, 0.6))
+    plt.legend()
+    plt.savefig(f"{output_path}/{algorithm}-modes-{rank}-w-legend-T-{transposed}.png")
     plt.show()
         #plt.imshow(mode.imag)
         #plt.show()
@@ -115,42 +131,19 @@ def plot_dmd_results(dmd, country, algorithm="base"):
     # plt.show()
 
     for i, dynamic in enumerate(dmd.dynamics):
-        plt.plot(t, dynamic.real, label="Dynamic mode #{i}")
+        plt.plot(t, dynamic.real, label=f"#{i + 1}")
 
-    plt.title("Dynamics")
-    plt.xlabel("Time $t_k$")
+    plt.title("Dynamics mode")
+
+    if transposed:
+        plt.xlabel("Markets $M_i$")
+    else:
+        plt.xlabel("Time $t_k$")
     plt.tight_layout()
-    plt.legend(loc="lower left", bbox_to_anchor=(0.7, 0.5))
-
+    # plt.legend(loc="lower left", bbox_to_anchor=(0.7, 0.5))
+    plt.legend()
+    plt.savefig(f"{output_path}/{algorithm}-dynamics-{rank}-w-legend-T.png")
     plt.show()
-
-    # print("Shape before manipulation: {}".format(dmd.reconstructed_data.shape))
-    # dmd.dmd_time['dt'] *= .25
-    # dmd.dmd_time['tend'] *= 3
-    # print("Shape after manipulation: {}".format(dmd.reconstructed_data.shape))
-    #
-    # fig = plt.figure()
-    #
-    # x1 = np.linspace(-3, 3, 80)
-    # x2 = np.linspace(-3, 3, 80)
-    # x1grid, x2grid = np.meshgrid(x1, x2)
-    # dmd_states = [state.reshape(x1grid.shape) for state in dmd.reconstructed_data.T]
-    #
-    # frames = [
-    #     [plt.pcolor(x1grid, x2grid, state.real, vmin=-1, vmax=1)]
-    #     for state in dmd_states
-    # ]
-    #
-    # ani = animation.ArtistAnimation(fig, frames, interval=70, blit=False, repeat=False)
-    #
-    # HTML(ani.to_html5_video())
-
-    # dmd.plot_modes_2D(figsize=(12, 5))
-    # dmd.plot_modes_2D()
-    # dmd.plot_modes_2D(figsize=(12, 5))
-    # dmd.plot_snapshots_2D()
-
-    # dmd.predict()
 
 
 # ----------------------------------------------------------------------------------------------------------------------

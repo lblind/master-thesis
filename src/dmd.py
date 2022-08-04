@@ -125,7 +125,7 @@ def save_dmd_results(dmd, country, commodity, excel_output_extension=""):
     print(f"Saving results of DMD successful.")
 
 
-def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True):
+def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True, mr_dmd=False):
     """
 
     :param commodity:
@@ -144,6 +144,9 @@ def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True):
     # define the operator/ parameters you want to use for the algorithm
     dmd = DMD(svd_rank=svd_rank, exact=exact)
 
+    if mr_dmd:
+        dmd = MrDMD(dmd)
+
     # convert df to numpy
     np_snapshots = df_snapshots.to_numpy()
 
@@ -158,7 +161,7 @@ def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True):
     return dmd
 
 
-def dmd_per_commodity(df_final, write_excels=True, svd_rank=3):
+def dmd_per_commodity(df_final, write_excels=True, svd_rank=1, mr_dmd=False, transpose=True):
     """
 
     :param df_final:
@@ -203,10 +206,19 @@ def dmd_per_commodity(df_final, write_excels=True, svd_rank=3):
         # --------------------------------------------------------------------------------------------------------------
 
         # svd_rank = 2
-        dmd = dmd_algorithm(x_snapshot_matrix.T, country=country, commodity=commodity, svd_rank=svd_rank)
+        if transpose:
+            dmd = dmd_algorithm(x_snapshot_matrix.T, country=country, commodity=commodity, svd_rank=svd_rank, mr_dmd=mr_dmd)
+            png_appendix = "T"
+        else:
+            dmd = dmd_algorithm(x_snapshot_matrix, country=country, commodity=commodity, svd_rank=svd_rank, mr_dmd=mr_dmd)
+            png_appendix = ""
+
 
         # visualize what you have found
-        visualization.plot_dmd_results(dmd, country, algorithm="base")
+        if mr_dmd:
+            visualization.plot_dmd_results(dmd, country, algorithm="mrDMD", transposed=transpose)
+        else:
+            visualization.plot_dmd_results(dmd, country, algorithm="base", transposed=transpose)
 
     if write_excels:
         # Write all dfs into one excel
