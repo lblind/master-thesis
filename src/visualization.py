@@ -184,14 +184,6 @@ def plot_dmd_results(dmd, country, commodity, svd_rank, algorithm="base", transp
     plt.savefig(f"{output_path}/{commodity}-{algorithm}-reconstructed-matrix-{svd_rank}-T-{transposed}.png")
     plt.show()
 
-    plt.tight_layout()
-    #plt.legend(loc="lower left", bbox_to_anchor=(0.7, 0.6))
-    plt.legend()
-    plt.savefig(f"{output_path}/{commodity}-{algorithm}-modes-{svd_rank}-w-legend-T-{transposed}.png")
-    plt.show()
-
-
-
 
 # ----------------------------------------------------------------------------------------------------------------------
 # (LINE) PLOTS

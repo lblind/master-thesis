@@ -234,7 +234,7 @@ def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True, mr_d
     return dmd
 
 
-def dmd_per_commodity(df_final, write_excels=True, svd_rank=0.95, mr_dmd=False, transpose=False,
+def dmd_per_commodity(df_final, write_excels=True, svd_rank=0.95, mr_dmd=False, transpose=True,
                       own_implementation=False):
     """
 
