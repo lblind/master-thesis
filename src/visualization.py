@@ -88,105 +88,58 @@ def plot_abs_error_matrix(abs_error, country, rank, algorithm, commodity, transp
 
     # TODO: maybe also plot mean error per market (x)
 
-
-
-
-def plot_dmd_results(dmd, country, commodity, algorithm="base", transposed=False):
+def plot_dmd_results(dmd, country, commodity, svd_rank, algorithm="base", transposed=True):
     """
 
     :param dmd:
     :return:
     """
-    # make sure output dir exisst
-    output_path = f"../output/{country}/plots/dmd"
+    # make sure output dir exists
+    output_path = f"../output/{country}/plots/dmd/svd-rank-{svd_rank}"
+
+    if transposed:
+        output_path += "/T"
 
     if os.path.exists(output_path) is False:
         os.makedirs(output_path)
 
     rank = dmd.eigs.shape[0]
-    dmd.plot_eigs(filename=f"{output_path}/{commodity}-{algorithm}-eigs-{rank}-T.png")
+
+    # png_appendix_eigs = "-T" if transposed else ""
+    # I have to put rank as integer, as floating point not accepted by dmd.plot_eigs
+    dmd.plot_eigs(filename=f"{output_path}/{commodity}-{algorithm}-eigs-{rank}-T-{transposed}.png")
     plt.show()
 
     # 51 = number of markets
-    # x = np.linspace(-5, 5, 51)
     x = np.linspace(1, dmd.snapshots.shape[0], dmd.snapshots.shape[0])
     # 216 = number of time steps
-    # t = np.linspace(0, 4 * np.pi, 216)
     t = np.linspace(1, dmd.snapshots.shape[1], dmd.snapshots.shape[1])
 
-    for mode in dmd.modes.T:
-        plt.plot(x, mode.real)
-    plt.title(f"Modes {commodity} ({country})")
+    # MODES
+    # ------------------------------------
+    for i, mode in enumerate(dmd.modes.T):
+        plt.plot(x, mode.real, label=f"#{i+1}")
+
     if transposed:
         plt.ylabel("Markets $M_i$")
         plt.xlabel("Value")
     else:
         plt.xlabel("Markets $M_i$")
         plt.ylabel("Value")
-        # plt.legend()
-    plt.savefig(f"{output_path}/{commodity}-{algorithm}-modes-{rank}-T-{transposed}.png")
-    plt.show()
 
-    plt.imshow(dmd.snapshots)
-    plt.colorbar(orientation="vertical")
-    if transposed:
-        plt.xlabel("Markets $M_i$")
-        plt.ylabel("Time $t_k$")
-    else:
-        plt.ylabel("Markets $M_i$")
-        plt.xlabel("Time $t_k$")
-    plt.title("Original Snapshot Matrix")
-    plt.savefig(f"{output_path}/{algorithm}-original-snapshot-matrix-{rank}-T-{transposed}.png")
-    plt.show()
-
-    plt.imshow(dmd.reconstructed_data.real)
-    plt.colorbar(orientation="vertical")
-    if transposed:
-        plt.xlabel("Markets $M_i$")
-        plt.ylabel("Time $t_k$")
-    else:
-        plt.ylabel("Markets $M_i$")
-        plt.xlabel("Time $t_k$")
-    plt.title(f"Reconstructed Matrix {commodity} ({country})")
-    plt.savefig(f"{output_path}/{commodity}-{algorithm}-reconstructed-matrix-{rank}-T-{transposed}.png")
-    plt.show()
-
-    # fig, ax = plt.subplots(3, 3)
-    for i in range(dmd.modes.shape[1]):
-        mode = dmd.modes[:, i]
-        plt.plot(x, mode.real, label=f"#{i+1}")
     plt.title(f"Modes {commodity} ({country})")
-
-
-    if transposed:
-        plt.xlabel("time $t_k$")
-    else:
-        plt.xlabel("Markets $M_i$")
-    plt.ylabel("Value")
-
-
-    plt.tight_layout()
-    #plt.legend(loc="lower left", bbox_to_anchor=(0.7, 0.6))
     plt.legend()
-    plt.savefig(f"{output_path}/{commodity}-{algorithm}-modes-{rank}-w-legend-T-{transposed}.png")
+    plt.savefig(f"{output_path}/{commodity}-{algorithm}-modes-{svd_rank}-T-{transposed}.png")
     plt.show()
-        #plt.imshow(mode.imag)
-        #plt.show()
-    # dynamics per mode -> dynamics
 
-
-
-    # # error between approximated data and original one
-    # plt.pcolor(xgrid, tgrid, (x_snapshot_matrix - dmd.reconstructed_data.real))
-    # fig = plt.colorbar()
-    # plt.title("Absolute error approximated & reconstructed matrix")
-    # fig.show()
-    # plt.show()
-
+    # DYNAMICS OF MODES
+    # ------------------------------------
+    print(f"Dynamics: {dmd.dynamics}")
     for i, dynamic in enumerate(dmd.dynamics):
-        plt.plot(t, dynamic.real, label=f"#{i + 1}")
+        print("Dynamic:", dynamic)
+        plt.plot(t, dynamic, label=f"#{i + 1}")
 
-    plt.title(f"Dynamics modes {commodity} ({country})")
+    plt.title(f"Dynamics of modes {commodity} ({country})")
 
     if transposed:
         plt.xlabel("Markets $M_i$")
@@ -195,8 +148,49 @@ def plot_dmd_results(dmd, country, commodity, algorithm="base", transposed=False
     plt.tight_layout()
     # plt.legend(loc="lower left", bbox_to_anchor=(0.7, 0.5))
     plt.legend()
-    plt.savefig(f"{output_path}/{commodity}-{algorithm}-dynamics-{rank}-w-legend-T.png")
+    plt.title(f"Dynamics of DMD modes {commodity} ({country})")
+    plt.savefig(f"{output_path}/{commodity}-{algorithm}-dynamics-{svd_rank}-T-{transposed}.png")
     plt.show()
+
+    # SNAPSHOT MATRIX (ORIGINAL)
+    # ------------------------------------
+    plt.imshow(dmd.snapshots)
+
+    if transposed:
+        plt.xlabel("Markets $M_i$")
+        plt.ylabel("Time $t_k$")
+        plt.colorbar(orientation="vertical")
+    else:
+        plt.ylabel("Markets $M_i$")
+        plt.xlabel("Time $t_k$")
+        plt.colorbar(orientation="horizontal")
+    plt.title("Original Snapshot Matrix")
+    plt.savefig(f"{output_path}/{algorithm}-original-snapshot-matrix-{svd_rank}-T-{transposed}.png")
+    plt.show()
+
+    # SNAPSHOT MATRIX (RECONSTRUCTED)
+    # ------------------------------------
+    plt.imshow(dmd.reconstructed_data.real)
+
+    if transposed:
+        plt.xlabel("Markets $M_i$")
+        plt.ylabel("Time $t_k$")
+        plt.colorbar(orientation="vertical")
+    else:
+        plt.ylabel("Markets $M_i$")
+        plt.xlabel("Time $t_k$")
+        plt.colorbar(orientation="horizontal")
+    plt.title(f"Reconstructed Matrix {commodity} ({country})")
+    plt.savefig(f"{output_path}/{commodity}-{algorithm}-reconstructed-matrix-{svd_rank}-T-{transposed}.png")
+    plt.show()
+
+    plt.tight_layout()
+    #plt.legend(loc="lower left", bbox_to_anchor=(0.7, 0.6))
+    plt.legend()
+    plt.savefig(f"{output_path}/{commodity}-{algorithm}-modes-{svd_rank}-w-legend-T-{transposed}.png")
+    plt.show()
+
+
 
 
 # ----------------------------------------------------------------------------------------------------------------------

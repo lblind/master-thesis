@@ -16,6 +16,47 @@ import utils
 import visualization
 
 
+def svd_own_implementation(S):
+    """
+
+    :param S:
+    :return:
+    """
+    X = S.to_numpy()[:, :-1]
+    X_prime = S.to_numpy()[:, 1:]
+
+    X_pinv = np.linalg.pinv(X)
+    A = X_prime.dot(X_pinv)
+
+    # Compute eigendecomposition
+    # W = eigenvalues
+    # V = Eigenvectors
+    W, V = np.linalg.eig(A)
+
+    W_matrix = np.diag(W)
+
+    x = np.linspace(1, S.shape[0], S.shape[0])
+
+    reconstructed_data = V @ W_matrix @ V.T
+    reconstructed_data = np.empty(S.shape)
+    x_k = S[:, 0]
+    reconstructed_data[:, 0] = x_k
+    for k in range(1, S.shape[1]):
+        reconstructed_data[:, k] = A.dot(x_k)
+        x_k = reconstructed_data[:, k]
+
+    plt.imshow(reconstructed_data.real)
+    # plt.plot(x, V[:, 0])
+    plt.title("Own implementation first DMD mode")
+    plt.show()
+
+    return W, V
+
+
+
+
+
+
 def get_snapshot_matrix_x_for_commodity(df_commodity, time_span_min, time_span_max, write_excel=True):
     """
     Arranges the final dataset in a way that it fits the Dynamic Mode Decomposition (DMD), i.e.:
@@ -188,11 +229,13 @@ def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True, mr_d
     # save the dmd outputs as excels
     save_dmd_results(dmd, country, commodity, rank=svd_rank, transposed=transposed)
 
+
     # return the trained dmd object
     return dmd
 
 
-def dmd_per_commodity(df_final, write_excels=True, svd_rank=1, mr_dmd=False, transpose=True):
+def dmd_per_commodity(df_final, write_excels=True, svd_rank=0.95, mr_dmd=False, transpose=False,
+                      own_implementation=False):
     """
 
     :param df_final:
@@ -236,23 +279,25 @@ def dmd_per_commodity(df_final, write_excels=True, svd_rank=1, mr_dmd=False, tra
         # STEP 2: Do the actual DMD
         # --------------------------------------------------------------------------------------------------------------
 
-        # svd_rank = 2
-        if transpose:
-            dmd = dmd_algorithm(x_snapshot_matrix.T, country=country, commodity=commodity, svd_rank=svd_rank,
-                                mr_dmd=mr_dmd, transposed=transpose)
-            png_appendix = "T"
+        if own_implementation:
+            svd_own_implementation(x_snapshot_matrix)
         else:
-            dmd = dmd_algorithm(x_snapshot_matrix, country=country, commodity=commodity, svd_rank=svd_rank,
-                                mr_dmd=mr_dmd, transposed=transpose)
+            # svd_rank = 2
+            if transpose:
+                dmd = dmd_algorithm(x_snapshot_matrix.T, country=country, commodity=commodity, svd_rank=svd_rank,
+                                    mr_dmd=mr_dmd, transposed=transpose)
+                png_appendix = "T"
+            else:
+                dmd = dmd_algorithm(x_snapshot_matrix, country=country, commodity=commodity, svd_rank=svd_rank,
+                                    mr_dmd=mr_dmd, transposed=transpose)
 
-        # visualize what you have found
-        if mr_dmd:
-            visualization.plot_dmd_results(dmd, country, algorithm="mrDMD", transposed=transpose, commodity=commodity)
-        else:
-            visualization.plot_dmd_results(dmd, country, algorithm="base", transposed=transpose, commodity=commodity)
-
-
-        # compute error
+            # visualize what you have found
+            if mr_dmd:
+                visualization.plot_dmd_results(dmd, country, algorithm="mrDMD", transposed=transpose,
+                                               commodity=commodity, svd_rank=svd_rank)
+            else:
+                visualization.plot_dmd_results(dmd, country, algorithm="base", transposed=transpose,
+                                               commodity=commodity, svd_rank=svd_rank)
 
 
     if write_excels:
@@ -261,6 +306,15 @@ def dmd_per_commodity(df_final, write_excels=True, svd_rank=1, mr_dmd=False, tra
                 f"{output_dir_dmd}/{country}-snapshot-matrices-per-commodity.xlsx") as writer:
             for commodity in df_final.Commodity.unique():
                 dict_xs_per_commodity[commodity].to_excel(writer, sheet_name=commodity, na_rep="-")
+
+
+    def predict(dmd):
+        """
+
+        :param dmd:
+        :return:
+        """
+        dmd.predict()
 
 
 
