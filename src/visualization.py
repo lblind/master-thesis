@@ -38,39 +38,74 @@ import statistics_snippets as stats
 # DMD results
 # ----------------------------------------------------------------------------------------------------------------------
 
-def plot_dmd_results(dmd):
+def plot_dmd_results(dmd, country, algorithm="base"):
     """
 
     :param dmd:
     :return:
     """
-    dmd.plot_eigs()
+    # make sure output dir exisst
+    output_path = f"../output/{country}/plots/dmd"
+
+    if os.path.exists(output_path) is False:
+        os.makedirs(output_path)
+
+    rank = dmd.eigs.shape[0]
+    dmd.plot_eigs(filename=f"{output_path}/{algorithm}-eigs-{rank}.png")
+    plt.show()
 
     # 51 = number of markets
     # x = np.linspace(-5, 5, 51)
-    x = np.linspace(1, 51, 51)
+    x = np.linspace(1, dmd.snapshots.shape[0], dmd.snapshots.shape[0])
     # 216 = number of time steps
     # t = np.linspace(0, 4 * np.pi, 216)
-    t = np.linspace(1, 216, 216)
+    t = np.linspace(1, dmd.snapshots.shape[1], dmd.snapshots.shape[1])
 
-    xgrid, tgrid = np.meshgrid(x, t)
     for mode in dmd.modes.T:
         plt.plot(x, mode.real)
         plt.title("Modes")
-        plt.legend()
+        plt.xlabel("Markets $M_i$")
+        plt.ylabel("Value")
+        # plt.legend()
+    plt.savefig(f"{output_path}/{algorithm}-modes-{rank}.png")
     plt.show()
 
     plt.imshow(dmd.snapshots)
+    plt.colorbar(orientation="horizontal")
     plt.ylabel("Markets $M_i$")
-    plt.xlabel("$t$")
+    plt.xlabel("Time $t_k$")
     plt.title("Original Snapshot Matrix")
+    plt.savefig(f"{output_path}/{algorithm}-original-snapshot-matrix-{rank}.png")
     plt.show()
 
     plt.imshow(dmd.reconstructed_data.real)
+    plt.colorbar(orientation="horizontal")
     plt.ylabel("Markets $M_i$")
-    plt.xlabel("$t$")
+    plt.xlabel("Time $t_k$")
     plt.title("Reconstructed Matrix")
+    plt.savefig(f"{output_path}/{algorithm}-reconstructed-matrix-{rank}.png")
     plt.show()
+
+    # fig, ax = plt.subplots(3, 3)
+    for i in range(dmd.modes.shape[1]):
+        mode = dmd.modes[:, i]
+        plt.plot(x, mode.real, label=f"Mode #{i+1}")
+    plt.title("Modes")
+    plt.xlabel("Markets $M_i$")
+    plt.ylabel("Value")
+        # plt.legend()
+        # plt.imshow(np.expand_dims(mode.real, axis=1))
+        # plt.colorbar(orientation="vertical")
+        #plt.title(f"Mode #{i}")
+    plt.tight_layout()
+    plt.legend(loc="lower left", bbox_to_anchor=(0.7, 0.6))
+    plt.savefig(f"{output_path}/{algorithm}-modes-{rank}-w-legend.png")
+    plt.show()
+        #plt.imshow(mode.imag)
+        #plt.show()
+    # dynamics per mode -> dynamics
+
+
 
     # # error between approximated data and original one
     # plt.pcolor(xgrid, tgrid, (x_snapshot_matrix - dmd.reconstructed_data.real))
@@ -79,14 +114,42 @@ def plot_dmd_results(dmd):
     # fig.show()
     # plt.show()
 
-    for dynamic in dmd.dynamics:
-        plt.plot(t, dynamic.real)
-        plt.title("Dynamics")
+    for i, dynamic in enumerate(dmd.dynamics):
+        plt.plot(t, dynamic.real, label="Dynamic mode #{i}")
+
+    plt.title("Dynamics")
+    plt.xlabel("Time $t_k$")
+    plt.tight_layout()
+    plt.legend(loc="lower left", bbox_to_anchor=(0.7, 0.5))
+
     plt.show()
 
+    # print("Shape before manipulation: {}".format(dmd.reconstructed_data.shape))
+    # dmd.dmd_time['dt'] *= .25
+    # dmd.dmd_time['tend'] *= 3
+    # print("Shape after manipulation: {}".format(dmd.reconstructed_data.shape))
+    #
+    # fig = plt.figure()
+    #
+    # x1 = np.linspace(-3, 3, 80)
+    # x2 = np.linspace(-3, 3, 80)
+    # x1grid, x2grid = np.meshgrid(x1, x2)
+    # dmd_states = [state.reshape(x1grid.shape) for state in dmd.reconstructed_data.T]
+    #
+    # frames = [
+    #     [plt.pcolor(x1grid, x2grid, state.real, vmin=-1, vmax=1)]
+    #     for state in dmd_states
+    # ]
+    #
+    # ani = animation.ArtistAnimation(fig, frames, interval=70, blit=False, repeat=False)
+    #
+    # HTML(ani.to_html5_video())
+
     # dmd.plot_modes_2D(figsize=(12, 5))
+    # dmd.plot_modes_2D()
     # dmd.plot_modes_2D(figsize=(12, 5))
-    # dmd.plot_snapshots_2D(figsize=x_snapshot_matrix.shape)
+    # dmd.plot_snapshots_2D()
+
     # dmd.predict()
 
 

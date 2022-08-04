@@ -111,4 +111,4 @@ if __name__ == "__main__":
           "# DYNAMIC MODE DECOMPOSITION (DMD)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-    # dmd.dmd_per_commodity(df_final)
+    dmd.dmd_per_commodity(df_final)

@@ -8,6 +8,7 @@ Functions that are used to perform the Dynamic Mode Decomposition (DMD).
 import pydmd
 from matplotlib import pyplot as plt
 from pydmd import DMD
+from pydmd import MrDMD
 
 import pandas as pd
 import os
@@ -157,7 +158,7 @@ def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True):
     return dmd
 
 
-def dmd_per_commodity(df_final, write_excels=True):
+def dmd_per_commodity(df_final, write_excels=True, svd_rank=3):
     """
 
     :param df_final:
@@ -201,10 +202,11 @@ def dmd_per_commodity(df_final, write_excels=True):
         # STEP 2: Do the actual DMD
         # --------------------------------------------------------------------------------------------------------------
 
-        dmd = dmd_algorithm(x_snapshot_matrix, country=country, commodity=commodity, svd_rank=2)
+        # svd_rank = 2
+        dmd = dmd_algorithm(x_snapshot_matrix.T, country=country, commodity=commodity, svd_rank=svd_rank)
 
         # visualize what you have found
-        visualization.plot_dmd_results(dmd)
+        visualization.plot_dmd_results(dmd, country, algorithm="base")
 
     if write_excels:
         # Write all dfs into one excel
