@@ -38,7 +38,60 @@ import statistics_snippets as stats
 # DMD results
 # ----------------------------------------------------------------------------------------------------------------------
 
-def plot_dmd_results(dmd, country, algorithm="base", transposed=False):
+def plot_abs_error_matrix(abs_error, country, rank, algorithm, commodity, transposed=False):
+    """
+
+    :param abs_error:
+    :param transposed:
+    :return:
+    """
+    output_dir_dmd = f"../output/{country}/plots/dmd"
+    if os.path.exists(output_dir_dmd) is False:
+        os.makedirs(output_dir_dmd)
+
+    plt.imshow(abs_error)
+    plt.title(f"Absolute Error {commodity} ({country})")
+    # plt.suptitle(f"Absolute error {commodity} ({country})")
+    # plt.title("Observed - Reconstructed Time Series")
+    if transposed:
+        plt.xlabel("Markets $M_i$")
+        plt.ylabel("Time $t_k$")
+        plt.colorbar(orientation="vertical")
+    else:
+        plt.ylabel("Markets $M_i$")
+        plt.xlabel("Time $t_k$")
+        plt.colorbar(orientation="horizontal")
+
+
+    plt.savefig(f"{output_dir_dmd}/{algorithm}-error-matrix-r-{rank}-T-{transposed}.png")
+
+
+    plt.show()
+
+    if transposed:
+        t = np.linspace(1, abs_error.shape[0], abs_error.shape[0])
+        # calculate mean per row / month
+        mean_err = abs_error.mean(axis=1)
+
+    else:
+        t = np.linspace(1, abs_error.shape[1], abs_error.shape[1])
+        # calculate mean per column / month
+        mean_err = abs_error.mean(axis=0)
+
+    plt.title("Mean error over time")
+    plt.plot(t, mean_err)
+    plt.ylabel("Mean error per $t_k$")
+    plt.xlabel("Time $t_k$")
+
+    plt.savefig(f"{output_dir_dmd}/{algorithm}-error-over-time-r-{rank}-T-{transposed}.png")
+    plt.show()
+
+    # TODO: maybe also plot mean error per market (x)
+
+
+
+
+def plot_dmd_results(dmd, country, commodity, algorithm="base", transposed=False):
     """
 
     :param dmd:
@@ -51,7 +104,7 @@ def plot_dmd_results(dmd, country, algorithm="base", transposed=False):
         os.makedirs(output_path)
 
     rank = dmd.eigs.shape[0]
-    dmd.plot_eigs(filename=f"{output_path}/{algorithm}-eigs-{rank}-T.png")
+    dmd.plot_eigs(filename=f"{output_path}/{commodity}-{algorithm}-eigs-{rank}-T.png")
     plt.show()
 
     # 51 = number of markets
@@ -63,7 +116,7 @@ def plot_dmd_results(dmd, country, algorithm="base", transposed=False):
 
     for mode in dmd.modes.T:
         plt.plot(x, mode.real)
-    plt.title("Modes")
+    plt.title(f"Modes {commodity} ({country})")
     if transposed:
         plt.ylabel("Markets $M_i$")
         plt.xlabel("Value")
@@ -71,7 +124,7 @@ def plot_dmd_results(dmd, country, algorithm="base", transposed=False):
         plt.xlabel("Markets $M_i$")
         plt.ylabel("Value")
         # plt.legend()
-    plt.savefig(f"{output_path}/{algorithm}-modes-{rank}-T-{transposed}.png")
+    plt.savefig(f"{output_path}/{commodity}-{algorithm}-modes-{rank}-T-{transposed}.png")
     plt.show()
 
     plt.imshow(dmd.snapshots)
@@ -94,15 +147,15 @@ def plot_dmd_results(dmd, country, algorithm="base", transposed=False):
     else:
         plt.ylabel("Markets $M_i$")
         plt.xlabel("Time $t_k$")
-    plt.title("Reconstructed Matrix")
-    plt.savefig(f"{output_path}/{algorithm}-reconstructed-matrix-{rank}-T-{transposed}.png")
+    plt.title(f"Reconstructed Matrix {commodity} ({country})")
+    plt.savefig(f"{output_path}/{commodity}-{algorithm}-reconstructed-matrix-{rank}-T-{transposed}.png")
     plt.show()
 
     # fig, ax = plt.subplots(3, 3)
     for i in range(dmd.modes.shape[1]):
         mode = dmd.modes[:, i]
         plt.plot(x, mode.real, label=f"#{i+1}")
-    plt.title("Modes")
+    plt.title(f"Modes {commodity} ({country})")
 
 
     if transposed:
@@ -115,7 +168,7 @@ def plot_dmd_results(dmd, country, algorithm="base", transposed=False):
     plt.tight_layout()
     #plt.legend(loc="lower left", bbox_to_anchor=(0.7, 0.6))
     plt.legend()
-    plt.savefig(f"{output_path}/{algorithm}-modes-{rank}-w-legend-T-{transposed}.png")
+    plt.savefig(f"{output_path}/{commodity}-{algorithm}-modes-{rank}-w-legend-T-{transposed}.png")
     plt.show()
         #plt.imshow(mode.imag)
         #plt.show()
@@ -133,7 +186,7 @@ def plot_dmd_results(dmd, country, algorithm="base", transposed=False):
     for i, dynamic in enumerate(dmd.dynamics):
         plt.plot(t, dynamic.real, label=f"#{i + 1}")
 
-    plt.title("Dynamics mode")
+    plt.title(f"Dynamics modes {commodity} ({country})")
 
     if transposed:
         plt.xlabel("Markets $M_i$")
@@ -142,7 +195,7 @@ def plot_dmd_results(dmd, country, algorithm="base", transposed=False):
     plt.tight_layout()
     # plt.legend(loc="lower left", bbox_to_anchor=(0.7, 0.5))
     plt.legend()
-    plt.savefig(f"{output_path}/{algorithm}-dynamics-{rank}-w-legend-T.png")
+    plt.savefig(f"{output_path}/{commodity}-{algorithm}-dynamics-{rank}-w-legend-T.png")
     plt.show()
 
 

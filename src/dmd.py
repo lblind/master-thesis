@@ -4,7 +4,6 @@ Dynamic Mode Decomposition
 Functions that are used to perform the Dynamic Mode Decomposition (DMD).
 """
 
-
 import pydmd
 from matplotlib import pyplot as plt
 from pydmd import DMD
@@ -61,11 +60,8 @@ def get_snapshot_matrix_x_for_commodity(df_commodity, time_span_min, time_span_m
             # vec_prices_commodity_per_month = df_commodity[df_commodity.TimeSpei == time]["Price"]
             vec_prices_commodity_per_month = np.array(df_commodity_year[df_commodity_year.Month == month]["AdjPrice"])
 
-
             print(f" [{commodity}] ({year}, {month})", commodity, len(vec_prices_commodity_per_month),
                   vec_prices_commodity_per_month.shape)
-            # print(df_commodity_year[df_commodity_year.Month == month]["Market"])
-            # print(vec_prices_commodity_per_month)
 
             # add vector to matrix
             # print(f"{year}, {month}")
@@ -83,9 +79,28 @@ def get_snapshot_matrix_x_for_commodity(df_commodity, time_span_min, time_span_m
     return snapshot_matrix_x_for_commodity
 
 
-def save_dmd_results(dmd, country, commodity, excel_output_extension=""):
+def compute_abs_error(dmd, country, commodity, rank, algorithm, transposed=False):
     """
 
+    :return:
+    """
+    # create dir for dmd if not yet existent
+    output_dir_dmd = f"../output/{country}/dmd"
+    if os.path.exists(output_dir_dmd) is False:
+        os.makedirs(output_dir_dmd)
+    abs_error = np.abs(dmd.snapshots - dmd.reconstructed_data.real)
+
+
+    visualization.plot_abs_error_matrix(abs_error=abs_error, country=country, rank=rank,
+                                        algorithm=algorithm, transposed=transposed, commodity=commodity)
+
+    return abs_error
+
+
+def save_dmd_results(dmd, country, commodity, excel_output_extension="", transposed=False, algorithm="base", rank=0):
+    """
+
+    :param transposed:
     :param dmd:
     :return:
     """
@@ -102,6 +117,21 @@ def save_dmd_results(dmd, country, commodity, excel_output_extension=""):
     results_dict["snapshots"] = pd.DataFrame(dmd.snapshots)
     results_dict["amplitudes"] = pd.DataFrame(dmd.amplitudes)
 
+    abs_error=compute_abs_error(dmd=dmd, country=country, commodity=commodity,
+                                                     rank=dmd.svd_rank, algorithm=algorithm,
+                                                     transposed=transposed)
+
+    stats_abs_error = pd.DataFrame({
+        "Mean" : [abs_error.flatten().mean()],
+        "Min" : [abs_error.flatten().min()],
+        "Median" : [np.median(abs_error.flatten())],
+        "Max" : [abs_error.flatten().max()],
+        "Std. dev" : [abs_error.flatten().std()],
+    })
+
+    results_dict["abs_error_df"] = pd.DataFrame(abs_error)
+    results_dict["abs_error_stat"] = stats_abs_error
+
 
     print(f"Frequency ({dmd.frequency.shape})\n", dmd.frequency)
     print(f"Eigs ({dmd.eigs.shape})\n", dmd.eigs)
@@ -110,13 +140,14 @@ def save_dmd_results(dmd, country, commodity, excel_output_extension=""):
     print(f"Original data ({dmd.snapshots.shape})")
     print(f"Reconstructed data ({dmd.snapshots.shape})\n", dmd.reconstructed_data)
 
+
     # make sure that directory exists
     output_path = f"../output/{country}/dmd/{commodity}"
     if os.path.exists(output_path) is False:
         os.makedirs(output_path)
 
     # Write all dfs into one excel
-    with pd.ExcelWriter(f"{output_path}/dmd-results{excel_output_extension}.xlsx") as writer:
+    with pd.ExcelWriter(f"{output_path}/dmd-results{excel_output_extension}-r{rank}-T-{transposed}.xlsx") as writer:
         for group in results_dict.keys():
             # extract relevant subgroup
             df_sum_stat = results_dict[group]
@@ -125,7 +156,8 @@ def save_dmd_results(dmd, country, commodity, excel_output_extension=""):
     print(f"Saving results of DMD successful.")
 
 
-def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True, mr_dmd=False):
+
+def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True, mr_dmd=False, transposed=False):
     """
 
     :param commodity:
@@ -153,9 +185,8 @@ def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True, mr_d
     # train the data
     dmd.fit(np_snapshots)
 
-
     # save the dmd outputs as excels
-    save_dmd_results(dmd, country, commodity)
+    save_dmd_results(dmd, country, commodity, rank=svd_rank, transposed=transposed)
 
     # return the trained dmd object
     return dmd
@@ -197,7 +228,7 @@ def dmd_per_commodity(df_final, write_excels=True, svd_rank=1, mr_dmd=False, tra
 
         # construct the snapshot matrix per commodity
         x_snapshot_matrix = get_snapshot_matrix_x_for_commodity(df_final_per_commodity, time_span_min=time_span_min,
-                                                time_span_max=time_span_max, write_excel=write_excels)
+                                                                time_span_max=time_span_max, write_excel=write_excels)
         # append snapshot matrix to dict
         dict_xs_per_commodity[commodity] = x_snapshot_matrix
 
@@ -207,18 +238,22 @@ def dmd_per_commodity(df_final, write_excels=True, svd_rank=1, mr_dmd=False, tra
 
         # svd_rank = 2
         if transpose:
-            dmd = dmd_algorithm(x_snapshot_matrix.T, country=country, commodity=commodity, svd_rank=svd_rank, mr_dmd=mr_dmd)
+            dmd = dmd_algorithm(x_snapshot_matrix.T, country=country, commodity=commodity, svd_rank=svd_rank,
+                                mr_dmd=mr_dmd, transposed=transpose)
             png_appendix = "T"
         else:
-            dmd = dmd_algorithm(x_snapshot_matrix, country=country, commodity=commodity, svd_rank=svd_rank, mr_dmd=mr_dmd)
-            png_appendix = ""
-
+            dmd = dmd_algorithm(x_snapshot_matrix, country=country, commodity=commodity, svd_rank=svd_rank,
+                                mr_dmd=mr_dmd, transposed=transpose)
 
         # visualize what you have found
         if mr_dmd:
-            visualization.plot_dmd_results(dmd, country, algorithm="mrDMD", transposed=transpose)
+            visualization.plot_dmd_results(dmd, country, algorithm="mrDMD", transposed=transpose, commodity=commodity)
         else:
-            visualization.plot_dmd_results(dmd, country, algorithm="base", transposed=transpose)
+            visualization.plot_dmd_results(dmd, country, algorithm="base", transposed=transpose, commodity=commodity)
+
+
+        # compute error
+
 
     if write_excels:
         # Write all dfs into one excel
@@ -226,3 +261,6 @@ def dmd_per_commodity(df_final, write_excels=True, svd_rank=1, mr_dmd=False, tra
                 f"{output_dir_dmd}/{country}-snapshot-matrices-per-commodity.xlsx") as writer:
             for commodity in df_final.Commodity.unique():
                 dict_xs_per_commodity[commodity].to_excel(writer, sheet_name=commodity, na_rep="-")
+
+
+
