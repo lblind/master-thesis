@@ -538,6 +538,10 @@ def scatter_adj_prices_per_region_one_fig(df_wfp, title_appendix="", png_appendi
         # option 1)
         fig.tight_layout()
 
+        # Add padding between axes and labels
+        plt.gca().xaxis.set_tick_params(pad=5)
+        plt.gca().yaxis.set_tick_params(pad=10)
+
         # format the axis
         # just display the year
         # plt.gca().xaxis.set_major_formatter(DateFormatter("%Y"))
@@ -645,7 +649,6 @@ def scatter_extrapolated_adj_prices_per_region(df_region, df_region_extrapolated
     if show:
         plt.show()
 
-
 def scatter_spikes_per_commodity(df):
     """
     For each commodity in df:
@@ -680,6 +683,14 @@ def scatter_spikes_per_commodity(df):
 
         plt.hlines(df_commodity.MeanAdjPrice.unique()[0], df_commodity.TimeWFP.min(), df_commodity.TimeWFP.max(),
                    label="Mean", colors="c", linewidth=2)
+
+        # # if you want to plot the upper quartile as well -> outcomment
+        # # upper quartile
+        # upper_quartile = np.nanpercentile(df_commodity.AdjPrice, 75)
+        # plt.hlines(upper_quartile, df_commodity.TimeWFP.min(), df_commodity.TimeWFP.max(),
+        #            label="Upper quartile", colors="c", linewidth=2)
+
+
         plt.legend()
         plt.xlabel("Time")
         plt.ylabel(f"Price [{currency}]")
@@ -688,7 +699,28 @@ def scatter_spikes_per_commodity(df):
                      alpha=0.7)
         # display year and month
         plt.gca().xaxis.set_major_formatter(DateFormatter("%Y, %m"))
-        plt.xticks(rotation=30)
+
+        # Add padding between axes and labels
+        plt.gca().xaxis.set_tick_params(pad=5)
+        plt.gca().yaxis.set_tick_params(pad=10)
+
+        # plt.xticks(df_commodity.TimeWFP.unique(), rotation=30)
+        # one for each year
+        # print(df_commodity.groupby("Year")["TimeWFP"])
+
+        # always plot january on x-axis (one tick for each year)
+
+        # # one tick per year (January)
+        # dates_xticks = df_commodity[df_commodity.Month == 1]["TimeWFP"].unique()
+        # two ticks per year (January and July)
+        dates_xticks = df_commodity[df_commodity.Month.isin([1, 7])]["TimeWFP"].unique()
+
+        # two ticks per year
+        plt.xticks(dates_xticks, rotation=90)
+
+        plt.tight_layout()
+
+        #plt.xticks(df_commodity.groupby("Year")["TimeWFP"][0], rotation=30)
         plt.savefig(f"{output_path}/{commodity}-Spikes.png")
         plt.show()
 
