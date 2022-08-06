@@ -8,7 +8,7 @@ import warnings
 import pandas as pd
 
 import preprocessing as preproc
-import statistics_snippets as stats
+import analysis as stats
 import visualization
 
 

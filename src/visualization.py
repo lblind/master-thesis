@@ -32,7 +32,7 @@ import utils
 import plotly.express as px
 
 import missingno as msgo
-import statistics_snippets as stats
+import analysis as stats
 
 # ----------------------------------------------------------------------------------------------------------------------
 # DMD results
@@ -98,7 +98,7 @@ def plot_dmd_results(dmd, country, commodity, svd_rank, algorithm="base", transp
     output_path = f"../output/{country}/plots/dmd/svd-rank-{svd_rank}"
 
     if transposed:
-        output_path += "/T"
+        output_path += "/transposed"
 
     if os.path.exists(output_path) is False:
         os.makedirs(output_path)

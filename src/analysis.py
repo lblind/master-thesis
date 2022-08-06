@@ -1,6 +1,8 @@
 """
-STATISTICS
-----------
+ANALYSIS & STATISTICS
+---------------------
+Everything regarding further analysis and statistics (and its documentation)
+E.g. some statistics are computed here and stored in Excel sheets.
 """
 import os
 import pandas as pd
@@ -8,6 +10,61 @@ import numpy as np
 
 import utils
 import preprocessing as preproc
+
+
+def identify_spikes_per_commodity(df, spike_dev = 1, write_excel=True, state_preproc_step=4):
+    """
+
+    :param df:
+    :param write_excel:
+    :param state_preproc_step:
+    :return:
+    """
+    # first: compute means per commodity
+    mean_adj_price_per_commodity = df.groupby("Commodity")["AdjPrice"].mean()
+
+    print(mean_adj_price_per_commodity)
+    print(mean_adj_price_per_commodity["Beans"])
+
+    # create column to compute deviation from mean
+    df["DevMean"] = np.nan
+    # compute share of deviation from dev mean
+    df["RelDevMean"] = np.nan
+    # column to identify whether a spike has occured
+    df["SpikeAdjPrice"] = np.nan
+
+    for commodity in df.Commodity.unique():
+        print(f"Commodity: {commodity}, Mean: {mean_adj_price_per_commodity[commodity]}")
+        # create a view on the subset of the df that belongs to that commodity
+        df_commodity = df[df.Commodity == commodity]
+
+        # compute deviation from mean per commodity
+        df.loc[df.Commodity == commodity, "DevMean"] = df_commodity.AdjPrice - mean_adj_price_per_commodity[commodity]
+
+        # create new view
+        df_commodity = df[df.Commodity == commodity]
+
+        # compute relative deviation from mean per commodity
+        df.loc[df.Commodity == commodity, "RelDevMean"] = df_commodity.DevMean / mean_adj_price_per_commodity[commodity]
+
+        # create new view
+        df_commodity = df[df.Commodity == commodity]
+
+        # identify spike -> if relative deviation > 10% or just at all deviatng
+        # variant 1: just at all deviating from mean
+        df.loc[df.Commodity == commodity, "SpikeAdjPrice"] = df_commodity.DevMean > 0
+
+    if write_excel:
+
+        country = df.Country.unique()[0]
+        output_path = f"../output/{country}/spikes"
+        if os.path.exists(output_path) is False:
+            os.makedirs(output_path)
+
+        df.to_excel(f"{output_path}/df-with-spikes-PREPROC-{state_preproc_step}.xlsx")
+
+    return df
+
 
 
 def mean_column_per_group(gdf_final, column="AdjPrice", group="District"):
@@ -34,13 +91,13 @@ def mean_column_per_group(gdf_final, column="AdjPrice", group="District"):
 
     return gdf_merged
 
+
 def sum_stats_range_of_variables(df, add_pad_months_time_span=0, preproc_step=1):
     """
 
     :param df:
     :return:
     """
-
 
     country = df.Country.unique()[0]
 
@@ -53,12 +110,12 @@ def sum_stats_range_of_variables(df, add_pad_months_time_span=0, preproc_step=1)
 
         # call subset extraction function -> find union of time
         df_commodity, min_time, max_time = preproc.extract_df_subset_time_prices(df_commodity=df_commodity,
-                                                                         epsilon_month=add_pad_months_time_span)
+                                                                                 epsilon_month=add_pad_months_time_span)
 
         # call subset extraction function -> find intersection of time
         # (per region as interpolated by region afterwards)
         df_commodity, min_time, max_time = preproc.extract_intersec_subset_time_per_region_for_commodity(df_commodity=
-                                                                                                 df_commodity)
+                                                                                                         df_commodity)
 
         # store min and max time for further use/ documentation
         min_max_times_dict[commodity] = (min_time, max_time)
@@ -131,11 +188,9 @@ def sum_stats_prices(df, var_list_groups_by=None, excel_output_extension="-prepr
         # List containing the share of that unique value in the overall number of possible values for that variable
         share_unique_value_country_list = []
 
-
         format_number = "#"
         format_share = "%"
         format_missings = "nan"
-
 
         # Missings per unique value in that group
         for value in df[group].unique():
@@ -191,13 +246,15 @@ def sum_stats_prices(df, var_list_groups_by=None, excel_output_extension="-prepr
     if return_df_by_group_sheet == "General":
         return df_sum_stats_general
     elif return_df_by_group_sheet in dict_dfs_sum_stats.keys():
-        return dict_dfs_sum_stats[return_df_by_group_sheet].sort_values(by=[return_df_by_group_sheet], ignore_index=True)
+        return dict_dfs_sum_stats[return_df_by_group_sheet].sort_values(by=[return_df_by_group_sheet],
+                                                                        ignore_index=True)
     else:
         raise ValueError(f"Nothing will be returned, as "
                          f"{return_df_by_group_sheet} is neither "
                          f"General, nor part of the valid groups:"
                          f"{dict_dfs_sum_stats.keys()}.\n"
                          f"Plesae revise your definition.")
+
 
 def sum_stats_prices_and_droughts(df, var_list_groups_by=None, excel_output_extension="-preproc-1",
                                   commodity=None, return_df_by_group_sheet="General"):
@@ -400,7 +457,8 @@ def sum_stats_prices_and_droughts(df, var_list_groups_by=None, excel_output_exte
     if return_df_by_group_sheet == "General":
         return df_sum_stats_general
     elif return_df_by_group_sheet in dict_dfs_sum_stats.keys():
-        return dict_dfs_sum_stats[return_df_by_group_sheet].sort_values(by=[return_df_by_group_sheet], ignore_index=True)
+        return dict_dfs_sum_stats[return_df_by_group_sheet].sort_values(by=[return_df_by_group_sheet],
+                                                                        ignore_index=True)
     else:
         raise ValueError(f"Nothing will be returned, as "
                          f"{return_df_by_group_sheet} is neither "
@@ -434,7 +492,6 @@ def df_describe_excel(df, group_by_column=None, excel_extension="-final", column
                 f"{output_path_stats}/{country}-describe-group-{group_by_column}{excel_extension}.xlsx",
                 sheet_name=column)
         else:
-            sum_stats_per_group.to_excel(f"{output_path_stats}/{country}-describe-group-{group_by_column}{excel_extension}.xlsx",
-                                         sheet_name="All columns")
-
-
+            sum_stats_per_group.to_excel(
+                f"{output_path_stats}/{country}-describe-group-{group_by_column}{excel_extension}.xlsx",
+                sheet_name="All columns")

@@ -12,7 +12,7 @@ import pandas as pd
 import utils
 import visualization
 import dataset_creation
-import statistics_snippets as stats
+import analysis as stats
 
 import dmd
 
@@ -67,6 +67,11 @@ if __name__ == "__main__":
     # stats.df_describe_excel(df_wfp_drought, group_by_column=["Commodity", "Drought", "Region"], excel_extension="-STEP4", column="AdjPrice")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# ANALYSIS - Peak"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+    stats.identify_spikes_per_commodity(df_wfp)
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# VISUALIZATION"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
@@ -111,4 +116,4 @@ if __name__ == "__main__":
           "# DYNAMIC MODE DECOMPOSITION (DMD)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-    dmd.dmd_per_commodity(df_final)
+    # dmd.dmd_per_commodity(df_final)
