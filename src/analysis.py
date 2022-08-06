@@ -14,12 +14,24 @@ import preprocessing as preproc
 
 def identify_spikes_per_commodity(df, spike_dev = 0, write_excel=True, state_preproc_step=4):
     """
+    Approximately identifies and classifies spikes per commodity
+    Hint: ONLY approximation, as def. of spike is everything > mean
+    (This works better or worse for different commodities and their distribution and sample size)
+
+    Measures calculated
+    Overall mean of inflation adjusted price for that commodity
+    Deviation from Mean
+    Relative deviation from mean (i.e. dev from mean/ mean)
+    SpikeAdjPrice: bool
+        Indicator whether or not adjPrice > mean adjPrice
+
 
     :param df:
     :param write_excel:
     :param state_preproc_step:
     :return:
     """
+
     # first: compute means per commodity
     mean_adj_price_per_commodity = df.groupby("Commodity")["AdjPrice"].mean()
 
@@ -32,9 +44,25 @@ def identify_spikes_per_commodity(df, spike_dev = 0, write_excel=True, state_pre
     # column to identify whether a spike has occured
     df["SpikeAdjPrice"] = np.nan
 
+    # measures for peak in spike
+    df["SpikePeak"] = np.nan
+    df["SpikePeakDate"] = np.nan
+
     for commodity in df.Commodity.unique():
         # create a view on the subset of the df that belongs to that commodity
         df_commodity = df[df.Commodity == commodity]
+
+        # compute peak of spike / overall time series
+        df.loc[df.Commodity == commodity, "SpikePeak"] = df_commodity.AdjPrice.max()
+
+        max_adj_price = df_commodity.AdjPrice.max()
+
+        # create new view
+        df_commodity = df[df.Commodity == commodity]
+
+        # compute date for peak spike
+        df.loc[df.Commodity == commodity, "SpikePeakDate"] = df_commodity[df_commodity.AdjPrice ==
+                                                                          max_adj_price].TimeWFP
 
         # assign mean adjusted price per commodity
         df.loc[df.Commodity == commodity, "MeanAdjPrice"] = mean_adj_price_per_commodity[commodity]
@@ -53,11 +81,13 @@ def identify_spikes_per_commodity(df, spike_dev = 0, write_excel=True, state_pre
 
         # identify spike -> if relative deviation > 10% or just at all deviatng
         # variant 1: just at all deviating from mean (dev > 0)
-        df.loc[df.Commodity == commodity, "SpikeAdjPrice"] = df_commodity.DevMean > spike_dev * mean_adj_price_per_commodity[commodity]
+        df.loc[df.Commodity == commodity, "SpikeAdjPrice"] = df_commodity.DevMean > spike_dev * \
+                                                             mean_adj_price_per_commodity[commodity]
 
 
     # make sure that spike is boolean and not object
     df.SpikeAdjPrice.astype("bool")
+    print(df.SpikePeakDate.unique())
 
     if write_excel:
 
@@ -470,6 +500,9 @@ def sum_stats_prices_and_droughts(df, var_list_groups_by=None, excel_output_exte
                          f"General, nor part of the valid groups:"
                          f"{dict_dfs_sum_stats.keys()}.\n"
                          f"Plesae revise your definition.")
+
+
+
 
 
 def df_describe_excel(df, group_by_column=None, excel_extension="-final", column=None):

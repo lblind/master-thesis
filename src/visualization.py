@@ -677,6 +677,8 @@ def scatter_spikes_per_commodity(df):
         df_commodity_no_spike = df_commodity[df_commodity.DevMean <= 0]
 
         plt.scatter(df_commodity_spike.TimeWFP, df_commodity_spike.AdjPrice, c="m", marker="*", alpha=0.5, label="Spike (> mean)")
+
+
         plt.scatter(df_commodity_no_spike.TimeWFP, df_commodity_no_spike.AdjPrice, c="blue", alpha=0.5, label="No spike")
         plt.title("Spikes")
         plt.suptitle(f"(Inflation-Adjusted) Price Distribution - Commodity: {commodity}")
@@ -711,9 +713,9 @@ def scatter_spikes_per_commodity(df):
         # always plot january on x-axis (one tick for each year)
 
         # # one tick per year (January)
-        # dates_xticks = df_commodity[df_commodity.Month == 1]["TimeWFP"].unique()
+        dates_xticks = df_commodity[df_commodity.Month == 1]["TimeWFP"].unique()
         # two ticks per year (January and July)
-        dates_xticks = df_commodity[df_commodity.Month.isin([1, 7])]["TimeWFP"].unique()
+        # dates_xticks = df_commodity[df_commodity.Month.isin([1, 7])]["TimeWFP"].unique()
 
         # two ticks per year
         plt.xticks(dates_xticks, rotation=90)
@@ -723,6 +725,49 @@ def scatter_spikes_per_commodity(df):
         #plt.xticks(df_commodity.groupby("Year")["TimeWFP"][0], rotation=30)
         plt.savefig(f"{output_path}/{commodity}-Spikes.png")
         plt.show()
+
+        # --------------------------------------------------------------------------------------------------------------
+        # PLOT ONLY SPIKES / Data > mean
+        # --------------------------------------------------------------------------------------------------------------
+        # one tick per year (January)
+        dates_xticks = df_commodity[df_commodity.Month == 1]["TimeWFP"].unique()
+        plt.xticks(dates_xticks, rotation=90)
+        plt.scatter(df_commodity_spike.TimeWFP, df_commodity_spike.AdjPrice, c="m", marker="*", alpha=0.5,
+                    label="Spike (> mean)")
+        plt.legend()
+        plt.xlabel("Time")
+        plt.ylabel(f"Price [{currency}]")
+        plt.grid(b=True, color='grey',
+                 linestyle='-.', linewidth=0.5,
+                 alpha=0.7)
+        # display year and month
+        plt.gca().xaxis.set_major_formatter(DateFormatter("%Y, %m"))
+
+        # Add padding between axes and labels
+        plt.gca().xaxis.set_tick_params(pad=5)
+        plt.gca().yaxis.set_tick_params(pad=10)
+        plt.savefig(f"{output_path}/{commodity}-Spikes-only-spike-1-tick.png")
+        plt.show()
+
+        dates_xticks = df_commodity[df_commodity.Month.isin([1, 7])]["TimeWFP"].unique()
+        # o ticks per year
+        plt.xticks(dates_xticks, rotation=90)
+        plt.scatter(df_commodity_spike.TimeWFP, df_commodity_spike.AdjPrice, c="m", marker="*", alpha=0.5,
+                    label="Spike (> mean)")
+        plt.legend()
+        plt.xlabel("Time")
+        plt.ylabel(f"Price [{currency}]")
+        plt.grid(b=True, color='grey',
+                 linestyle='-.', linewidth=0.5,
+                 alpha=0.7)
+        # display year and month
+        plt.gca().xaxis.set_major_formatter(DateFormatter("%Y, %m"))
+        # Add padding between axes and labels
+        plt.gca().xaxis.set_tick_params(pad=5)
+        plt.gca().yaxis.set_tick_params(pad=10)
+        plt.savefig(f"{output_path}/{commodity}-Spikes-only-spike-2-ticks.png")
+        plt.show()
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # BOXPLOTS
