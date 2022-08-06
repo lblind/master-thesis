@@ -12,7 +12,7 @@ import utils
 import preprocessing as preproc
 
 
-def identify_spikes_per_commodity(df, spike_dev = 1, write_excel=True, state_preproc_step=4):
+def identify_spikes_per_commodity(df, spike_dev = 0, write_excel=True, state_preproc_step=4):
     """
 
     :param df:
@@ -23,9 +23,8 @@ def identify_spikes_per_commodity(df, spike_dev = 1, write_excel=True, state_pre
     # first: compute means per commodity
     mean_adj_price_per_commodity = df.groupby("Commodity")["AdjPrice"].mean()
 
-    print(mean_adj_price_per_commodity)
-    print(mean_adj_price_per_commodity["Beans"])
-
+    # store mean adj price in new column
+    df["MeanAdjPrice"] = np.nan
     # create column to compute deviation from mean
     df["DevMean"] = np.nan
     # compute share of deviation from dev mean
@@ -34,9 +33,11 @@ def identify_spikes_per_commodity(df, spike_dev = 1, write_excel=True, state_pre
     df["SpikeAdjPrice"] = np.nan
 
     for commodity in df.Commodity.unique():
-        print(f"Commodity: {commodity}, Mean: {mean_adj_price_per_commodity[commodity]}")
         # create a view on the subset of the df that belongs to that commodity
         df_commodity = df[df.Commodity == commodity]
+
+        # assign mean adjusted price per commodity
+        df.loc[df.Commodity == commodity, "MeanAdjPrice"] = mean_adj_price_per_commodity[commodity]
 
         # compute deviation from mean per commodity
         df.loc[df.Commodity == commodity, "DevMean"] = df_commodity.AdjPrice - mean_adj_price_per_commodity[commodity]
@@ -51,8 +52,12 @@ def identify_spikes_per_commodity(df, spike_dev = 1, write_excel=True, state_pre
         df_commodity = df[df.Commodity == commodity]
 
         # identify spike -> if relative deviation > 10% or just at all deviatng
-        # variant 1: just at all deviating from mean
-        df.loc[df.Commodity == commodity, "SpikeAdjPrice"] = df_commodity.DevMean > 0
+        # variant 1: just at all deviating from mean (dev > 0)
+        df.loc[df.Commodity == commodity, "SpikeAdjPrice"] = df_commodity.DevMean > spike_dev * mean_adj_price_per_commodity[commodity]
+
+
+    # make sure that spike is boolean and not object
+    df.SpikeAdjPrice.astype("bool")
 
     if write_excel:
 

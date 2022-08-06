@@ -645,6 +645,53 @@ def scatter_extrapolated_adj_prices_per_region(df_region, df_region_extrapolated
     if show:
         plt.show()
 
+
+def scatter_spikes_per_commodity(df):
+    """
+    For each commodity in df:
+    Plot spikes in magenta and no spikes in blue
+    :param df:
+    :return:
+    """
+    country = df.Country.unique()[0]
+    currency = df.Currency.unique()[0]
+    output_path = f"../output/{country}/plots/spikes"
+
+    if os.path.exists(output_path) is False:
+        os.makedirs(output_path)
+
+
+    for commodity in df.Commodity.unique():
+        df_commodity = df[df.Commodity == commodity]
+        # only consider non-nan entries
+        df_commodity = df_commodity[df_commodity.SpikeAdjPrice.notna()]
+        print(df_commodity.SpikeAdjPrice.unique())
+
+        # extract part where a spike occured
+        df_commodity_spike = df_commodity[df_commodity.SpikeAdjPrice]
+        # can't invert the mask, because there might still be some nan values in it (non-extrapolated part)
+        # df_commodity_no_spike = df_commodity[~df_commodity.SpikeAdjPrice]
+        df_commodity_no_spike = df_commodity[df_commodity.DevMean <= 0]
+
+        plt.scatter(df_commodity_spike.TimeWFP, df_commodity_spike.AdjPrice, c="m", marker="*", alpha=0.5, label="Spike (> mean)")
+        plt.scatter(df_commodity_no_spike.TimeWFP, df_commodity_no_spike.AdjPrice, c="blue", alpha=0.5, label="No spike")
+        plt.title("Spikes")
+        plt.suptitle(f"(Inflation-Adjusted) Price Distribution - Commodity: {commodity}")
+
+        plt.hlines(df_commodity.MeanAdjPrice.unique()[0], df_commodity.TimeWFP.min(), df_commodity.TimeWFP.max(),
+                   label="Mean", colors="c", linewidth=2)
+        plt.legend()
+        plt.xlabel("Time")
+        plt.ylabel(f"Price [{currency}]")
+        plt.grid(b=True, color='grey',
+                     linestyle='-.', linewidth=0.5,
+                     alpha=0.7)
+        # display year and month
+        plt.gca().xaxis.set_major_formatter(DateFormatter("%Y, %m"))
+        plt.xticks(rotation=30)
+        plt.savefig(f"{output_path}/{commodity}-Spikes.png")
+        plt.show()
+
 # ----------------------------------------------------------------------------------------------------------------------
 # BOXPLOTS
 # ----------------------------------------------------------------------------------------------------------------------
