@@ -5,7 +5,6 @@ All source code for visualizations
 """
 
 import os
-import geoplot as gplt
 import geopandas as gpd
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -15,16 +14,6 @@ import preprocessing as preproc
 import utils
 import seaborn as sns
 import missingno as msgo
-import analysis as stats
-import plotly.express as px
-import geoplot.crs as gcrs
-import imageio
-import pathlib
-import matplotlib.animation as animation
-import matplotlib.dates as mdates
-import folium
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-import mapclassify as mc
 
 
 # ----------------------------------------------------------------------------------------------------------------------

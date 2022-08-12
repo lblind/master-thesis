@@ -2,6 +2,7 @@
 UTILS
 -----
 Auxiliary code snippets that are used by various modules
+(Convenience functions)
 """
 import numpy as np
 import pandas as pd
@@ -19,8 +20,10 @@ def convert_excel_to_df(path_to_excel, sheet_name=None, nan_char="-"):
         Sheet to read
         If None, the first sheet will be read per default
         Otherwise, specify a sheet name
-    :param nan_char:
-    :return:
+    :param nan_char: str
+        Character that should be identified as a nan that has been used in the excel workbook
+    :return: pandas.DataFrame
+        Extracted dataframe
     """
     if os.path.exists(path_to_excel) is False:
         raise ValueError("Cannot convert excel to df, as path:\n"
@@ -53,13 +56,18 @@ def convert_excel_to_df(path_to_excel, sheet_name=None, nan_char="-"):
 
 def merge_dfs_left(df_left, df_right, on):
     """
-    Left outer join
+    Left outer join to merge to dataframes
 
-    :param df_left:
-    :param df_right:
-    :param on:
-    :param how:
-    :return:
+    :param df_left: pandas.DataFrame
+        Left dataset
+    :param df_right: pandas.DataFrame
+        Right dataset
+    :param on: str or list of str
+        Column name(s) to merge the dataframes on
+    :param how: str
+        Manner of how to join ("inner", "left", ...)
+    :return: pandas.DataFrame
+        Merged dataframe
     """
     # Step 1: drop all possible duplicates
     # df_left = df_left.drop_duplicates(keep="first")
@@ -79,9 +87,13 @@ def merge_dfs_left(df_left, df_right, on):
 
 def merge_drought_to_df_wfp(df_wfp, drop_na=True):
     """
-
-    :param df_wfp:
-    :return:
+    Merge the drought dataset to a dataset containing the WFP prices
+    :param df_wfp: pandas.DataFrame
+        Dataset containnig the WFP part
+    :param drop_na: boolean
+        Whether or not to drop nan entries
+    :return: pandas.DataFrame
+        Merged dataframe containnig both price and classified SPEI/ drought data
     """
     country = df_wfp.Country.unique()[0]
     # merge SPEI to price data

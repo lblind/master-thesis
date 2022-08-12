@@ -4,15 +4,24 @@ MAIN
 (Control)
 
 Starting point of program execution
-"""
-import os
 
-import preprocessing as preproc
-import pandas as pd
+Different configurations can be set here.
+However, this repository has been mainly developed (and tested) for the case of Malawi.
+However, the source code for other countries is left here for potential extension of the code
+Feel free to use everything and test out different configurations and other country cases.
+I'd be happy to see what you have found.
+
+The lines for analysis and visualizations have been commented, as
+they may need a bit of time to end.
+However, feel free to run them regularly and/ or extend the code with
+other functions created and available throughout this repostiory (or just write your own :) ).
+
+"""
+
 import utils
 import visualization
 import dataset_creation
-import analysis as stats
+import analysis as ana
 
 import dmd
 
@@ -60,21 +69,21 @@ if __name__ == "__main__":
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
     # create stats just by commodity
-    stats.df_describe_excel(df_wfp, group_by_column="Commodity", excel_extension="-STEP4", column="AdjPrice")
+    ana.df_describe_excel(df_wfp, group_by_column="Commodity", excel_extension="-STEP4", column="AdjPrice")
     # ... and by commodity & region
-    stats.df_describe_excel(df_wfp, group_by_column=["Commodity", "Region"], excel_extension="-STEP4", column="AdjPrice")
+    ana.df_describe_excel(df_wfp, group_by_column=["Commodity", "Region"], excel_extension="-STEP4", column="AdjPrice")
 
     # add spei dataset & classify droughts
     df_wfp_drought = utils.merge_drought_to_df_wfp(df_wfp)
     # stats by commodity & drought
-    stats.df_describe_excel(df_wfp_drought, group_by_column=["Commodity", "Drought"], excel_extension="-STEP4", column="AdjPrice")
+    ana.df_describe_excel(df_wfp_drought, group_by_column=["Commodity", "Drought"], excel_extension="-STEP4", column="AdjPrice")
     # stats by commodity, drought & region
-    stats.df_describe_excel(df_wfp_drought, group_by_column=["Commodity", "Drought", "Region"], excel_extension="-STEP4", column="AdjPrice")
+    ana.df_describe_excel(df_wfp_drought, group_by_column=["Commodity", "Drought", "Region"], excel_extension="-STEP4", column="AdjPrice")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# ANALYSIS - Peak"
           "\n# ------------------------------------------------------------------------------------------------------\n")
-    df_with_peak = stats.identify_spikes_per_commodity(df_wfp)
+    df_with_peak = ana.identify_spikes_per_commodity(df_wfp)
     visualization.scatter_spikes_per_commodity(df_with_peak)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
@@ -83,11 +92,9 @@ if __name__ == "__main__":
 
 
     print(df_with_drought.columns)
-    df_corr = stats.compute_correlations(df_with_drought)
+    df_corr = ana.compute_correlations(df_with_drought)
 
     visualization.plot_correlation_matrix(df_wfp)
-
-
 
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
@@ -138,3 +145,7 @@ if __name__ == "__main__":
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
     dmd.dmd_per_commodity(df_final, exact_modes=False, transpose=False)
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# CODE EXECUTION COMPLETE."
+         "\n# ------------------------------------------------------------------------------------------------------\n")

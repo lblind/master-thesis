@@ -5,9 +5,8 @@ CREATION OF DATASET
 """
 import warnings
 import preprocessing as preproc
-import analysis as stats
+import analysis as ana
 import visualization
-import pandas as pd
 
 
 def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
@@ -70,7 +69,7 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
     df_wfp.to_excel(f"../output/{country}/intermediate-results/df_wfp_STEP{preproc_step}.xlsx")
 
     # Write sum stats (result Step 2/1)
-    stats.sum_stats_prices(df=df_wfp, excel_output_extension="-preproc-STEP1-2-df_wfp")
+    ana.sum_stats_prices(df=df_wfp, excel_output_extension="-preproc-STEP1-2-df_wfp")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC - PHASE A: STEP 3 (Missings -> Subset of Time: Extract relevant slice per commodity)"
@@ -87,8 +86,8 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
 
     # write summary statistics (share of missing values within commodity dataset)
     # Check missings (result of step 3)
-    df_commodity_stats = stats.sum_stats_prices(df=df_wfp, return_df_by_group_sheet="Commodity",
-                                                excel_output_extension=f"-preproc-STEP{preproc_step}-subset-time")
+    df_commodity_stats = ana.sum_stats_prices(df=df_wfp, return_df_by_group_sheet="Commodity",
+                                              excel_output_extension=f"-preproc-STEP{preproc_step}-subset-time")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC - PHASE A: STEP 4 (Cut extreme outliers (manually) -> Rice)"
@@ -104,8 +103,8 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
     # write the raw output to an Excel workbook
     df_wfp.to_excel(f"../output/{country}/intermediate-results/df_wfp_STEP{preproc_step}.xlsx")
 
-    df_commodity_stats = stats.sum_stats_prices(df=df_wfp, return_df_by_group_sheet="Commodity",
-                                                excel_output_extension=f"-preproc-STEP{preproc_step}-cut-extreme-outliers")
+    df_commodity_stats = ana.sum_stats_prices(df=df_wfp, return_df_by_group_sheet="Commodity",
+                                              excel_output_extension=f"-preproc-STEP{preproc_step}-cut-extreme-outliers")
 
     # Visualization of price distribution before cut offs
     visualization.boxplot_adj_prices(df_wfp, png_appendix=f"-preproc-STEP{preproc_step}-after-cut")
@@ -126,8 +125,8 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
 
     # write summary statistics (share of missing values within market dataset)
     # check missings (result of step 5)
-    df_market_stats = stats.sum_stats_prices(df=df_wfp, return_df_by_group_sheet="Market",
-                                             excel_output_extension=f"-preproc-STEP{preproc_step}-subset-commodity")
+    df_market_stats = ana.sum_stats_prices(df=df_wfp, return_df_by_group_sheet="Market",
+                                           excel_output_extension=f"-preproc-STEP{preproc_step}-subset-commodity")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC - PHASE A: STEP 6 (Missings -> Subset of Market: Drop too sparse markets)"
@@ -145,7 +144,7 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
                                                      )
 
     # Write sum stats (result Step 5)
-    stats.sum_stats_prices(df=df_wfp, excel_output_extension=f"-preproc-STEP{preproc_step}-subset-market")
+    ana.sum_stats_prices(df=df_wfp, excel_output_extension=f"-preproc-STEP{preproc_step}-subset-market")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC - PHASE A: STEP 7 - Per commodity: (Interpolation of missing data)"
@@ -177,7 +176,7 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
         warnings.warn(f"Number of prices should be 0 after extrapolation, but is: {df_wfp.Price.isna().sum()}")
 
     # write final sum stats
-    stats.sum_stats_prices(df=df_wfp, excel_output_extension=f"-preproc-STEP{preproc_step}-interpolation-PHASE-A")
+    ana.sum_stats_prices(df=df_wfp, excel_output_extension=f"-preproc-STEP{preproc_step}-interpolation-PHASE-A")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC - PHASE A: COMPLETED (WFP dataset preprocessed -> no missings anymore)"
@@ -241,8 +240,8 @@ def phase_b_merge_wfp_with_spei_dataset(country, df_wfp_preproc_phase_a, write_r
 
     df_wfp_and_spei = preproc.merge_food_price_and_climate_dfs(df_wfp_with_coords=df_wfp_with_coords, df_spei=df_spei)
 
-    stats.sum_stats_prices(df=df_wfp_and_spei,
-                           excel_output_extension=f"-preproc-STEP{preproc_step}-Merged-SPEI")
+    ana.sum_stats_prices(df=df_wfp_and_spei,
+                         excel_output_extension=f"-preproc-STEP{preproc_step}-Merged-SPEI")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC - PHASE B: STEP 11 - Subset Time: Drop years for which there is no SPEI data (2021, 2022)"
@@ -257,8 +256,8 @@ def phase_b_merge_wfp_with_spei_dataset(country, df_wfp_preproc_phase_a, write_r
     print(f"# Dropping years (as no SPEI data available): {years_to_drop}")
     df_wfp_and_spei = preproc.drop_years(df=df_wfp_and_spei, years_list=years_to_drop)
 
-    stats.sum_stats_prices(df=df_wfp_and_spei,
-                           excel_output_extension=f"-preproc-STEP{preproc_step}-Merged-no-2021-22")
+    ana.sum_stats_prices(df=df_wfp_and_spei,
+                         excel_output_extension=f"-preproc-STEP{preproc_step}-Merged-no-2021-22")
 
     visualization.line_plot_spei_per_region(df_wfp_and_spei=df_wfp_and_spei, show=True)
 
@@ -284,8 +283,8 @@ def phase_b_merge_wfp_with_spei_dataset(country, df_wfp_preproc_phase_a, write_r
     print(f"Counts Drought:\n{counts_drought}")
     print(f"Share of droughts: {counts_drought[True]}/ {(counts_drought[True] + counts_drought[False])}")
 
-    stats.sum_stats_prices_and_droughts(df=df_wfp_and_spei,
-                                        excel_output_extension=f"-preproc-STEP{preproc_step}-FINAL-DATASET")
+    ana.sum_stats_prices_and_droughts(df=df_wfp_and_spei,
+                                      excel_output_extension=f"-preproc-STEP{preproc_step}-FINAL-DATASET")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# PREPROC - PHASE B: COMPLETED (WFP dataset merged with SPEI dataset + Drought classification)"
