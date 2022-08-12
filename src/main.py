@@ -51,18 +51,21 @@ if __name__ == "__main__":
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
     path_to_final_df = f"../output/{country}/{country}-final-dta.xlsx"
-    # TODO outcomment this line if dataset has already been created
-    df_final = utils.convert_excel_to_df(path_to_final_df)
+    # TODO outcomment this line if dataset has already been created (saves some time)
+    # df_final = utils.convert_excel_to_df(path_to_final_df)
 
-    # stats.df_describe_excel(df_final, group_by_column="Commodity")
+    # # if you want to describe the input and create some summary stats
+    # ana.df_describe_excel(df_final, group_by_column="Commodity")
 
     path_to_df_wfp = f"../output/{country}/intermediate-results/df_wfp_STEP4.xlsx"
     df_wfp = utils.convert_excel_to_df(path_to_df_wfp)
 
-    df_with_drought = utils.convert_excel_to_df(f"../output/{country}/intermediate-results/df_wfp_w_drought_STEP4.xlsx")
+    # merge WFP data out of preproc 4 to drought data
     df_with_drought = utils.merge_drought_to_df_wfp(df_wfp)
-
     df_with_drought.to_excel(f"../output/{country}/intermediate-results/df_wfp_w_drought_STEP4.xlsx")
+
+    # TODO: if dataset has been already merged to drought outcommment this line (saves some time)
+    # df_with_drought = utils.convert_excel_to_df(f"../output/{country}/intermediate-results/df_wfp_w_drought_STEP4.xlsx")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# ANALYSIS - Statistics"
@@ -90,12 +93,9 @@ if __name__ == "__main__":
           "# ANALYSIS - Correlations"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-
-    print(df_with_drought.columns)
-    df_corr = ana.compute_correlations(df_with_drought)
-
+    # For the computation of correlations, stata has been used
+    # df_corr = ana.compute_correlations(df_with_drought)
     visualization.plot_correlation_matrix(df_wfp)
-
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# VISUALIZATION"
@@ -109,11 +109,16 @@ if __name__ == "__main__":
           "# VISUALIZATION - Scatter plots"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
+    # create different scatter plots
     visualization.scatter_adj_prices_per_region_one_fig(df_wfp=df_wfp)
     visualization.scatter_adj_prices_all_commodities_droughts(df_wfp=df_wfp)
     visualization.scatter_adj_price_per_region_drought_one_fig(df_wfp=df_wfp)
 
-    # visualization.plot_hist_for_all_commodities(df_wfp)
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# VISUALIZATION - Histograms"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+    # histograms
+    visualization.plot_hist_for_all_commodities(df_wfp)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# VISUALIZATION - Boxplots"
@@ -131,13 +136,16 @@ if __name__ == "__main__":
     visualization.plot_malawi_regions_adm1(df_with_drought, scatter_markets=False)
     visualization.plot_malawi_districts_adm2(df_with_drought, plot_markets=True)
 
-    visualization.plot_malawi(df_final=df_final)
-
     # plot districts
     visualization.plot_malawi_districts_adm2(df_final)
 
+    # Plot prices for specific month
     visualization.plot_country_adm2_prices_for_year_month(df_final, 2018, 8, "Maize")
     visualization.plot_country_adm2_price_spei(df_final, 2018, 8, "Maize")
+
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# VISUALIZATION - Missing values"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
     visualization.plot_missings(df_final, "Price")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
