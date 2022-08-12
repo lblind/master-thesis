@@ -13,64 +13,8 @@ import preprocessing as preproc
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-def compute_correlations(df, corr_columns=None, group_by="Commodity", preproc_step_status=4, time_subset=None):\
 
-    """
-    For each group, compute the pearson correlation coefficients between
-    AdjPrice, Drought and Spei
-    :param df: 
-    :param group: 
-    :param time_subset:
-        if None, then the entire dataset is used. If not none, the 
-    :return: 
-    """
-    # for drought the corr
-    if corr_columns is None:
-        corr_columns = ["AdjPrice", "Drought", "Spei", "Region", "Commodity"]
-
-    # extract relevant columns
-    df = df[corr_columns]
-    # extract dummies
-    df = pd.get_dummies(df)
-
-    corr_columns = list(corr_columns[:-1])
-
-    # df_corr = df.groupby(group_by)[corr_columns].corr().unstack().iloc[:, 1]
-    # compute the correlation per group
-    df_corr = df.groupby(group_by)[corr_columns].corr(method="pearson")
-    df_corr_all = df.groupby(group_by).corr(method="pearson")
-
-    # without further distinction by group - only subset of droguht
-    sns.heatmap(df_corr, annot=True, cmap=plt.cm.Reds)
-
-    print(df_corr)
-    # plot heatmap correlations
-    for group in df[group_by].unique():
-        group_df_corr_all = df_corr_all.loc[[group]]
-        sns.heatmap(group_df_corr_all, annot=True, cmap=plt.cm.Reds)
-        plt.title(f"Commodity: {group}")
-        plt.tight_layout()
-        plt.show()
-
-        sns.heatmap(df_corr.loc[[group]], annot=True, cmap=plt.cm.Reds)
-        plt.title(f"Commodity: {group}")
-        plt.tight_layout()
-        plt.show()
-
-    # write correlations to folder
-    country = df.Country.unique()[0]
-    output_dir = f"../output/{country}/summary-statistics"
-    if os.path.exists(output_dir) is False:
-        os.makedirs(output_dir)
-
-    df_corr.to_excel(f"{output_dir}/{country}-correlations-preproc-STEP{preproc_step_status}.xlsx")
-    df_corr_all.to_excel(f"{output_dir}/{country}-correlations-ALL-preproc-STEP{preproc_step_status}.xlsx")
-
-
-    return df_corr
-
-
-def identify_spikes_per_commodity(df, spike_dev = 0, write_excel=True, state_preproc_step=4):
+def identify_spikes_per_commodity(df, spike_dev=0, write_excel=True, state_preproc_step=4):
     """
     Approximately identifies and classifies spikes per commodity
     Hint: ONLY approximation, as def. of spike is everything > mean
@@ -81,13 +25,22 @@ def identify_spikes_per_commodity(df, spike_dev = 0, write_excel=True, state_pre
     Deviation from Mean
     Relative deviation from mean (i.e. dev from mean/ mean)
     SpikeAdjPrice: bool
-        Indicator whether or not adjPrice > mean adjPrice
+        Indicator whether adjPrice > mean adjPrice
 
 
-    :param df:
-    :param write_excel:
-    :param state_preproc_step:
-    :return:
+    :param spike_dev: float
+        indicates how much the data point must deviate from the mean in order
+        to be classified as a spike
+        If deviation from mean > 0 (spike_dev) --> spike
+    :param df: pandas.DataFrame
+        Input dataset
+    :param write_excel: boolean
+        Whether or not to store the results as excel workbooks
+    :param state_preproc_step: int
+        Number of the preprocessing step out of which df resulted
+    :return: pandas.DataFrame
+        Dataframe containing the computed classifications
+
     """
 
     # first: compute means per commodity
@@ -142,7 +95,6 @@ def identify_spikes_per_commodity(df, spike_dev = 0, write_excel=True, state_pre
         df.loc[df.Commodity == commodity, "SpikeAdjPrice"] = df_commodity.DevMean > spike_dev * \
                                                              mean_adj_price_per_commodity[commodity]
 
-
     # make sure that spike is boolean and not object
     df.SpikeAdjPrice.astype("bool")
     print(df.SpikePeakDate.unique())
@@ -157,7 +109,6 @@ def identify_spikes_per_commodity(df, spike_dev = 0, write_excel=True, state_pre
         df.to_excel(f"{output_path}/df-with-spikes-PREPROC-{state_preproc_step}.xlsx")
 
     return df
-
 
 
 def mean_column_per_group(gdf_final, column="AdjPrice", group="District"):
@@ -560,9 +511,6 @@ def sum_stats_prices_and_droughts(df, var_list_groups_by=None, excel_output_exte
                          f"Plesae revise your definition.")
 
 
-
-
-
 def df_describe_excel(df, group_by_column=None, excel_extension="-final", column=None):
     """
 
@@ -591,3 +539,68 @@ def df_describe_excel(df, group_by_column=None, excel_extension="-final", column
             sum_stats_per_group.to_excel(
                 f"{output_path_stats}/{country}-describe-group-{group_by_column}{excel_extension}.xlsx",
                 sheet_name="All columns")
+
+
+def compute_correlations(df, corr_columns=None, group_by="Commodity", preproc_step_status=4, time_subset=None):
+    """
+    For each group, compute the pearson correlation coefficients between
+    AdjPrice, Drought and Spei
+
+    Hint: For some reason this did not work out (probably due to the datatype of
+    the different columns)
+    For convenience, the dataset has been exported to Stata and the correlation matrix
+    has been computed with a small script for each of the desired indicators.
+    The code is also stored in this repository under src.
+
+    :param preproc_step_status:
+    :param group_by:
+    :param corr_columns:
+    :param df:
+    :param group:
+    :param time_subset:
+        if None, then the entire dataset is used. If not none, the
+    :return:
+    """
+    # for drought the corr
+    if corr_columns is None:
+        corr_columns = ["AdjPrice", "Drought", "Spei", "Region", "Commodity"]
+
+    # extract relevant columns
+    df = df[corr_columns]
+    # extract dummies
+    df = pd.get_dummies(df)
+
+    corr_columns = list(corr_columns[:-1])
+
+    # df_corr = df.groupby(group_by)[corr_columns].corr().unstack().iloc[:, 1]
+    # compute the correlation per group
+    df_corr = df.groupby(group_by)[corr_columns].corr(method="pearson")
+    df_corr_all = df.groupby(group_by).corr(method="pearson")
+
+    # without further distinction by group - only subset of droguht
+    sns.heatmap(df_corr, annot=True, cmap=plt.cm.Reds)
+
+    print(df_corr)
+    # plot heatmap correlations
+    for group in df[group_by].unique():
+        group_df_corr_all = df_corr_all.loc[[group]]
+        sns.heatmap(group_df_corr_all, annot=True, cmap=plt.cm.Reds)
+        plt.title(f"Commodity: {group}")
+        plt.tight_layout()
+        plt.show()
+
+        sns.heatmap(df_corr.loc[[group]], annot=True, cmap=plt.cm.Reds)
+        plt.title(f"Commodity: {group}")
+        plt.tight_layout()
+        plt.show()
+
+    # write correlations to folder
+    country = df.Country.unique()[0]
+    output_dir = f"../output/{country}/summary-statistics"
+    if os.path.exists(output_dir) is False:
+        os.makedirs(output_dir)
+
+    df_corr.to_excel(f"{output_dir}/{country}-correlations-preproc-STEP{preproc_step_status}.xlsx")
+    df_corr_all.to_excel(f"{output_dir}/{country}-correlations-ALL-preproc-STEP{preproc_step_status}.xlsx")
+
+    return df_corr

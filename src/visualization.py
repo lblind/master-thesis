@@ -1,39 +1,31 @@
 """
 VISUALIZATION
 -------------
-
+All source code for visualizations
 """
 
-# TODO: color regions
-# TODO: visualize prices (e.g. color scale, kdeplot)
-# from mpl_toolkits.basemap import Basemap
 import os
-
 import geoplot as gplt
 import geopandas as gpd
-import geoplot.crs as gcrs
-import imageio
 import pandas as pd
-import pathlib
-import matplotlib.animation as animation
 import matplotlib.pyplot as plt
-import mapclassify as mc
 import numpy as np
-import folium
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-
 from matplotlib.dates import DateFormatter
-import matplotlib.dates as mdates
-
 import preprocessing as preproc
 import utils
 import seaborn as sns
-
-
-import plotly.express as px
-
 import missingno as msgo
 import analysis as stats
+import plotly.express as px
+import geoplot.crs as gcrs
+import imageio
+import pathlib
+import matplotlib.animation as animation
+import matplotlib.dates as mdates
+import folium
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+import mapclassify as mc
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # DMD results
@@ -41,10 +33,23 @@ import analysis as stats
 
 def plot_abs_error_matrix(abs_error, country, rank, algorithm, commodity, transposed=False):
     """
+    Plots for the absolute error matrix & the mean error over time
 
-    :param abs_error:
-    :param transposed:
-    :return:
+    :param abs_error: pd.DataFrame
+        Absolute error matrix
+    :param country: str
+        Country for which the DMD has been computed
+    :param rank: int
+        Rank of the underlying SVD
+    :param algorithm: str
+        PyDMD algorithm set (Default: Base)
+    :param commodity: str
+        Commodity for which the DMD has been computed
+    :param transposed: boolean
+        Whether or not the snapshot matrix has been transposed
+    :return: Nothing
+        The resulting graphics are stored in the respective output folder
+
     """
     output_dir_dmd = f"../output/{country}/plots/dmd"
     if os.path.exists(output_dir_dmd) is False:
@@ -63,9 +68,7 @@ def plot_abs_error_matrix(abs_error, country, rank, algorithm, commodity, transp
         plt.xlabel("Time $t_k$")
         plt.colorbar(orientation="horizontal")
 
-
     plt.savefig(f"{output_dir_dmd}/{algorithm}-error-matrix-r-{rank}-T-{transposed}.png")
-
 
     plt.show()
 
@@ -87,13 +90,26 @@ def plot_abs_error_matrix(abs_error, country, rank, algorithm, commodity, transp
     plt.savefig(f"{output_dir_dmd}/{algorithm}-error-over-time-r-{rank}-T-{transposed}.png")
     plt.show()
 
-    # TODO: maybe also plot mean error per market (x)
+
 
 def plot_dmd_results(dmd, country, commodity, svd_rank, algorithm="base", transposed=True):
     """
+    Plots the Results of the DMD algorith,
 
-    :param dmd:
-    :return:
+    :param dmd: pyDMD
+        Trained pyDMD object
+    :param country: str
+        Country for which the DMD has been computed
+    :param commodity: str
+        Commodity for which the DMD has been computed
+    :param svd_rank: int
+        Rank of the underlying SVD
+    :param algorithm: str
+        Algorithm set for the PyDMD implementation
+    :param transposed: boolean
+        Whether or not the snapshot matrix has been transposed
+    :return: Nothing
+        Stores the results in the respective folder
     """
     # make sure output dir exists
     output_path = f"../output/{country}/plots/dmd/svd-rank-{svd_rank}"
@@ -119,7 +135,7 @@ def plot_dmd_results(dmd, country, commodity, svd_rank, algorithm="base", transp
     # MODES
     # ------------------------------------
     for i, mode in enumerate(dmd.modes.T):
-        plt.plot(x, mode.real, label=f"#{i+1}")
+        plt.plot(x, mode.real, label=f"#{i + 1}")
 
     if transposed:
         plt.ylabel("Markets $M_i$")
@@ -192,10 +208,16 @@ def plot_dmd_results(dmd, country, commodity, svd_rank, algorithm="base", transp
 
 def line_plot_spei(df_spei, country, show=True, alpha=0.5):
     """
+    Creates a line plot for the development of the SPEI indicator over time
 
-    :param df_spei:
-    :param show:
-    :param alpha:
+    :param df_spei: pandas.DataFrame
+        Dataframe containing the SPEI measure points
+    :param country: str
+        COuntry to which the data belongs
+    :param show: boolean
+        Whether or not to show the graphics
+    :param alpha: float
+        Configuration parameter to set the opacity of the drawings
     :return:
     """
 
@@ -222,11 +244,21 @@ def line_plot_spei(df_spei, country, show=True, alpha=0.5):
 
 def line_plot_mean_min_max_spei_per_time(df_spei, country, time="Year", show=True, alpha=0.5):
     """
+    Creates a line plot for the mean/ min/ max values per delta t (month)
+    including the boundary lines for floods and droughts (|SPEI| > 1)
 
-    :param df_wfp_and_spei:
-    :param show:
-    :param alpha:
-    :return:
+    :param df_spei: pandas.DataFrame
+        Dataframe containing the SPEI observations
+    :param country: str
+        Name of the country the data belongs to
+    :param time: str
+        Aggregation of time that should be used (Mean per year/month/etc.)
+    :param show: boolean
+        Whether or not to show the results
+    :param alpha: float
+        COnfiguration parameter to set the opacity of the drawings
+    :return: None
+        Stores the results in the respective folder.
     """
 
     output_dir = f"../output/{country}/plots/line-plots/spei"
@@ -303,8 +335,17 @@ def line_plot_mean_min_max_spei_per_time(df_spei, country, time="Year", show=Tru
 
 def line_plot_spei_per_region(df_wfp_and_spei, show=True, alpha=0.5):
     """
+    Iterates over all unique regions for one country and creates a line plot
+    for those
 
-    :return:
+    :param df_wfp_and_spei: pandas.DataFrame
+        Dataframe containing both WFP and SPEI indciators
+    :param show: boolean
+        Whether or not to show the plot
+    :param alpha: float
+        CConfiguration parameter to set the opacity
+    :return: None
+        Stores the results in the respective folder
     """
     country = df_wfp_and_spei.Country.unique()[0]
 
@@ -345,10 +386,16 @@ def line_plot_spei_per_region(df_wfp_and_spei, show=True, alpha=0.5):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def scatter_adj_price_region_all_commodities(df_wfp, alpha=0.5, preproc_step=4):
+def scatter_adj_prices_all_commodities(df_wfp, alpha=0.5, preproc_step=4):
     """
+    Scatters the inflation-adjusted prices for all commodities
 
-    :param df_wfp:
+    :param df_wfp: pandas.DataFrame
+        Dataset containing the WFP prices
+    :param alpha: float
+        Configuration parameter to set the opacity
+    :param preproc_step: int
+        Number of the preprocessing step tha correspond to the datset ("state" of the dataset)
     :return:
     """
     currency = df_wfp.Currency.unique()[0]
@@ -374,14 +421,13 @@ def scatter_adj_price_region_all_commodities(df_wfp, alpha=0.5, preproc_step=4):
         plt.gca().xaxis.set_major_formatter(DateFormatter("%Y, %m"))
         plt.xticks(rotation=30)
 
-
         # Add x, y gridlines
         plt.gca().xaxis.grid(b=True, color='grey',
-                               linestyle='-.', linewidth=0.5,
-                               alpha=0.6)
+                             linestyle='-.', linewidth=0.5,
+                             alpha=0.6)
         plt.gca().yaxis.grid(b=True, color='grey',
-                               linestyle='-.', linewidth=0.5,
-                               alpha=0.6)
+                             linestyle='-.', linewidth=0.5,
+                             alpha=0.6)
 
         # Make sure Output dir exists
         country = df_wfp.Country.unique()[0]
@@ -392,17 +438,28 @@ def scatter_adj_price_region_all_commodities(df_wfp, alpha=0.5, preproc_step=4):
         plt.savefig(f"{output_dir}/{commodity}-scatter-adj-prices-STEP{preproc_step}.png")
         plt.show()
 
-def scatter_adj_price_region_all_commodities_droughts(df_wfp, alpha=0.5, preproc_step=4):
-    """
 
-    :param df_wfp:
-    :return:
+def scatter_adj_prices_all_commodities_droughts(df_wfp, alpha=0.5, preproc_step=4):
+    """
+    Creates a 3x1 plot plotting
+
+    - both drought and non-drought points in one fig
+    - only the drought points
+    - only the non-drought points
+
+    :param df_wfp: pandas.DataFrame
+        Input dataset
+    :param alpha: float
+        Configuration paramter to control the opacity
+    :param preproc_step: int
+        Number of preprocessing step the dataset resulted of
+    :return: None
+        Plots will be stored in output folder
     """
     country = df_wfp.Country.unique()[0]
 
     # merge SPEI to price data
     df_wfp = utils.merge_drought_to_df_wfp(df_wfp)
-
 
     currency = df_wfp.Currency.unique()[0]
     for commodity in df_wfp.Commodity.unique():
@@ -418,8 +475,9 @@ def scatter_adj_price_region_all_commodities_droughts(df_wfp, alpha=0.5, preproc
         # df_wfp_commodity_drought = df_wfp_commodity[df_wfp_commodity.Drought]
         # df_wfp_commodity_no_drought = df_wfp_commodity[~df_wfp_commodity["Drought"]]
 
-        ax[1].scatter(df_wfp_commodity_drought.TimeWFP, df_wfp_commodity_drought["AdjPrice"], label="Drought", color="red",
-                    alpha=alpha)
+        ax[1].scatter(df_wfp_commodity_drought.TimeWFP, df_wfp_commodity_drought["AdjPrice"], label="Drought",
+                      color="red",
+                      alpha=alpha)
         ax[1].set_title("Drought")
 
         # Don't display xlabel for these
@@ -448,14 +506,10 @@ def scatter_adj_price_region_all_commodities_droughts(df_wfp, alpha=0.5, preproc
                       alpha=alpha)
         ax[0].set_title("Both")
 
-
-
         # plt.vlines(df_wfp_commodity_drought.TimeWFP, 0, 4000)
         ax[2].scatter(df_wfp_commodity_no_drought.TimeWFP, df_wfp_commodity_no_drought["AdjPrice"], label="No Drought",
-                    alpha=alpha)
+                      alpha=alpha)
         ax[2].set_title("No drought")
-
-
 
         fig.suptitle(f"(Inflation-Adjusted) Price Distribution - {commodity}")
 
@@ -492,11 +546,21 @@ def scatter_adj_price_region_all_commodities_droughts(df_wfp, alpha=0.5, preproc
         plt.show()
 
 
-
 def scatter_adj_prices_per_region_one_fig(df_wfp, title_appendix="", png_appendix="", c=None):
     """
+    Creates a #unique regions x 1 figure
+    where one figure contains only the observations corresponding to that unique region
 
-    :return:
+    :param df_wfp: pandas.DataFrame
+        Input dataset
+    :param title_appendix: str
+        Appendix to add to the default title
+    :param png_appendix:  str
+        Appendix to add to the output png image
+    :param c: str
+        Specific color to use for plot
+    :return: None
+        Plots will be stored in respective output folder
     """
 
     n_regions = len(df_wfp.Region.unique())
@@ -521,19 +585,17 @@ def scatter_adj_prices_per_region_one_fig(df_wfp, title_appendix="", png_appendi
             ax[i].get_yaxis().set_tick_params(pad=5)
 
             # Don't display xlabel for these
-            if i != n_regions -1:
+            if i != n_regions - 1:
                 ax[i].get_xaxis().set_visible(False)
                 # ax[i].get_xaxis().set_xlabel(None)
 
             # # Add x, y gridlines
             ax[i].get_xaxis().grid(b=True, color='grey',
-                     linestyle='-.', linewidth=0.5,
-                     alpha=0.6)
+                                   linestyle='-.', linewidth=0.5,
+                                   alpha=0.6)
             ax[i].get_yaxis().grid(b=True, color='grey',
                                    linestyle='-.', linewidth=0.5,
                                    alpha=0.6)
-
-
 
         # set the spacing between subplots
         # option 1)
@@ -561,7 +623,6 @@ def scatter_adj_prices_per_region_one_fig(df_wfp, title_appendix="", png_appendi
         # define range of x axis
         # plt.xticks(ticks=df_wfp_commodity.Year)
 
-
         fig.suptitle(f"Commodity: {commodity}{title_appendix}")
 
         # Make sure Output dir exists
@@ -576,13 +637,18 @@ def scatter_adj_prices_per_region_one_fig(df_wfp, title_appendix="", png_appendi
 
 def scatter_adj_price_per_region_drought_one_fig(df_wfp, c="red"):
     """
+    Creates a # unique regions x 1 figure
+    For each region, plots only the observations where a drought has occured
 
-    :param df_wfp:
-    :return:
+    :param df_wfp: pandas.DataFrame
+        Input dataset
+    :param c: str
+        Color to use for plotting the (drought) points
+    :return: None
+        Output will be stored in respective folder
     """
     # merge drought data
     df_wfp_droughts = utils.merge_drought_to_df_wfp(df_wfp)
-
 
     # just extract the slice where a drought occured
     df_wfp_droughts = df_wfp_droughts[df_wfp_droughts.Drought]
@@ -591,13 +657,23 @@ def scatter_adj_price_per_region_drought_one_fig(df_wfp, c="red"):
                                           c=c)
 
 
-
 def scatter_adj_prices_per_region(df_region, commodity, currency, show=False, alpha=0.5):
     """
+    For the dataframe containing only the data for one region,
+    plot the inlfation-adjusted prices
 
-    :param commodity:
-    :param region:
-    :return:
+    :param df_region: pandas.DataFrame
+        Dataset containing only observations for one region
+    :param commodity: str
+        Commodity for which to plot the data
+    :param currency: str
+        Name of the currency used
+    :param show: boolean
+        Whether or not to show the results
+    :param alpha: float
+        Configuration parameter to set the opacity
+    :return: None
+        Results are stored in respective output folder
     """
     country = df_region.Country.unique()[0]
     region = df_region.Region.unique()[0]
@@ -626,6 +702,31 @@ def scatter_extrapolated_adj_prices_per_region(df_region, df_region_extrapolated
                                                commodity, currency, interpolation_method, order,
                                                show=False, alpha=0.5,
                                                show_original_points=True):
+    """
+    For the dataset corresponding to a unique region and commodity, plot the extrapolated points
+    (and the original ones)
+
+    :param df_region: pandas.DataFrame
+        Dataset containing only the subset for one unique region & commodity
+    :param df_region_extrapolated:  pandas.DataFrame
+        Dataset containing only the subset for one unique region & commodity with the extrapolated data
+    :param commodity: str
+        Name of the commodity this dataset belongs to
+    :param currency: str
+        Name of the currency the prices belong ot
+    :param interpolation_method: str
+        Used interpolation method (quadratic, linear, ...)
+    :param order: int
+        Order of the interpolation function used
+    :param show: boolean
+        Whether or not to show the results
+    :param alpha: float
+        Configuration parameter for the opacity
+    :param show_original_points: boolean
+        Whether or not to show the original (non-extrapolated) points as well
+    :return: None
+        The results will be stored in the respective directory
+    """
     # Extract data
     country = df_region.Country.unique()[0]
     region = df_region.Region.unique()[0]
@@ -650,12 +751,16 @@ def scatter_extrapolated_adj_prices_per_region(df_region, df_region_extrapolated
     if show:
         plt.show()
 
+
 def scatter_spikes_per_commodity(df):
     """
     For each commodity in df:
-    Plot spikes in magenta and no spikes in blue
-    :param df:
-    :return:
+    Plot spikes in magenta and non spikes in blue
+
+    :param df: pandas.DataFrame
+        Input dataset
+    :return: None
+        The results will be stored in the respective directory
     """
     country = df.Country.unique()[0]
     currency = df.Currency.unique()[0]
@@ -663,7 +768,6 @@ def scatter_spikes_per_commodity(df):
 
     if os.path.exists(output_path) is False:
         os.makedirs(output_path)
-
 
     for commodity in df.Commodity.unique():
         df_commodity = df[df.Commodity == commodity]
@@ -677,10 +781,11 @@ def scatter_spikes_per_commodity(df):
         # df_commodity_no_spike = df_commodity[~df_commodity.SpikeAdjPrice]
         df_commodity_no_spike = df_commodity[df_commodity.DevMean <= 0]
 
-        plt.scatter(df_commodity_spike.TimeWFP, df_commodity_spike.AdjPrice, c="m", marker="*", alpha=0.5, label="Spike (> mean)")
+        plt.scatter(df_commodity_spike.TimeWFP, df_commodity_spike.AdjPrice, c="m", marker="*", alpha=0.5,
+                    label="Spike (> mean)")
 
-
-        plt.scatter(df_commodity_no_spike.TimeWFP, df_commodity_no_spike.AdjPrice, c="blue", alpha=0.5, label="No spike")
+        plt.scatter(df_commodity_no_spike.TimeWFP, df_commodity_no_spike.AdjPrice, c="blue", alpha=0.5,
+                    label="No spike")
         plt.title("Spikes")
         plt.suptitle(f"(Inflation-Adjusted) Price Distribution - Commodity: {commodity}")
 
@@ -693,13 +798,12 @@ def scatter_spikes_per_commodity(df):
         # plt.hlines(upper_quartile, df_commodity.TimeWFP.min(), df_commodity.TimeWFP.max(),
         #            label="Upper quartile", colors="c", linewidth=2)
 
-
         plt.legend()
         plt.xlabel("Time")
         plt.ylabel(f"Price [{currency}]")
         plt.grid(b=True, color='grey',
-                     linestyle='-.', linewidth=0.5,
-                     alpha=0.7)
+                 linestyle='-.', linewidth=0.5,
+                 alpha=0.7)
         # display year and month
         plt.gca().xaxis.set_major_formatter(DateFormatter("%Y, %m"))
 
@@ -723,7 +827,7 @@ def scatter_spikes_per_commodity(df):
 
         plt.tight_layout()
 
-        #plt.xticks(df_commodity.groupby("Year")["TimeWFP"][0], rotation=30)
+        # plt.xticks(df_commodity.groupby("Year")["TimeWFP"][0], rotation=30)
         plt.savefig(f"{output_path}/{commodity}-Spikes.png")
         plt.show()
 
@@ -776,7 +880,18 @@ def scatter_spikes_per_commodity(df):
 
 def boxplot_adj_prices(df, png_appendix="-all-commodities", by="Commodity", suptitle_appendix="", title_appendix=""):
     """
+    Plots the boxplot(s) for a dataframe (if indicated by a specific group)
 
+    :param df: pandas.DataFrame
+        Input dataset
+    :param png_appendix: str
+        Appendix for the output image
+    :param by: str
+        Group for which the boxplots should be computed (one per unique value in that group)
+    :param suptitle_appendix: str
+        Appendix for the suptitle of the plot
+    :param title_appendix: str
+        Appendix for the title of the plot
     :return:
     """
 
@@ -798,7 +913,6 @@ def boxplot_adj_prices(df, png_appendix="-all-commodities", by="Commodity", supt
         plt.suptitle(f"Boxplot grouped by {by}{suptitle_appendix}")
         output_path += f"/{by}"
 
-
     if os.path.exists(output_path) is False:
         os.makedirs(output_path)
 
@@ -809,13 +923,19 @@ def boxplot_adj_prices(df, png_appendix="-all-commodities", by="Commodity", supt
     plt.savefig(f"{output_path}/hist{png_appendix}.png")
     plt.show()
 
+
 def box_plot_for_all_commodities_by_group(df, by=None):
     """
+    Creates boxplots for all unique commodities in a dataframe
+    (if indicating within that unique commodity by a soecific group)
 
-    :param df:
+    :param df: pandas.DataFrame
+        Input dataset
     :param by: str
-        if None, boxplots will be created for all commodities (and no further grouping will occur)
-    :return:
+        if None, boxpots will be created for all commodities (and no further grouping will occur)
+        otherwise: Name of the group for which to compute the boxplots (e.g. "Region", "Drought")
+    :return: None
+        Outputs will be stored in the respective directory
     """
     # merge spei data to df
     df = utils.merge_drought_to_df_wfp(df)
@@ -829,17 +949,7 @@ def box_plot_for_all_commodities_by_group(df, by=None):
         else:
             png_appendix = f"-{commodity}"
         boxplot_adj_prices(df_commodity, png_appendix=png_appendix, by=by,
-        title_appendix=f" - {commodity}")
-
-
-
-def boxplot_per_region(df):
-    """
-
-    :param df:
-    :return:
-    """
-    pass
+                           title_appendix=f" - {commodity}")
 
 # ----------------------------------------------------------------------------------------------------------------------
 # BAR CHARTS
@@ -850,17 +960,35 @@ def boxplot_per_region(df):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-
-
-def plot_hist(df, column_x, rotation=45, bins=7, orientation="vertical", rwidth=0.75, png_appendix="", title_appendix=""):
+def plot_hist(df, column_x, rotation=45, bins=7, orientation="vertical", rwidth=0.75, png_appendix="",
+              title_appendix=""):
     """
+    Plots the histogram for a input dataset df and a respective column column_x
 
-    :param df:
-    :param column_x:
-    :param column_y:
-    :return:
+    :param df: pandas.DataFrame
+        Input dataset
+    :param column_x: str
+        Name of the column that should be used
+    :param rotation: int
+        Degree of the rotation of the legend
+    :param bins: int
+        Number of bins to create
+    :param orientation: str (vertical or horizontal)
+        Orientation of the histogram (horiontal or normal barchart)
+    :param rwidth: float
+        Relative width of the bars as a fraction of the bin width
+        (For more info cf. matplotlib documentation)
+    :param png_appendix: str
+        Appendix for the output image
+    :param title_appendix: str
+        Appendix for the title
+    :return: None
+        Results will be stored in respective directory
+
+    References
+    ----------
+    https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.hist.html
     """
-
     if column_x not in df:
         raise ValueError(f"Can't plot histogram, as column {column_x} not existent. \n"
                          f"Please revise your definition and use one of the following columns instead:\n{df.columns}")
@@ -928,24 +1056,43 @@ def plot_hist(df, column_x, rotation=45, bins=7, orientation="vertical", rwidth=
 
 def plot_hist_for_all_commodities(df, bins=20):
     """
+    For each commodity, extract the respective subset
+    and plot the histogram
 
-    :return:
+    :param df: pandas.DataFrame
+        Input dataset containing all commodities
+    :param bins: int
+        Number of bins to create per histogram
+    :return: None
+        Results are stored in respective folder
     """
     for commodity in df.Commodity.unique():
         df_commodity = df[df.Commodity == commodity]
-        plot_hist(df_commodity, column_x="AdjPrice", png_appendix=f"-{commodity}-{bins}", bins=bins, title_appendix=f" - {commodity}")
-
-
-
+        plot_hist(df_commodity, column_x="AdjPrice", png_appendix=f"-{commodity}-{bins}", bins=bins,
+                  title_appendix=f" - {commodity}")
 
 
 def histogram_pandas(df, column, commodity, year, month, bins=20, save_fig=False):
     """
+    Plots the histogram, but by directly calling the pandas histogram function
+    (Different style)
 
-    :param df:
-    :param column:
-    :param bins:
-    :return:
+    :param df: pandas.DataFrame
+        Input dataset
+    :param column: str
+        Name of the column to plot the distribution for
+    :param commodity: str
+        Name of the commodity for which to plot the histogram
+    :param year:  int
+        Year
+    :param month: int
+        Month
+    :param bins: int
+        Number of bins to create
+    :param save_fig: boolean
+        Whether to store/save the png or not
+    :return: None
+        Will store the outputs if indicated via save_fig
     """
     country = df.Country.unique()[0]
     output_path_maps = f"../output/{country}/plots/histograms"
@@ -967,13 +1114,14 @@ def histogram_pandas(df, column, commodity, year, month, bins=20, save_fig=False
 # MISSINGS
 # ----------------------------------------------------------------------------------------------------------------------
 
-def plot_missings(df_final, column):
+def plot_missings(df_final):
     """
-    Plot number and percent of missing values
+    Plots the number and percent of missing values for the entire dataset
 
-    :param df_final:
-    :param column:
-    :return:
+    :param df_final: pandas.DataFrame
+        Dataset for which to compute the missing values
+    :return: None
+        (Results are currently not stored in this implementation)
     """
     msgo.bar(df_final)
 
@@ -989,10 +1137,15 @@ def plot_missings(df_final, column):
 
 def plot_malawi_regions_adm1(df_final, scatter_markets=True):
     """
-    Plot malawi and color the specific regions
+    Plots Malawi and colors the map based on administrative level 1 (Region)
+    If indicated, plots the markets in the scatterplot as well
 
-    :param df_final:
-    :return:
+    :param df_final: pandas.DataFrame
+        Input dataset
+    :param scatter_markets: boolean
+        Whether or not to plot the markets on the map as well
+    :return: None
+        The outputs will be stored in the respective folder
     """
     country = df_final.Country.unique()[0]
     output_path_maps = f"../output/{country}/plots/maps"
@@ -1028,14 +1181,14 @@ def plot_malawi_regions_adm1(df_final, scatter_markets=True):
     # 4, winter (not enough contrast), summer (nice, but creates wrong image)
     # magma, plasma, turbo
     cmap = possible_cmaps[-1]
-    cmap = "summer" +"_r"
+    cmap = "summer" + "_r"
     # cmap = "summer"
 
     # ax.set_prop_cycle(color=cmap[1:])
     malawi_adm1.plot(column="Region", ax=ax, legend=True, legend_kwds={"loc": "lower left",
                                                                        "bbox_to_anchor": (0.6, 0.8),
                                                                        "fontsize": "x-small",
-                                                                       "title" : "Regions"},
+                                                                       "title": "Regions"},
                      cmap=cmap)
     # edgecolor="darkgreen"
     # default
@@ -1060,7 +1213,7 @@ def plot_malawi_regions_adm1(df_final, scatter_markets=True):
     plt.ylabel("Latitude")
     title = "Malawi"
     if scatter_markets:
-        title+= " - Markets"
+        title += " - Markets"
     plt.suptitle(title)
     # plt.title("Malawi - Regions", loc="left")
 
@@ -1072,13 +1225,22 @@ def plot_malawi_regions_adm1(df_final, scatter_markets=True):
 def plot_country_adm2_prices_for_year_month(df_final, year, month, commodity=None,
                                             path_shape_file="../input/Malawi/maps/WFPGeoNode/mwi_bnd_admin2/mwi_bnd_admin2.shp"):
     """
-    Plots
-    :param df_final:
-    :param year:
-    :param month:
-    :param commodity:
-    :return:
+    Plots Malawi and the prices for a specific date/ time entry (year, month)
+
+    :param df_final: pandas.DataFrame
+        INput dataset
+    :param year: int
+        year for which to extract the prices
+    :param month: int
+        month (in combination with year) for which to extract the prices
+    :param commodity: str
+        Commodity for which to extract the prices
+    :param path_shape_file:str
+        Path to required shape file
+    :return: None
+        Results will be stored in respective directory
     """
+
     # Make sure that output dir exists
     country = df_final.Country.unique()[0]
     output_path_maps = f"../output/{country}/plots/maps"
@@ -1207,13 +1369,26 @@ def plot_country_adm2_prices_for_year_month(df_final, year, month, commodity=Non
 def plot_country_adm2_price_spei(df_final, year, month, commodity=None,
                                  path_shape_file="../input/Malawi/maps/WFPGeoNode/mwi_bnd_admin2/mwi_bnd_admin2.shp"):
     """
-        Plots
-        :param df_final:
-        :param year:
-        :param month:
-        :param commodity:
-        :return:
-        """
+
+     Plots Malawi and the prices for a specific date/ time entry (year, month)
+     and colors the map based on the average SPEI for each district
+
+    :param df_final: pandas.DataFrame
+        INput dataset
+    :param year: int
+        year for which to extract the prices
+    :param month: int
+        month (in combination with year) for which to extract the prices
+    :param commodity: str
+        Commodity for which to extract the prices
+    :param path_shape_file:str
+        Path to required shape file
+    :return: None
+        Results will be stored in respective directory
+    :return:
+    """
+
+
     # Make sure that output dir exists
     country = df_final.Country.unique()[0]
     output_path_maps = f"../output/{country}/plots/maps"
@@ -1331,7 +1506,7 @@ def plot_country_adm2_price_spei(df_final, year, month, commodity=None,
 
     if commodity is not None:
         plt.suptitle(f"Malawi - {commodity}")
-        plt.savefig(f"{output_path_maps}/{country}-Districts-Adm2-Prices-{year}-{month}-{commodity}.png")
+        plt.savefig(f"{output_path_maps}/{country}-Districts-Adm2-Prices-{year}-{month}-{commodity}-SPEI.png")
     else:
         plt.suptitle("Malawi - Markets")
         plt.savefig(f"{output_path_maps}/{country}-Districts-Adm2-Prices-{year}-{month}-SPEI.png")
@@ -1341,8 +1516,15 @@ def plot_country_adm2_price_spei(df_final, year, month, commodity=None,
 
 def plot_malawi_districts_adm2(df_final, plot_markets=True):
     """
+    Plots Malawi and colors the map based on administrative level 2 (District)
+    If indicated, plots the markets in the scatterplot as well
 
-    :return:
+    :param df_final: pandas.DataFrame
+        Input dataset
+    :param plot_markets: boolean
+        Whether or not to plot the markets on the map as well
+    :return: None
+        The outputs will be stored in the respective folder
     """
     country = df_final.Country.unique()[0]
     output_path_maps = f"../output/{country}/plots/maps"
@@ -1369,7 +1551,7 @@ def plot_malawi_districts_adm2(df_final, plot_markets=True):
     malawi_adm2.plot(column="District", ax=ax, legend=True, legend_kwds={"loc": "lower left",
                                                                          "bbox_to_anchor": (1.1, -0.1),
                                                                          "fontsize": "x-small",
-                                                                         "title" : "Districts"},
+                                                                         "title": "Districts"},
                      cmap=cmap)
 
     # spatial join: find the fitting admin 2 for each market
@@ -1385,7 +1567,7 @@ def plot_malawi_districts_adm2(df_final, plot_markets=True):
     # plt.tight_layout()
     plt.xlabel("Longitude")
     plt.ylabel("Latitude")
-    title="Malawi"
+    title = "Malawi"
     if plot_markets:
         title += " - Markets"
 
@@ -1397,105 +1579,18 @@ def plot_malawi_districts_adm2(df_final, plot_markets=True):
     plt.show()
 
 
-def plot_malawi(df_final):
-    """
-
-    Admin1: Regions
-    Admin2: Markets
-    Structure Shape File
-    NAME_0: Name of country
-    NAME_1: Name of bigger regions
-    NAME_2: Name of cities
-
-
-    References
-    ----------
-    Data source/ shape files extracted via: https://www.diva-gis.org/datadown
-    :return:
-    """
-    # Read shape file(s)
-    # WFP GeoData
-    malawi_adm1 = gpd.read_file("../input/Malawi/maps/WFPGeoNode/mwi_bnd_admin1/mwi_bnd_admin1.shp")
-    malawi_adm2 = gpd.read_file("../input/Malawi/maps/WFPGeoNode/mwi_bnd_admin2/mwi_bnd_admin2.shp")
-
-    # Humanitarian Data Exchange
-    malawi_adm3 = gpd.read_file("../input/Malawi/maps/hum-data-exchange/mwi_adm_nso_20181016_shp"
-                                "/mwi_admbnda_adm3_nso_20181016.shp")
-
-    print("Malawi admin 1\n", malawi_adm1, "\nColumns", malawi_adm1.columns)
-    print("Malawi admin 2\n", malawi_adm2, "\nColumns", malawi_adm2.columns)
-    print("Malawi admin 3\n", malawi_adm3, "\nColumns", malawi_adm3.columns)
-
-    # print(malawi_adm3.Market.unique(), len(malawi_adm2.Market.unique()))
-
-    malawi_adm1.rename(columns={"NAME_1": "Region"}, inplace=True)
-    malawi_adm2.rename(columns={"NAME_2": "Market"}, inplace=True)
-    malawi_adm3.rename(columns={"ADM3_EN": "TA"}, inplace=True)
-
-    print(malawi_adm1.Region.unique())
-    print(malawi_adm2.Market.unique(), len(malawi_adm2.Market.unique()))
-    print(malawi_adm3.TA.unique(), len(malawi_adm3.TA.unique()))
-    # merge adm1 data (for now) with df_final
-    # df_final_merged = malawi_adm1.merge(df_final, on="Market")
-    df_final_merged = malawi_adm2.merge(df_final, on="Market")
-
-    print("Unique Markets\n",
-          len(df_final_merged.Market.unique()), len(df_final.Market.unique()))
-
-    # convert regular dataframe to geopandas df
-    gdf_final = gpd.GeoDataFrame(
-        df_final, geometry=gpd.points_from_xy(df_final.MarketLongitude, df_final.MarketLatitude)
-    )
-
-    gdf_markets_with_admin3 = gpd.sjoin(gdf_final, malawi_adm3, how="inner", predicate="intersects")
-    print(gdf_markets_with_admin3.columns, gdf_markets_with_admin3.shape)
-
-    print(f"Merged shape: {df_final_merged.shape}")
-
-    print(malawi_adm2.Admin2.unique())
-    print(malawi_adm1.Admin1.unique())
-
-    # Plot boundaries Admin 1
-
-    # Plot boundaries Admin 2
-    # ax = gplt.polyplot(malawi_adm2)
-    ax = gplt.polyplot(malawi_adm2)
-
-    # PLOT POINTS / Markets on it
-    gplt.pointplot(gdf_final, ax=ax, hue="Region")
-    # gplt.pointplot(gdf_final, ax=ax)
-
-    # ax = gplt.polyplot(df_final_merged, hue="Region")
-    # ax = gplt.polyplot(malawi_adm1, projection=gcrs.AlbersEqualArea())
-    # print(df_final_merged.head())
-    # gplt.choropleth(
-    #     gdf_markets_with_admin3,
-    #     hue="Market",
-    #     edgecolor="white",
-    #     linewidth=1,
-    #     cmap="Greens",
-    #     legend=True,
-    #     scheme="FisherJenks",
-    #     ax=ax
-    # )
-
-    plt.xlabel("Longitude")
-    plt.ylabel("Latitude")
-    plt.suptitle("Malawi")
-    plt.title("Markets (per Region)")
-    plt.legend()
-    plt.savefig("../output/Malawi/plots/Map-Markets.png")
-    plt.show()
-
-
 # ----------------------------------------------------------------------------------------------------------------------
-# CORRELATIONS
+# CORRELATIONS / Heatmap
 # ----------------------------------------------------------------------------------------------------------------------
 def plot_correlation_matrix(df):
     """
+    Makes a heatplot for the correlation matrix
     Correlations have been computed via Stata
 
-    :return:
+    :param df: pandas.DataFrame
+        input dataframe
+    :return: None
+        Results will be stored in respective output folder.
     """
     country = df.Country.unique()[0]
     output_path_corr = f"../output/{country}/plots/corr"
@@ -1503,12 +1598,12 @@ def plot_correlation_matrix(df):
         os.makedirs(output_path_corr)
 
     df_corr = pd.DataFrame({
-        "Adjusted Price" : [1, -0.0024, -0.0255, -0.1291, -0.0666, 0.0975],
-        "Region" : [ -0.0024, 1, -0.0683, 0.0171, 0.0415, -0.0179],
-        "Market" : [-0.0255, -0.0683, 1, 0.0077, 0.0061, -0.0109],
-        "Commodity" : [-0.1291, 0.0171, 0.0077, 1, 0.0083, 0.0045],
-        "Drought" : [-0.0666, 0.0415, 0.0061, 0.0083, 1, -0.6751],
-        "SPEI" : [0.0975,  -0.0179, -0.0109, 0.0045, -0.6751, 1]
+        "Adjusted Price": [1, -0.0024, -0.0255, -0.1291, -0.0666, 0.0975],
+        "Region": [-0.0024, 1, -0.0683, 0.0171, 0.0415, -0.0179],
+        "Market": [-0.0255, -0.0683, 1, 0.0077, 0.0061, -0.0109],
+        "Commodity": [-0.1291, 0.0171, 0.0077, 1, 0.0083, 0.0045],
+        "Drought": [-0.0666, 0.0415, 0.0061, 0.0083, 1, -0.6751],
+        "SPEI": [0.0975, -0.0179, -0.0109, 0.0045, -0.6751, 1]
     }, ["Adjusted Price", "Region", "Market", "Commodity", "Drought", "SPEI"])
 
     sns.heatmap(df_corr, annot=True, cmap=plt.cm.Reds)
@@ -1517,4 +1612,3 @@ def plot_correlation_matrix(df):
 
     plt.savefig(f"{output_path_corr}/corr_matrix.png")
     plt.show()
-
