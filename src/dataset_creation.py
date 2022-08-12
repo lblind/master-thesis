@@ -1,7 +1,7 @@
 """
 CREATION OF DATASET
 -------------------
-
+Functions belonging to the creation of the dataset (combination of preprocessing steps)
 """
 import warnings
 import preprocessing as preproc
