@@ -10,6 +10,64 @@ import numpy as np
 
 import utils
 import preprocessing as preproc
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+def compute_correlations(df, corr_columns=None, group_by="Commodity", preproc_step_status=4, time_subset=None):\
+
+    """
+    For each group, compute the pearson correlation coefficients between
+    AdjPrice, Drought and Spei
+    :param df: 
+    :param group: 
+    :param time_subset:
+        if None, then the entire dataset is used. If not none, the 
+    :return: 
+    """
+    # for drought the corr
+    if corr_columns is None:
+        corr_columns = ["AdjPrice", "Drought", "Spei", "Region", "Commodity"]
+
+    # extract relevant columns
+    df = df[corr_columns]
+    # extract dummies
+    df = pd.get_dummies(df)
+
+    corr_columns = list(corr_columns[:-1])
+
+    # df_corr = df.groupby(group_by)[corr_columns].corr().unstack().iloc[:, 1]
+    # compute the correlation per group
+    df_corr = df.groupby(group_by)[corr_columns].corr(method="pearson")
+    df_corr_all = df.groupby(group_by).corr(method="pearson")
+
+    # without further distinction by group - only subset of droguht
+    sns.heatmap(df_corr, annot=True, cmap=plt.cm.Reds)
+
+    print(df_corr)
+    # plot heatmap correlations
+    for group in df[group_by].unique():
+        group_df_corr_all = df_corr_all.loc[[group]]
+        sns.heatmap(group_df_corr_all, annot=True, cmap=plt.cm.Reds)
+        plt.title(f"Commodity: {group}")
+        plt.tight_layout()
+        plt.show()
+
+        sns.heatmap(df_corr.loc[[group]], annot=True, cmap=plt.cm.Reds)
+        plt.title(f"Commodity: {group}")
+        plt.tight_layout()
+        plt.show()
+
+    # write correlations to folder
+    country = df.Country.unique()[0]
+    output_dir = f"../output/{country}/summary-statistics"
+    if os.path.exists(output_dir) is False:
+        os.makedirs(output_dir)
+
+    df_corr.to_excel(f"{output_dir}/{country}-correlations-preproc-STEP{preproc_step_status}.xlsx")
+    df_corr_all.to_excel(f"{output_dir}/{country}-correlations-ALL-preproc-STEP{preproc_step_status}.xlsx")
+
+
+    return df_corr
 
 
 def identify_spikes_per_commodity(df, spike_dev = 0, write_excel=True, state_preproc_step=4):

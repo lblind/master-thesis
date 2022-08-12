@@ -50,6 +50,11 @@ if __name__ == "__main__":
     path_to_df_wfp = f"../output/{country}/intermediate-results/df_wfp_STEP4.xlsx"
     df_wfp = utils.convert_excel_to_df(path_to_df_wfp)
 
+    df_with_drought = utils.convert_excel_to_df(f"../output/{country}/intermediate-results/df_wfp_w_drought_STEP4.xlsx")
+    # df_with_drought = utils.merge_drought_to_df_wfp(df_wfp)
+    #
+    # df_with_drought.to_excel(f"../output/{country}/intermediate-results/df_wfp_w_drought_STEP4.xlsx")
+
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# ANALYSIS - Statistics"
           "\n# ------------------------------------------------------------------------------------------------------\n")
@@ -69,9 +74,19 @@ if __name__ == "__main__":
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# ANALYSIS - Peak"
           "\n# ------------------------------------------------------------------------------------------------------\n")
-    df = stats.identify_spikes_per_commodity(df_wfp)
+    # df_with_peak = stats.identify_spikes_per_commodity(df_wfp)
+    # visualization.scatter_spikes_per_commodity(df_with_peak)
 
-    visualization.scatter_spikes_per_commodity(df)
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# ANALYSIS - Correlations"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
+
+
+    # print(df_with_drought.columns)
+    # df_corr = stats.compute_correlations(df_with_drought)
+
+    visualization.plot_correlation_matrix(df_wfp)
+
 
 
 
@@ -102,9 +117,11 @@ if __name__ == "__main__":
     # visualization.box_plot_for_all_commodities_by_group(df_wfp, by=["Drought", "Region"])
 
 
+    print("\n# ------------------------------------------------------------------------------------------------------\n"
+          "# VISUALIZATION - Maps"
+          "\n# ------------------------------------------------------------------------------------------------------\n")
 
-
-
+    # visualization.plot_malawi_regions_adm1(df_with_drought, scatter_markets=False)
 
     # visualization.plot_malawi(df_final=df_final)
     # visualization.plot_malawi_regions(df_final)
@@ -120,4 +137,4 @@ if __name__ == "__main__":
           "# DYNAMIC MODE DECOMPOSITION (DMD)"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-    # dmd.dmd_per_commodity(df_final)
+    # dmd.dmd_per_commodity(df_final, exact_modes=False, transpose=False)

@@ -235,7 +235,7 @@ def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True, mr_d
 
 
 def dmd_per_commodity(df_final, write_excels=True, svd_rank=0.95, mr_dmd=False, transpose=True,
-                      own_implementation=False):
+                      own_implementation=False, exact_modes=True):
     """
 
     :param df_final:
@@ -285,11 +285,11 @@ def dmd_per_commodity(df_final, write_excels=True, svd_rank=0.95, mr_dmd=False, 
             # svd_rank = 2
             if transpose:
                 dmd = dmd_algorithm(x_snapshot_matrix.T, country=country, commodity=commodity, svd_rank=svd_rank,
-                                    mr_dmd=mr_dmd, transposed=transpose)
+                                    mr_dmd=mr_dmd, transposed=transpose, exact=exact_modes)
                 png_appendix = "T"
             else:
                 dmd = dmd_algorithm(x_snapshot_matrix, country=country, commodity=commodity, svd_rank=svd_rank,
-                                    mr_dmd=mr_dmd, transposed=transpose)
+                                    mr_dmd=mr_dmd, transposed=transpose, exact=exact_modes)
 
             # visualize what you have found
             if mr_dmd:
@@ -308,13 +308,13 @@ def dmd_per_commodity(df_final, write_excels=True, svd_rank=0.95, mr_dmd=False, 
                 dict_xs_per_commodity[commodity].to_excel(writer, sheet_name=commodity, na_rep="-")
 
 
-    def predict(dmd):
-        """
+def predict(dmd):
+    """
 
-        :param dmd:
-        :return:
-        """
-        dmd.predict()
+    :param dmd:
+    :return:
+    """
+    dmd.predict()
 
 
 

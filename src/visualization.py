@@ -27,6 +27,7 @@ import matplotlib.dates as mdates
 
 import preprocessing as preproc
 import utils
+import seaborn as sns
 
 
 import plotly.express as px
@@ -986,7 +987,7 @@ def plot_missings(df_final, column):
 # MAPS
 # ----------------------------------------------------------------------------------------------------------------------
 
-def plot_malawi_regions_adm1(df_final):
+def plot_malawi_regions_adm1(df_final, scatter_markets=True):
     """
     Plot malawi and color the specific regions
 
@@ -1027,14 +1028,16 @@ def plot_malawi_regions_adm1(df_final):
     # 4, winter (not enough contrast), summer (nice, but creates wrong image)
     # magma, plasma, turbo
     cmap = possible_cmaps[-1]
-    # cmap = "summer" +"_r"
-    cmap = "summer"
+    cmap = "summer" +"_r"
+    # cmap = "summer"
 
     # ax.set_prop_cycle(color=cmap[1:])
     malawi_adm1.plot(column="Region", ax=ax, legend=True, legend_kwds={"loc": "lower left",
-                                                                       "bbox_to_anchor": (0.6, 0.8)},
+                                                                       "bbox_to_anchor": (0.6, 0.8),
+                                                                       "fontsize": "x-small",
+                                                                       "title" : "Regions"},
                      cmap=cmap)
-
+    # edgecolor="darkgreen"
     # default
     # malawi_adm1.plot(column="Region", ax=ax, legend=True, legend_kwds={"loc": "lower left",
     #                                                                    "bbox_to_anchor": (0.6, 0.8)})
@@ -1046,14 +1049,19 @@ def plot_malawi_regions_adm1(df_final):
         df_final, geometry=gpd.points_from_xy(df_final.MarketLongitude, df_final.MarketLatitude)
     )
 
-    plt.scatter(df_final.MarketLongitude, df_final.MarketLatitude, c="darkblue", edgecolor="orange")
+    if scatter_markets:
+        plt.scatter(df_final.MarketLongitude, df_final.MarketLatitude, c="darkblue", edgecolor="orange",
+                    alpha=0.5)
 
     # gplt.pointplot(gdf_final_markets, ax=ax)
     # gdf_final_markets.plot(kind="scatter", ax=ax)
     # plt.grid()
     plt.xlabel("Longitude")
     plt.ylabel("Latitude")
-    plt.suptitle("Malawi - Regions")
+    title = "Malawi"
+    if scatter_markets:
+        title+= " - Markets"
+    plt.suptitle(title)
     # plt.title("Malawi - Regions", loc="left")
 
     plt.savefig(f"{output_path_maps}/{country}-Regions.png")
@@ -1472,3 +1480,35 @@ def plot_malawi(df_final):
     plt.legend()
     plt.savefig("../output/Malawi/plots/Map-Markets.png")
     plt.show()
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# CORRELATIONS
+# ----------------------------------------------------------------------------------------------------------------------
+def plot_correlation_matrix(df):
+    """
+    Correlations have been computed via Stata
+
+    :return:
+    """
+    country = df.Country.unique()[0]
+    output_path_corr = f"../output/{country}/plots/corr"
+    if os.path.exists(output_path_corr) is False:
+        os.makedirs(output_path_corr)
+
+    df_corr = pd.DataFrame({
+        "Adjusted Price" : [1, -0.0024, -0.0255, -0.1291, -0.0666, 0.0975],
+        "Region" : [ -0.0024, 1, -0.0683, 0.0171, 0.0415, -0.0179],
+        "Market" : [-0.0255, -0.0683, 1, 0.0077, 0.0061, -0.0109],
+        "Commodity" : [-0.1291, 0.0171, 0.0077, 1, 0.0083, 0.0045],
+        "Drought" : [-0.0666, 0.0415, 0.0061, 0.0083, 1, -0.6751],
+        "SPEI" : [0.0975,  -0.0179, -0.0109, 0.0045, -0.6751, 1]
+    }, ["Adjusted Price", "Region", "Market", "Commodity", "Drought", "SPEI"])
+
+    sns.heatmap(df_corr, annot=True, cmap=plt.cm.Reds)
+    plt.tight_layout()
+    plt.title("Correlation matrix")
+
+    plt.savefig(f"{output_path_corr}/corr_matrix.png")
+    plt.show()
+
