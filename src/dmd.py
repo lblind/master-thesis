@@ -16,11 +16,16 @@ import utils
 import visualization
 
 
-def svd_own_implementation(S):
+def dmd_own_implementation(S):
     """
+    Own implementation of Dynamic Mode Decomposition (DMD)
+    This is just an auxiliary function to check the validity
+    of the PyDMD implementation.
 
-    :param S:
-    :return:
+    :param S: pandas.DataFrame
+        Snapshot matrix
+    :return: W, V: panda.DataFrame
+        DMD eigenvalues and DMD modes
     """
     X = S.to_numpy()[:, :-1]
     X_prime = S.to_numpy()[:, 1:]
@@ -53,10 +58,6 @@ def svd_own_implementation(S):
     return W, V
 
 
-
-
-
-
 def get_snapshot_matrix_x_for_commodity(df_commodity, time_span_min, time_span_max, write_excel=True):
     """
     Arranges the final dataset in a way that it fits the Dynamic Mode Decomposition (DMD), i.e.:
@@ -67,8 +68,17 @@ def get_snapshot_matrix_x_for_commodity(df_commodity, time_span_min, time_span_m
     X':
     - shift X one delta t (i.e. month)
 
-    :param df_final:
-    :return:
+    :param write_excel: boolean
+        Whether to write the results to an Excel sheet or not
+    :param df_commodity: pandas.DataFrame
+        Dataset containing only the data for one commodity
+    :param time_span_max: datetime
+        Date of the last entry for this commodity
+    :param time_span_min:  datetime
+        Date of the first entry for this commodity
+
+    :return: S: pandas.DataFrame
+        Snapshot matrix S
     """
     country = df_commodity.Country.unique()[0]
     commodity = df_commodity.Commodity.unique()[0]
@@ -122,6 +132,21 @@ def get_snapshot_matrix_x_for_commodity(df_commodity, time_span_min, time_span_m
 
 def compute_abs_error(dmd, country, commodity, rank, algorithm, transposed=False):
     """
+    Computes the absolute error resulting out of the reconstruction
+    and plots the corresponding error matrix
+
+    :param dmd: pyDMD baseobject
+        DMD object containing the set configuration
+    :param country: str
+        Country for which the DMD has been computed
+    :param commodity: str
+        Commodity for which the DMD has been computed
+    :param rank: int
+        Rank that has been set for the reconstruction
+    :param algorithm: str
+        Algorithm that has been used for the PyDMD DMD implementation (Default: base)
+    :param transposed: boolean
+        Whether or not the snapshot matrix has been transposed or not
 
     :return:
     """
@@ -131,7 +156,6 @@ def compute_abs_error(dmd, country, commodity, rank, algorithm, transposed=False
         os.makedirs(output_dir_dmd)
     abs_error = np.abs(dmd.snapshots - dmd.reconstructed_data.real)
 
-
     visualization.plot_abs_error_matrix(abs_error=abs_error, country=country, rank=rank,
                                         algorithm=algorithm, transposed=transposed, commodity=commodity)
 
@@ -140,10 +164,25 @@ def compute_abs_error(dmd, country, commodity, rank, algorithm, transposed=False
 
 def save_dmd_results(dmd, country, commodity, excel_output_extension="", transposed=False, algorithm="base", rank=0):
     """
+    Function that saves the results of the trained PyDMD dmd object
 
-    :param transposed:
-    :param dmd:
-    :return:
+    :param rank: int
+        Which rank should be set in the SVD which underlies the DMD
+    :param algorithm: str
+        Algorithm/ type of object that should be used for the PyDMD implementation
+    :param excel_output_extension: str
+        Postfix that should be appended to the regular excel name
+    :param commodity: str
+        Name of the commodity for which the DMD has been computed
+    :param dmd: PyDMD object
+        Trained PyDMD object
+    :param country: str
+        Country for which the DMD has been computed
+    :param transposed: boolean
+        Whether or not the Snapshot matrix has been transposed
+
+    :return: Nothing
+        The extracted results in an Excel workbook which will be stored in the output folder.
     """
     print(f"Saving results of DMD...")
     results_dict = {}
@@ -158,21 +197,20 @@ def save_dmd_results(dmd, country, commodity, excel_output_extension="", transpo
     results_dict["snapshots"] = pd.DataFrame(dmd.snapshots)
     results_dict["amplitudes"] = pd.DataFrame(dmd.amplitudes)
 
-    abs_error=compute_abs_error(dmd=dmd, country=country, commodity=commodity,
-                                                     rank=dmd.svd_rank, algorithm=algorithm,
-                                                     transposed=transposed)
+    abs_error = compute_abs_error(dmd=dmd, country=country, commodity=commodity,
+                                  rank=dmd.svd_rank, algorithm=algorithm,
+                                  transposed=transposed)
 
     stats_abs_error = pd.DataFrame({
-        "Mean" : [abs_error.flatten().mean()],
-        "Min" : [abs_error.flatten().min()],
-        "Median" : [np.median(abs_error.flatten())],
-        "Max" : [abs_error.flatten().max()],
-        "Std. dev" : [abs_error.flatten().std()],
+        "Mean": [abs_error.flatten().mean()],
+        "Min": [abs_error.flatten().min()],
+        "Median": [np.median(abs_error.flatten())],
+        "Max": [abs_error.flatten().max()],
+        "Std. dev": [abs_error.flatten().std()],
     })
 
     results_dict["abs_error_df"] = pd.DataFrame(abs_error)
     results_dict["abs_error_stat"] = stats_abs_error
-
 
     print(f"Frequency ({dmd.frequency.shape})\n", dmd.frequency)
     print(f"Eigs ({dmd.eigs.shape})\n", dmd.eigs)
@@ -180,7 +218,6 @@ def save_dmd_results(dmd, country, commodity, excel_output_extension="", transpo
 
     print(f"Original data ({dmd.snapshots.shape})")
     print(f"Reconstructed data ({dmd.snapshots.shape})\n", dmd.reconstructed_data)
-
 
     # make sure that directory exists
     output_path = f"../output/{country}/dmd/{commodity}"
@@ -197,17 +234,31 @@ def save_dmd_results(dmd, country, commodity, excel_output_extension="", transpo
     print(f"Saving results of DMD successful.")
 
 
-
 def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True, mr_dmd=False, transposed=False):
     """
+    Actual DMD algorithm containing all the steps required in the procedure
+    1. Convert the snapshots to numpy
+    2. Fit the PyDMD object based on those
+    3. Store the results
 
-    :param commodity:
-    :param df_snapshots:
-    :param svd_rank:
+    :param transposed: boolean
+        Whether or not the snapshot matrix has been tranposed
+    :param mr_dmd: boolean
+        Whether or not the Multiresolution DMD should be computed (DEfault False -> Base DMD)
+    :param country: str
+        Country for which the DMD has been computed
+    :param commodity: str
+        Commodity for which the DMD has been computed
+    :param df_snapshots: pandas.DataFrame
+        Snapshot matrix as a dataframe
+    :param svd_rank: int
+        Rank of the SVD underlying the DMD
         if set to 0, it will be automatically detected
-    :param exact:
-    :param opt:
-    :return:
+    :param exact: boolean
+        Whether the DMD modes should be computed exactly (True) or projected (False)
+
+    :return: pyDMD
+        The trained PyDMD object
     """
 
     output_dir = f"../output/{country}/dmd"
@@ -229,7 +280,6 @@ def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True, mr_d
     # save the dmd outputs as excels
     save_dmd_results(dmd, country, commodity, rank=svd_rank, transposed=transposed)
 
-
     # return the trained dmd object
     return dmd
 
@@ -237,9 +287,25 @@ def dmd_algorithm(df_snapshots, country, commodity, svd_rank=0, exact=True, mr_d
 def dmd_per_commodity(df_final, write_excels=True, svd_rank=0.95, mr_dmd=False, transpose=True,
                       own_implementation=False, exact_modes=True):
     """
+    Calls the DMD procedure for each unique commodity detected in the final dataset
 
-    :param df_final:
-    :return:
+    :param exact_modes: boolean
+        Whether the exact (True) or projected (False) DMD modes should be computed
+    :param own_implementation: boolean
+        Whether my own (True) or the PyDMD (False) implementation shoould be used
+    :param transpose: boolean
+        Whether or not the snapshot matrix should be tranposed
+    :param mr_dmd: boolean
+        Whether or not the Multiresolution DMD should (True) or should not (False) be used (False -> Base DMD)
+    :param svd_rank: int
+        Rank of the SVD underlying the DMD
+    :param write_excels: boolean
+        Whether or not the results should be stored in Excel workbooks
+    :param df_final: pandas.DataFrame
+        Final preprocessed Dataframe
+
+    :return: Nothing
+        All results will be stored in Excel workbooks if write_excels is set to True
     """
     country = df_final.Country.unique()[0]
     dict_xs_per_commodity = {}
@@ -280,7 +346,7 @@ def dmd_per_commodity(df_final, write_excels=True, svd_rank=0.95, mr_dmd=False, 
         # --------------------------------------------------------------------------------------------------------------
 
         if own_implementation:
-            svd_own_implementation(x_snapshot_matrix)
+            dmd_own_implementation(x_snapshot_matrix)
         else:
             # svd_rank = 2
             if transpose:
@@ -299,22 +365,11 @@ def dmd_per_commodity(df_final, write_excels=True, svd_rank=0.95, mr_dmd=False, 
                 visualization.plot_dmd_results(dmd, country, algorithm="base", transposed=transpose,
                                                commodity=commodity, svd_rank=svd_rank)
 
-
     if write_excels:
         # Write all dfs into one excel
         with pd.ExcelWriter(
                 f"{output_dir_dmd}/{country}-snapshot-matrices-per-commodity.xlsx") as writer:
             for commodity in df_final.Commodity.unique():
                 dict_xs_per_commodity[commodity].to_excel(writer, sheet_name=commodity, na_rep="-")
-
-
-def predict(dmd):
-    """
-
-    :param dmd:
-    :return:
-    """
-    dmd.predict()
-
 
 

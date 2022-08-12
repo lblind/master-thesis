@@ -35,7 +35,7 @@ if __name__ == "__main__":
 
     # # TODO: Outcomment this line if dataset hat not yet been created
     # df_final = dataset_creation.create_dataset(country=country, dropped_commodities=dropped_commodities,
-    #                                             write_results_to_excel=True)
+    #                                            write_results_to_excel=True)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# ANALYSIS"
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     # print(df_with_drought.columns)
     # df_corr = stats.compute_correlations(df_with_drought)
 
-    visualization.plot_correlation_matrix(df_wfp)
+    # visualization.plot_correlation_matrix(df_wfp)
 
 
 
@@ -122,6 +122,8 @@ if __name__ == "__main__":
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
     # visualization.plot_malawi_regions_adm1(df_with_drought, scatter_markets=False)
+
+    visualization.plot_malawi_districts_adm2(df_with_drought, plot_markets=True)
 
     # visualization.plot_malawi(df_final=df_final)
     # visualization.plot_malawi_regions(df_final)

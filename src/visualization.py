@@ -1339,7 +1339,7 @@ def plot_country_adm2_price_spei(df_final, year, month, commodity=None,
     plt.show()
 
 
-def plot_malawi_districts_adm2(df_final):
+def plot_malawi_districts_adm2(df_final, plot_markets=True):
     """
 
     :return:
@@ -1368,7 +1368,8 @@ def plot_malawi_districts_adm2(df_final):
 
     malawi_adm2.plot(column="District", ax=ax, legend=True, legend_kwds={"loc": "lower left",
                                                                          "bbox_to_anchor": (1.1, -0.1),
-                                                                         "fontsize": "x-small"},
+                                                                         "fontsize": "x-small",
+                                                                         "title" : "Districts"},
                      cmap=cmap)
 
     # spatial join: find the fitting admin 2 for each market
@@ -1379,11 +1380,16 @@ def plot_malawi_districts_adm2(df_final):
     #                                                                    "bbox_to_anchor": (0.6, 0.8)},
     #                  cmap=cmap)
 
-    plt.scatter(df_final.MarketLongitude, df_final.MarketLatitude, c="darkblue", edgecolor="orange")
+    if plot_markets:
+        plt.scatter(df_final.MarketLongitude, df_final.MarketLatitude, c="darkblue", edgecolor="orange")
     # plt.tight_layout()
     plt.xlabel("Longitude")
     plt.ylabel("Latitude")
-    plt.suptitle("Malawi - Districts")
+    title="Malawi"
+    if plot_markets:
+        title += " - Markets"
+
+    plt.suptitle(title)
     # plt.title("Malawi - Regions", loc="left")
 
     plt.savefig(f"{output_path_maps}/{country}-Districts-Adm2.png")

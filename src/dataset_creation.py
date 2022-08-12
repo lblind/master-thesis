@@ -4,23 +4,12 @@ CREATION OF DATASET
 
 """
 import warnings
-
-import pandas as pd
-
 import preprocessing as preproc
 import analysis as stats
 import visualization
+import pandas as pd
 
 
-# cut off markets: 0.5, cut off commodities: 0.8
-# Focus commodities: cut off: 0.4, 0.8 -> still to high
-
-# overall missings below 30%: cut_off_markets = 0.4, cut_off_commodities = 0.75
-# a bit better: cut_off_marekts = 0.35, cut_off_commodities = 0.75 (17 Markets)
-# solves the issue: 0.75 (commodities), 0.3 (markets) (10 Markets)
-
-# TODO: different cut offs per commodity for markets (and compute share of missings PER COMMODITY)
-# TODO: Maybe loop over create dataset function and extract only subset per commodity
 def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
                                    add_pad_months_time_span=0,
                                    cut_off_commodities=0.6,
@@ -38,13 +27,27 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
     - STEP 5 -> Reduce % missings -> Subset Market:
     - STEP 6 -> Inter-/Extrapolate missing data
 
-    :param country:
-    :param dropped_commodities:
-    :param add_pad_months_time_span:
-    :param cut_off_commodities:
-    :param cut_off_markets:
-    :param limit_consec_interpol:
-    :return:
+    Configuration 1 commodity (Malawi, Default): c_commodity = 0.6, c_market = 0.5
+    Configuration 2 commodities (Malawi): c_commodity = 0.7, c_market = 0.25
+    Configuration 3 commodities (Malawi): c_commodity = 0.75, c_market = 0.3
+
+    :param country: str
+        Name of country
+    :param dropped_commodities: list
+        Name of commodities to drop
+    :param add_pad_months_time_span: int
+        Additional months to add to the minimal time span per commmodity
+    :param cut_off_commodities: float
+        Cut off based on share of missing data on the commodity level
+        (Everything > cut-off -> cut)
+    :param cut_off_markets: float
+        Cut off based on share of missing data on the market level
+        (Everything > cut-off -> cut)
+    :param limit_consec_interpol: int
+        Number of consecutive entries that can be inter-/extrapolated
+        If this limit is exceeded, an error will be thrown
+    :return: pandas.DataFrame
+        Dataframe containing the results of Phase A of the preprocessing process
     """
     preproc_step = 0
     print("\n# ------------------------------------------------------------------------------------------------------\n"
@@ -81,8 +84,6 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
     # write the raw output to an Excel workbook
     df_wfp.to_excel(f"../output/{country}/intermediate-results/df_wfp_STEP{preproc_step}.xlsx")
 
-    # TODO: additional subset time component restricting time to smallest time overlap per region? (as extrapolated in
-    # regional patterns?) -> alternatively: just extrapolate over dataset, regardless of regional patterns
 
     # write summary statistics (share of missing values within commodity dataset)
     # Check missings (result of step 3)
@@ -170,7 +171,7 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
                                                                         order=order,
                                                                         extrapolate=extrapolate)
 
-    # TODO In case the implementtion changes, currently already an error is thrown
+    # TODO In case the implementtion changes, currently already an error is thrown (and this part never reached)
     # in the interpolation method if that is the case
     if df_wfp.Price.isna().sum() != 0:
         warnings.warn(f"Number of prices should be 0 after extrapolation, but is: {df_wfp.Price.isna().sum()}")
@@ -185,7 +186,7 @@ def phase_a_preprocess_wfp_dataset(country, dropped_commodities,
     return df_wfp
 
 
-def phase_b_merge_wfp_with_spei_dataset(country, df_wfp_preproc, write_results_to_excel=True):
+def phase_b_merge_wfp_with_spei_dataset(country, df_wfp_preproc_phase_a, write_results_to_excel=True):
     """
     Merge the reduced WFP Price dataset with
     - the dataset containing the market coordinates
@@ -201,8 +202,10 @@ def phase_b_merge_wfp_with_spei_dataset(country, df_wfp_preproc, write_results_t
     STEP 12 -> Classification of droughts and derivation of SPEI categories
 
 
-    :param country:
-    :param df_wfp_preproc:
+    :param country: str
+        Name of the country belonging to that dataset
+    :param df_wfp_preproc_phase_a: pandas.DataFrame
+        Dataframe out of preprocessing phase A
     :return:
     """
     # preproc steps of phase a
@@ -213,7 +216,7 @@ def phase_b_merge_wfp_with_spei_dataset(country, df_wfp_preproc, write_results_t
           "\n# ------------------------------------------------------------------------------------------------------\n")
     preproc_step += 1
     # 2. Read CSV containing market coordinates and merge to price data
-    df_wfp_with_coords = preproc.read_and_merge_wfp_market_coords(df_wfp=df_wfp_preproc, country=country)
+    df_wfp_with_coords = preproc.read_and_merge_wfp_market_coords(df_wfp=df_wfp_preproc_phase_a, country=country)
     # 3. Preparation for merge with Part B): Extract range of 3 main variables: time, longitude, latitude
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
@@ -298,7 +301,7 @@ def phase_b_merge_wfp_with_spei_dataset(country, df_wfp_preproc, write_results_t
             dict_df_final_per_commodity[commodity] = df_final_commodity
         df_drought, df_no_drought = preproc.separate_df_drought_non_drought(df_final)
 
-        preproc.write_preprocessing_results_to_excel(df_wfp=df_wfp_preproc, df_wfp_with_coords=df_wfp_with_coords,
+        preproc.write_preprocessing_results_to_excel(df_wfp=df_wfp_preproc_phase_a, df_wfp_with_coords=df_wfp_with_coords,
                                                      df_spei=df_spei, dict_df_final_per_commodity=
                                                      dict_df_final_per_commodity,
                                                      df_drought=df_drought,
@@ -313,13 +316,16 @@ def create_dataset(country, dropped_commodities, write_results_to_excel=True):
     PHASE A: Take care of WFP dataset and reduce the share of missing data
     PHASE B: Merge WFP dataset with Market coordinates + SPEI dataset.
 
-    :param country:
-    :param dropped_commodities:
-    :return:
+    :param country: str
+        Name of the country that dataset belongs to
+    :param dropped_commodities: list (of str)
+        Names of the commodities that should be dropped
+    :return: pandas.DataFrame
+        Final preprocessed dataset
     """
     df_wfp_preproc = phase_a_preprocess_wfp_dataset(country=country,
                                                     dropped_commodities=dropped_commodities)
-    df_final = phase_b_merge_wfp_with_spei_dataset(country=country, df_wfp_preproc=df_wfp_preproc,
+    df_final = phase_b_merge_wfp_with_spei_dataset(country=country, df_wfp_preproc_phase_a=df_wfp_preproc,
                                                    write_results_to_excel=write_results_to_excel)
 
     return df_final
