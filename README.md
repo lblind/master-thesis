@@ -21,8 +21,17 @@ The data merges data on food prices for different commodities and markets provid
 - [output folder Malawi](output/Malawi)
   - [Summary statistics (Doc. Preproecessing)](output/Malawi/summary-statistics)
   - [Plots](output/Malawi/plots)
+- [Source code](src)
+  - [main (Run this to start the program)](src/main.py)
+  - [Creation of dataset](src/dataset_creation.py)
+  - [Preprocessing](src/preprocessing.py)
+  - [Analysis & Summary statistics](src/analysis.py)
+  - [Visualization](src/visualization.py)
+  - [Auxiliary funtions (utils)](src/utils.py)
+  - [Stata Correlation matrices per commodity](src/corr_matrices.do)
 
-*Hint: For the SPEI dataset, Git LFS has been used. It might be necessary for
+*Hint: For the SPEI dataset, Git LFS has been used as the file size
+exceeded 100 MB. It might be necessary for
 you to install that Git extension as well to derive the respective file (spei01.nc) in
 the [climate data folder](input/Malawi/climate-dta/).
 ### Food price data
