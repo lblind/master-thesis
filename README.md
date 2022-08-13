@@ -17,9 +17,14 @@ The data merges data on food prices for different commodities and markets provid
   - [food price data](input/Malawi/food-price-dta/csv-prices)
   - [lon lat for markets](input/Malawi/food-price-dta/csv-lons-and-lats)
   - [inflation data WFP](input/Malawi/inflation-dta/WFP)
+  - [SPEI data*](input/Malawi/climate-dta/spei01.nc)
 - [output folder Malawi](output/Malawi)
   - [Summary statistics (Doc. Preproecessing)](output/Malawi/summary-statistics)
   - [Plots](output/Malawi/plots)
+
+*Hint: For the SPEI dataset, Git LFS has been used. It might be necessary for
+you to install that Git extension as well to derive the respective file (spei01.nc) in
+the [climate data folder](input/Malawi/climate-dta/).
 ### Food price data
 ![Screenshot vam.png](images/screenshot-wfp-vam.png)
 [Food prices](input/Malawi/food-price-dta/csv-prices) have been obtained via the open source database of WFP.  
