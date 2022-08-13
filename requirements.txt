@@ -7,5 +7,6 @@ seaborn
 missingno
 pydmd
 openpyxl
+geopy
 
 
