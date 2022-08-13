@@ -2,7 +2,7 @@
 ## Food Security and Climate Shocks
 ### The Resilience of Food Prices to Droughts in Malawi. A Machine Learning Approach.
 
-This is the GitHub repository corresponding to the Master Thesis of Lena B..
+This is the GitHub repository corresponding to the Master Thesis of L.Blind.
 
 ![SDG-2.png](images/sdg-2.png) ![SDG-13.png](images/sdg-13.png) 
 
