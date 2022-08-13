@@ -447,8 +447,9 @@ def scatter_adj_prices_all_commodities_droughts(df_wfp, alpha=0.5, preproc_step=
     """
     country = df_wfp.Country.unique()[0]
 
-    # merge SPEI to price data
-    df_wfp = utils.merge_drought_to_df_wfp(df_wfp)
+    # merge SPEI to price data if not done already
+    if "Drought" not in df_wfp:
+        df_wfp = utils.merge_drought_to_df_wfp(df_wfp)
 
     currency = df_wfp.Currency.unique()[0]
     for commodity in df_wfp.Commodity.unique():
@@ -636,13 +637,14 @@ def scatter_adj_price_per_region_drought_one_fig(df_wfp, c="red"):
     :return: None
         Output will be stored in respective folder
     """
-    # merge drought data
-    df_wfp_droughts = utils.merge_drought_to_df_wfp(df_wfp)
+    if "Drought" not in df_wfp:
+        # merge drought data
+        df_wfp = utils.merge_drought_to_df_wfp(df_wfp)
 
     # just extract the slice where a drought occured
-    df_wfp_droughts = df_wfp_droughts[df_wfp_droughts.Drought]
+    df_wfp= df_wfp[df_wfp.Drought]
 
-    scatter_adj_prices_per_region_one_fig(df_wfp_droughts, title_appendix=" (Drought occured)", png_appendix="-drought",
+    scatter_adj_prices_per_region_one_fig(df_wfp, title_appendix=" (Drought occured)", png_appendix="-drought",
                                           c=c)
 
 
@@ -926,10 +928,12 @@ def box_plot_for_all_commodities_by_group(df, by=None):
     :return: None
         Outputs will be stored in the respective directory
     """
-    # merge spei data to df
-    df = utils.merge_drought_to_df_wfp(df)
-    # classify droughts
-    df = preproc.classify_droughts(df)
+
+    if "Drought" not in df:
+        # merge spei data to df
+        df = utils.merge_drought_to_df_wfp(df)
+        # classify droughts
+        df = preproc.classify_droughts(df)
     for commodity in df.Commodity.unique():
         df_commodity = df[df.Commodity == commodity]
 

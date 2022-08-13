@@ -111,23 +111,22 @@ if __name__ == "__main__":
 
     # create different scatter plots
     visualization.scatter_adj_prices_per_region_one_fig(df_wfp=df_wfp)
-    visualization.scatter_adj_prices_all_commodities_droughts(df_wfp=df_wfp)
-    visualization.scatter_adj_price_per_region_drought_one_fig(df_wfp=df_wfp)
+    visualization.scatter_adj_prices_all_commodities_droughts(df_wfp=df_with_drought)
+    visualization.scatter_adj_price_per_region_drought_one_fig(df_wfp=df_with_drought)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# VISUALIZATION - Histograms"
           "\n# ------------------------------------------------------------------------------------------------------\n")
-    # histograms
+
     visualization.plot_hist_for_all_commodities(df_wfp)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# VISUALIZATION - Boxplots"
           "\n# ------------------------------------------------------------------------------------------------------\n")
-    visualization.box_plot_for_all_commodities_by_group(df_wfp)
-    visualization.box_plot_for_all_commodities_by_group(df_wfp, by="Drought")
-    visualization.box_plot_for_all_commodities_by_group(df_wfp, by="Region")
-    visualization.box_plot_for_all_commodities_by_group(df_wfp, by=["Drought", "Region"])
-
+    visualization.box_plot_for_all_commodities_by_group(df_with_drought)
+    visualization.box_plot_for_all_commodities_by_group(df_with_drought, by="Drought")
+    visualization.box_plot_for_all_commodities_by_group(df_with_drought, by="Region")
+    visualization.box_plot_for_all_commodities_by_group(df_with_drought, by=["Drought", "Region"])
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# VISUALIZATION - Maps"
@@ -146,7 +145,7 @@ if __name__ == "__main__":
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# VISUALIZATION - Missing values"
           "\n# ------------------------------------------------------------------------------------------------------\n")
-    visualization.plot_missings(df_final, "Price")
+    visualization.plot_missings(df_final)
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# DYNAMIC MODE DECOMPOSITION (DMD)"
