@@ -54,8 +54,8 @@ if __name__ == "__main__":
     # TODO outcomment this line if dataset has already been created (saves some time)
     # df_final = utils.convert_excel_to_df(path_to_final_df)
 
-    # # if you want to describe the input and create some summary stats
-    # ana.df_describe_excel(df_final, group_by_column="Commodity")
+    # if you want to describe the input and create some summary stats
+    ana.df_describe_excel(df_final, group_by_column="Commodity")
 
     path_to_df_wfp = f"../output/{country}/intermediate-results/df_wfp_STEP4.xlsx"
     df_wfp = utils.convert_excel_to_df(path_to_df_wfp)
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     df_with_drought.to_excel(f"../output/{country}/intermediate-results/df_wfp_w_drought_STEP4.xlsx")
 
     # TODO: if dataset has been already merged to drought outcommment this line (saves some time)
-    # df_with_drought = utils.convert_excel_to_df(f"../output/{country}/intermediate-results/df_wfp_w_drought_STEP4.xlsx")
+    df_with_drought = utils.convert_excel_to_df(f"../output/{country}/intermediate-results/df_wfp_w_drought_STEP4.xlsx")
 
     print("\n# ------------------------------------------------------------------------------------------------------\n"
           "# ANALYSIS - Statistics"
@@ -132,7 +132,8 @@ if __name__ == "__main__":
           "# VISUALIZATION - Maps"
           "\n# ------------------------------------------------------------------------------------------------------\n")
 
-    visualization.plot_malawi_regions_adm1(df_with_drought, scatter_markets=False)
+    visualization.plot_malawi_regions_adm1(df_final, scatter_markets=True)
+    # visualization.plot_malawi_regions_adm1(df_with_drought, scatter_markets=True)
     visualization.plot_malawi_districts_adm2(df_with_drought, plot_markets=True)
 
     # plot districts

@@ -7,10 +7,16 @@ This is the GitHub repository corresponding to the Master Thesis of L.Blind.
 ![SDG-2.png](images/sdg-2.png) ![SDG-13.png](images/sdg-13.png) 
 
 --------------------------------------------------------------------------
+## Presentation
+The thesis has been defended.
+
+**The presentation of the thesis defense can be found [here](./presentation/Thesis%20Defense%20-%20Lena.pptx).**
+
 ## Data
 The data merges data on food prices for different commodities and markets provided by WFP, as well as climate data on droughts, based on the SPEI as a drought indicator.  
 
 **The final dataset for Malawi can be found [here](output/Malawi/Malawi-final-dta.xlsx)**.
+
 
 ## Structure Malawi
 - [input folder Malawi](input/Malawi)
@@ -36,6 +42,8 @@ you to install that Git extension as well to derive the respective file (spei01.
 the [climate data folder](input/Malawi/climate-dta/).
 ### Food price data
 ![Screenshot vam.png](images/screenshot-wfp-vam.png)
+_Screenshot: [WFP vam database](https://dataviz.vam.wfp.org/economic_explorer/prices)_  
+
 [Food prices](input/Malawi/food-price-dta/csv-prices) have been obtained via the open source database of WFP.  
 Temporal Unit of analysis: Month  
 
