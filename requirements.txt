@@ -8,5 +8,8 @@ missingno
 pydmd
 openpyxl
 geopy
+netCDF4
+h5netcdf
+pyogrio
 
 
