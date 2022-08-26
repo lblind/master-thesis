@@ -10,7 +10,7 @@ This is the GitHub repository corresponding to the Master Thesis of L.Blind.
 ## Presentation
 The thesis has been defended.
 
-**The presentation of the thesis defense can be found [here](./presentation/Thesis%20Defense%20-%20Lena.pptx).**
+**The presentation of the thesis defense can be found [here](./presentation/Thesis%20Defense%20Presentation.pptx).**
 
 ## Data
 The data merges data on food prices for different commodities and markets provided by WFP, as well as climate data on droughts, based on the SPEI as a drought indicator.  
